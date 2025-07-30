@@ -12,14 +12,18 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
-
   "dependencies": {
+    "@reduxjs/toolkit": "^2.8.2",
     "node-machine-id": "^1.1.12",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-router-dom": "^7.6.3"
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.6.3",
+    "redux-persist": "^6.0.0"
   },
   "devDependencies": {
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.5.2",
     "concurrently": "^9.2.0",
     "cross-env": "^7.0.3",
@@ -38,7 +42,9 @@
       {
         "from": "dist",
         "to": "dist",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "asar": true,
