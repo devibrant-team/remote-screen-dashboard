@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import tailwindcss from '@tailwindcss/vite'
 
 // ⛏️ __dirname workaround for ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -24,5 +25,8 @@ export default defineConfig({
     'process.env': {}, // Optional shim
     global: 'globalThis', // Optional for polyfills
   },
-  plugins: [react()],
+  plugins: [
+      react(),
+      tailwindcss(),
+  ],
 });

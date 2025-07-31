@@ -1,4 +1,4 @@
-import './App.css';
+
 import LicenseKey from './../LicenseKey/LicenseKey';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../store';
