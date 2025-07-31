@@ -1,4 +1,4 @@
-@import "tailwindcss";
+
 /* bg-[var(--mainred)] */
 :root {
   --mainred: #ef4444;      /* red-500 */

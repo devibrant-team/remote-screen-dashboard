@@ -1,10 +1,10 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import pkg from 'node-machine-id';
-const { machineIdSync } = pkg;
+const { app, BrowserWindow, ipcMain } = require('electron');
+const path = require('path');
+const { machineIdSync } = require('node-machine-id');
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// Replace ESM way of getting __dirname with CommonJS equivalent
+// const __dirname = __dirname; // Already available in CommonJS
+
 const isDev = process.env.NODE_ENV === 'development';
 
 let win;
@@ -20,10 +20,8 @@ function createWindow() {
     },
   });
 
-
-    // Production mode: load React build unpacked outside ASAR
-     const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
-    win.loadFile(indexPath);
+  const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
+  win.loadFile(indexPath);
 
   win.on('closed', () => {
     win = null;
@@ -53,4 +51,3 @@ ipcMain.handle('get-machine-id', async () => {
 ipcMain.on('renderer-log', (event, ...args) => {
   console.log('[Renderer]', ...args);
 });
- 
