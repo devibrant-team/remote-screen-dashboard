@@ -1,3 +1,3 @@
-export const http =  "http://192.168.10.138:8000/api/";
-export const loginApi = `${http}login`
+export const http =  "http://192.168.10.107/remote-screen-backend/public/";
+export const loginApi = `${http}dashboard/login`
 

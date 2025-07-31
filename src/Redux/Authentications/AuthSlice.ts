@@ -22,7 +22,7 @@ export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async (credentials: { email: string; password: string , machineId:string | null }, thunkAPI) => {
     try {
-      const response = await axios.post(loginApi, credentials);
+      const response = await axios.post("http://192.168.10.107/remote-screen-backend/public/api/dashboard/login", credentials);
       const token = response.data.token;
       localStorage.setItem("token", token);
       return token;
