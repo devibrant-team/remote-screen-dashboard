@@ -1,0 +1,56 @@
+.license-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f7f9fc;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.license-title {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2a2e35;
+  margin-bottom: 1.5rem;
+}
+
+.license-box {
+  background-color: #ffffff;
+  padding: 2rem 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+  text-align: center;
+  width: 100%;
+  max-width: 500px;
+}
+
+.machine-id {
+  font-size: 1rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+  word-break: break-all;
+}
+
+.machine-id code {
+  background-color: #f0f0f0;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.increment-btn {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.increment-btn:hover {
+  background-color: #1d4ed8;
+}

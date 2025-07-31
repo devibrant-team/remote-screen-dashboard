@@ -1,67 +1,19 @@
-import { useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
 import './App.css';
-
-// Extend Window interface to define electronAPI
-declare global {
-  interface Window {
-    electronAPI?: {
-      sendLog?: (...args: any[]) => void;
-      getMachineId?: () => Promise<string>;
-    };
-  }
-}
-
-// Override console.log to forward logs to Electron main process
-const originalConsoleLog = console.log;
-console.log = (...args: unknown[]) => {
-  if (window.electronAPI?.sendLog) {
-    window.electronAPI.sendLog(...args);
-  }
-  originalConsoleLog(...args);
-};
+import LicenseKey from './../LicenseKey/LicenseKey';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 function App() {
-  const [count, setCount] = useState<number>(0);
-  const [machineId, setMachineId] = useState<string>('');
-  const [error, setError] = useState<string>('');
-
-  useEffect(() => {
-    if (window.electronAPI?.getMachineId) {
-      console.log('electronAPI object exists');
-      console.log('electronAPI.getMachineId is', typeof window.electronAPI.getMachineId);
-
-      window.electronAPI.getMachineId()
-        .then((id: string) => {
-          setMachineId(id);
-        })
-        .catch(() => {
-          setError('Failed to get Machine ID');
-        });
-    } else {
-      setError('electronAPI.getMachineId not available');
-    }
-  }, []);
+  const machineId: string | null = useSelector((state: RootState) => state.machine.machineId);
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React + Electron</h1>
-      <div className="card">
-        <button onClick={() => setCount((c) => c + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Machine ID: <code>{machineId || error || 'Loading...'}</code>
-        </p>
+      <LicenseKey />
+      <div className="app-container">
+        <h2>
+          {machineId ? 'Machine ID (for testing):' : 'Machine ID else (for testing):'}
+        </h2>
+        <code>{machineId ?? 'Loading or unavailable'}</code>
       </div>
     </>
   );

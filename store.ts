@@ -1,9 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit';
-
+import machineReducer from './src/Redux/Machine/machineSlice'
 
 export const store = configureStore({
   reducer: {
-  
+  machine: machineReducer,
   },
 });
 

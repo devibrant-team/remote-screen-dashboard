@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import './LicenseKey.css'; // We'll create this CSS next
+import { useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { setMachineId } from '../src/Redux/Machine/machineSlice';
 
 declare global {
   interface Window {
@@ -10,7 +11,7 @@ declare global {
   }
 }
 
-// Override console.log to forward logs to Electron main process
+// Optional: Forward console logs to Electron
 const originalConsoleLog = console.log;
 console.log = (...args: unknown[]) => {
   if (window.electronAPI?.sendLog) {
@@ -20,38 +21,21 @@ console.log = (...args: unknown[]) => {
 };
 
 export default function LicenseKey() {
-  const [count, setCount] = useState<number>(0);
-  const [machineId, setMachineId] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (window.electronAPI?.getMachineId) {
-      console.log('electronAPI object exists');
-      console.log('electronAPI.getMachineId is', typeof window.electronAPI.getMachineId);
-
       window.electronAPI.getMachineId()
         .then((id: string) => {
-          setMachineId(id);
+          dispatch(setMachineId(id));
         })
         .catch(() => {
-          setError('Failed to get Machine ID');
+          console.error('Failed to get Machine ID');
         });
     } else {
-      setError('electronAPI.getMachineId not available');
+      console.error('electronAPI.getMachineId not available');
     }
-  }, []);
+  }, [dispatch]);
 
-  return (
-    <div className="license-container">
-      <h2 className="license-title">License Key</h2>
-      <div className="license-box">
-        <p className="machine-id">
-          Machine ID: <code>{machineId || error || 'Loading...'}</code>
-        </p>
-        <button className="increment-btn" onClick={() => setCount((c) => c + 1)}>
-          Count is {count}
-        </button>
-      </div>
-    </div>
-  );
+  return null; // Render nothing to the UI
 }
