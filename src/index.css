@@ -1,1 +1,8 @@
 @import "tailwindcss";
+/* bg-[var(--mainred)] */
+:root {
+  --mainred: #ef4444;
+  --black: #000;
+  --white: #fff;
+  --white-200: #f5f5f5; /* Soft background shade */
+}

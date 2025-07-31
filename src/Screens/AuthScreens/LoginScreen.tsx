@@ -36,16 +36,16 @@ const LoginScreen = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[var(--red-light)] to-[var(--mainred)] flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Animated Blobs */}
-      <div className="absolute top-0 left-0 w-full h-full z-0">
-        <div className="absolute top-10 left-20 w-72 h-72 bg-[var(--mainred)] rounded-full filter blur-3xl background-bubble"></div>
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[var(--red-dark)] rounded-full filter blur-3xl background-bubble"></div>
+    <div className="min-h-screen w-full bg-gradient-to-br from-red-300 to-red-800 flex items-center justify-center px-4 relative overflow-hidden">
+      {/* Background IGUANA text with inverted gradient */}
+      <div className="absolute z-0 text-[160px] md:text-[200px] lg:text-[240px] font-extrabold  bg-clip-text text-white  opacity-30 select-none pointer-events-none">
+        IGUANA
       </div>
 
-      <div className="z-10 w-full max-w-md backdrop-blur-xl bg-white/80 text-gray-800 p-10 rounded-3xl shadow-2xl border border-gray-200">
-        <h1 className="text-4xl font-bold text-center mb-8 text-[var(--mainred)] tracking-wide">
-          Iguana Login
+      {/* Foreground login box */}
+      <div className="z-10 w-full max-w-md backdrop-blur-sm bg-white/65 text-gray-800 p-10 rounded-3xl shadow-2xl border border-gray-200">
+        <h1 className="text-4xl font-bold text-center mb-8 text-[var(--black)] tracking-wide">
+          Login
         </h1>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
