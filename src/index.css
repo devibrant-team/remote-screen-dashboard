@@ -1,68 +1,51 @@
+@import "tailwindcss";
+/* bg-[var(--mainred)] */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --mainred: #ef4444;      /* red-500 */
+  --red-dark: #7f1d1d;      /* red-900 */
+  --red-light: #fee2e2;     /* red-100 */
+  --ash-black: #1f1f1f;
+  --white: #ffffff;
+  --white-soft: #fef2f2;
+  --error: #dc2626;         /* red-600 */
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+  @keyframes move-left {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(120%, 0);
+    }
   }
-  a:hover {
-    color: #747bff;
+  
+  @keyframes move-right {
+    0%, 100% {
+      transform: translate(0, 0);
+    }
+    50% {
+      transform: translate(-120%, 0);
+    }
   }
-  button {
-    background-color: #f9f9f9;
+  
+  .move-left {
+    animation: move-left 8s ease-in-out infinite;
   }
+  
+  .move-right {
+    animation: move-right 8s ease-in-out infinite;
+  }
+
+  @keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-30px) scale(1.05);
+  }
+}
+
+.background-bubble {
+  animation: float 8s ease-in-out infinite;
+  opacity: 0.3;
 }
