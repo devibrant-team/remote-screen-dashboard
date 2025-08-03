@@ -1,60 +1,107 @@
-import { Upload, Plus, Layers, ChevronDown } from "lucide-react";
+// components/Tabbarplaylist.tsx
+
+import { Upload, Plus, Layers } from "lucide-react";
+import { useDispatch } from "react-redux";
+import {
+  setPlaylistName,
+  setDuration,
+} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 const Tabbarplaylist = () => {
+  const dispatch = useDispatch();
+
   return (
-    <div className="flex min-h-screen bg-[var(--white-200)]">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-[var(--white-200)]">
       {/* Sidebar */}
-      <div className="w-72 bg-[var(--white)] text-[var(--black)] p-6 space-y-6 shadow-md">
-        <h1 className="text-2xl font-bold text-red-700">Playlist Editor</h1>
+      <div className="w-full lg:w-72 bg-[var(--white)] text-[var(--black)] shadow-md border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col h-screen">
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+          <h1 className="text-xl lg:text-2xl font-bold text-red-700">
+            Playlist Editor
+          </h1>
 
-        <div className="space-y-5">
-          {/* Playlist Name */}
-          <div>
-            <h4 className="text-lg font-semibold">Playlist Name</h4>
-            <input
-              type="text"
-              placeholder="Enter playlist name"
-              className="w-full mt-1 p-2 rounded-md text-black border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
-            />
-          </div>
+          {/* Playlist Fields */}
+          <div className="space-y-6">
+            {/* Playlist Name */}
+            <div className="space-y-1">
+              <label
+                htmlFor="playlist-name"
+                className="text-base lg:text-lg font-semibold"
+              >
+                Playlist Name
+              </label>
+              <input
+                id="playlist-name"
+                onChange={(e) => dispatch(setPlaylistName(e.target.value))}
+                type="text"
+                placeholder="Enter playlist name"
+                className="w-full p-2 rounded-md text-black border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
+                aria-label="Playlist Name"
+              />
+            </div>
 
-          {/* Duration */}
-          <div>
-            <h4 className="text-lg font-semibold">Duration (seconds)</h4>
-            <input
-              type="number"
-              defaultValue={10}
-              className="w-full mt-1 p-2 rounded-md text-black border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
-            />
-          </div>
+            {/* Duration */}
+            <div className="space-y-1">
+              <label
+                htmlFor="duration"
+                className="text-base lg:text-lg font-semibold"
+              >
+                Duration (seconds)
+              </label>
+              <input
+                id="duration"
+                type="number"
+                defaultValue={10}
+                onChange={(e) =>
+                  dispatch(setDuration(Number(e.target.value)))
+                }
+                className="w-full p-2 rounded-md text-black border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
+                aria-label="Duration in seconds"
+              />
+            </div>
 
-          {/* Scale */}
-          <div>
-            <h4 className="text-lg font-semibold mb-1">Scale</h4>
-            <div className="relative">
-              <select className="w-full appearance-none p-2 pr-10 rounded-md text-black border border-gray-300 bg-white focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none">
-                <option>Original Scale</option>
-                <option>Scale to fit</option>
-                <option>Scale Stretch to fit</option>
-                <option>Fit with Blur background</option>
-              </select>
-              <ChevronDown className="absolute top-2.5 right-3 text-gray-500 pointer-events-none" size={18} />
+            {/* Media Buttons */}
+            <div className="space-y-2">
+              <h4 className="text-base lg:text-lg font-semibold">Media</h4>
+
+              <button
+                className="flex items-center justify-center gap-2 w-full bg-white text-black font-semibold py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 transition"
+                aria-label="Upload Media"
+              >
+                <Upload size={18} /> Upload Media
+              </button>
+
+              <button
+                className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
+                aria-label="Add Template"
+              >
+                <Plus size={18} /> Add Template
+              </button>
+
+              <button
+                className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
+                aria-label="Add Widget"
+              >
+                <Layers size={18} /> Add Widget
+              </button>
             </div>
           </div>
+        </div>
 
-          {/* Media Buttons */}
-          <div>
-            <h4 className="text-lg font-semibold mb-2">Media</h4>
-            <button className="flex items-center justify-center gap-2 w-full bg-[var(--white)] text-[var(--black)] font-semibold py-2 px-4 rounded-md mb-2 border border-gray-300 hover:bg-gray-100 transition">
-              <Upload size={18} /> Upload Media
-            </button>
-            <button className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-[var(--white)] font-semibold py-2 px-4 rounded-md mb-2 hover:bg-red-600 transition">
-              <Plus size={18} /> Add Template
-            </button>
-            <button className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-[var(--white)] font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition">
-              <Layers size={18} /> Add Widget
-            </button>
-          </div>
+        {/* Bottom Buttons */}
+        <div className="border-t pt-4 pb-6 px-4 space-y-2 border-gray-300">
+          <button
+            className="flex items-center justify-center gap-2 w-full bg-white text-black font-semibold py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 transition"
+            aria-label="Cancel"
+          >
+            Cancel
+          </button>
+          <button
+            className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
+            aria-label="Save Playlist"
+          >
+            Save Playlist
+          </button>
         </div>
       </div>
     </div>
