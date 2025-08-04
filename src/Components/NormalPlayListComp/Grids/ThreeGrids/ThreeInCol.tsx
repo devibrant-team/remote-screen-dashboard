@@ -4,9 +4,9 @@ import {
   setSlots,
   updateSlotMedia,
   updateSlotScale,
-} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-import type { RootState } from "../../../../store";
+} from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { ThreeColGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
+import type { RootState } from "../../../../../store";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -23,21 +23,21 @@ const getScaleClass = (scale: string) => {
   }
 };
 
-const DefaultGrid = () => {
+const ThreeInCol = () => {
   const dispatch = useDispatch();
-  const OneTemplate = useMemo(() => OneImageGridConfig, []);
+  const ThreeTemplate = useMemo(() => ThreeColGridConfig, []);
   const slots = useSelector((state: RootState) => state.normalplaylist.slots);
 
   useEffect(() => {
-    if (OneTemplate) {
-      const preparedSlots = OneTemplate.slots.map((slot) => ({
+    if (ThreeTemplate) {
+      const preparedSlots = ThreeTemplate.slots.map((slot) => ({
         ...slot,
         media: null,
         mediaType: undefined,
       }));
       dispatch(setSlots(preparedSlots));
     }
-  }, [OneTemplate, dispatch]);
+  }, [ThreeTemplate, dispatch]);
 
   const handleMediaUpload = (index: number, file: File) => {
     const mediaUrl = URL.createObjectURL(file);
@@ -46,15 +46,15 @@ const DefaultGrid = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto my-10">
-      {slots.length === 1 && (
-        <div className="w-full h-[60vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
+    <div className="w-full max-w-4xl mx-auto my-10">
+      {slots.length === 3 && (
+        <div className="w-full h-[80vh] max-h-[850px] flex flex-col   rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
-              className="w-full h-full relative group rounded-xl overflow-hidden"
+              className="flex-1 relative group bg-black  overflow-hidden"
             >
-              {/* Media Preview */}
+              {/* Media Display */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
                   <video
@@ -81,7 +81,7 @@ const DefaultGrid = () => {
                   </div>
                 )
               ) : (
-                <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl">
+                <label className="w-full h-full flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg transition hover:bg-[#2a2f3b]">
                   No media selected
                   <input
                     type="file"
@@ -95,7 +95,7 @@ const DefaultGrid = () => {
                 </label>
               )}
 
-              {/* Hover overlay */}
+              {/* Hover Overlay Controls */}
               {slot.media && (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
                   <select
@@ -112,7 +112,7 @@ const DefaultGrid = () => {
                         })
                       )
                     }
-                    className="p-2 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-400 font-bold"
+                    className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
                   >
                     <option value="fit">🖼️ Fit (Contain)</option>
                     <option value="fill">📱 Fill (Cover)</option>
@@ -141,4 +141,4 @@ const DefaultGrid = () => {
   );
 };
 
-export default DefaultGrid;
+export default ThreeInCol;

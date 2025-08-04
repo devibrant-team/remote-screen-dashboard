@@ -4,9 +4,9 @@ import {
   setSlots,
   updateSlotMedia,
   updateSlotScale,
-} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-import type { RootState } from "../../../../store";
+} from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { TwoByTwoColConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
+import type { RootState } from "../../../../../store";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -23,21 +23,21 @@ const getScaleClass = (scale: string) => {
   }
 };
 
-const DefaultGrid = () => {
+const TwobyTwoGridCol = () => {
   const dispatch = useDispatch();
-  const OneTemplate = useMemo(() => OneImageGridConfig, []);
+  const TwoTemplate = useMemo(() => TwoByTwoColConfig, []);
   const slots = useSelector((state: RootState) => state.normalplaylist.slots);
-
+console.log(slots)
   useEffect(() => {
-    if (OneTemplate) {
-      const preparedSlots = OneTemplate.slots.map((slot) => ({
+    if (TwoTemplate) {
+      const preparedSlots = TwoTemplate.slots.map((slot) => ({
         ...slot,
         media: null,
         mediaType: undefined,
       }));
       dispatch(setSlots(preparedSlots));
     }
-  }, [OneTemplate, dispatch]);
+  }, [TwoTemplate, dispatch]);
 
   const handleMediaUpload = (index: number, file: File) => {
     const mediaUrl = URL.createObjectURL(file);
@@ -46,15 +46,14 @@ const DefaultGrid = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto my-10">
-      {slots.length === 1 && (
-        <div className="w-full h-[60vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
+    <div className="w-full max-w-4xl mx-auto my-10">
+      {slots.length === 2 && (
+        <div className="w-full h-[70vh] max-h-[800px] flex flex-col rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
-              className="w-full h-full relative group rounded-xl overflow-hidden"
+              className="flex-1 relative group bg-black  overflow-hidden"
             >
-              {/* Media Preview */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
                   <video
@@ -81,7 +80,7 @@ const DefaultGrid = () => {
                   </div>
                 )
               ) : (
-                <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl">
+                <label className="w-full h-full flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg">
                   No media selected
                   <input
                     type="file"
@@ -141,4 +140,4 @@ const DefaultGrid = () => {
   );
 };
 
-export default DefaultGrid;
+export default TwobyTwoGridCol;

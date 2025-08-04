@@ -9,6 +9,7 @@ interface NormalPlaylistState {
   duration: number;
   scale: string;
   slots: GridSlotConfig[];
+  selectedGrid: string;
 }
 
 const initialState: NormalPlaylistState = {
@@ -16,12 +17,16 @@ const initialState: NormalPlaylistState = {
   duration: 10,
   scale: "Original Scale",
   slots: [],
+  selectedGrid: "default",
 };
 
 const NormalPlaylistSlice = createSlice({
   name: "NormalPlaylist",
   initialState,
   reducers: {
+    setSelectedGrid: (state, action: PayloadAction<string>) => {
+      state.selectedGrid = action.payload;
+    },
     setPlaylistName: (state, action: PayloadAction<string>) => {
       state.name = action.payload;
     },
@@ -34,15 +39,21 @@ const NormalPlaylistSlice = createSlice({
     setSlots: (state, action: PayloadAction<GridSlotConfig[]>) => {
       state.slots = action.payload;
     },
-    updateSlotImage: (
+    updateSlotMedia: (
       state,
-      action: PayloadAction<{ index: number; image: string }>
+      action: PayloadAction<{
+        index: number;
+        media: string | null;
+        mediaType: "image" | "video";
+      }>
     ) => {
       const slot = state.slots.find((s) => s.index === action.payload.index);
       if (slot) {
-        slot.image = action.payload.image;
+        slot.media = action.payload.media;
+        slot.mediaType = action.payload.mediaType;
       }
     },
+
     updateSlotScale: (
       state,
       action: PayloadAction<{ index: number; scale: GridSlotConfig["scale"] }>
@@ -60,8 +71,9 @@ export const {
   setDuration,
   setScale,
   setSlots,
-  updateSlotImage,
+  updateSlotMedia,
   updateSlotScale,
+  setSelectedGrid,
 } = NormalPlaylistSlice.actions;
 
 export default NormalPlaylistSlice.reducer;
