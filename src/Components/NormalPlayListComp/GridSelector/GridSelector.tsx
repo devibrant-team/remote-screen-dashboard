@@ -1,5 +1,5 @@
 import { useDispatch } from "react-redux";
-import { setSelectedGrid } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { setSelectedGrid } from "../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 type GridSelectorProps = {
   onClose: () => void;
 };

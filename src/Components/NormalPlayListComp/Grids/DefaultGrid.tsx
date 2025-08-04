@@ -4,9 +4,10 @@ import {
   setSlots,
   updateSlotMedia,
   updateSlotScale,
-} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+} from "../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 import type { RootState } from "../../../../store";
+import DurationInput from "./Inputs/DurationInput";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -27,6 +28,14 @@ const DefaultGrid = () => {
   const dispatch = useDispatch();
   const OneTemplate = useMemo(() => OneImageGridConfig, []);
   const slots = useSelector((state: RootState) => state.normalplaylist.slots);
+  // const duration = useSelector(
+  //   (state: RootState) => state.normalplaylist.duration
+  // );
+  const normalSlide = useSelector((state: RootState) => state.normalplaylist);
+
+useEffect(() => {
+  console.log("[NormalPlaylist State]", normalSlide);
+}, [normalSlide]);
 
   useEffect(() => {
     if (OneTemplate) {
@@ -47,6 +56,7 @@ const DefaultGrid = () => {
 
   return (
     <div className="w-full max-w-6xl mx-auto my-10">
+      <DurationInput/>
       {slots.length === 1 && (
         <div className="w-full h-[60vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
           {slots.map((slot) => (

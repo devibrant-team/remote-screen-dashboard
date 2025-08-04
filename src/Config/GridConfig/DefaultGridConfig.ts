@@ -9,10 +9,12 @@ export type GridSlotConfig = {
 export type GridLayoutConfig = {
   displayName: string;
   slots: GridSlotConfig[];
+  duration: number; 
 };
 // === Grid: One Images ===
 export const OneImageGridConfig: GridLayoutConfig = {
   displayName: "default",
+  duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -27,6 +29,7 @@ export const OneImageGridConfig: GridLayoutConfig = {
 // === Grid: Two Images ===
 export const TwoByTwoConfig: GridLayoutConfig = {
   displayName: "twobyTwo",
+    duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -48,6 +51,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
 // === Grid: Two Images ===
 export const TwoByTwoColConfig: GridLayoutConfig = {
   displayName: "twobyTwoCol",
+    duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -68,6 +72,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
 // === Grid: Three Images ===
 export const ThreeColGridConfig: GridLayoutConfig = {
   displayName: "threeCol",
+    duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -94,6 +99,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
 };
 export const ThreeRowGridConfig: GridLayoutConfig = {
   displayName: "threeRow",
+    duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -121,6 +127,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
 // === Grid: Four Images ===
 export const FourImageGridConfig: GridLayoutConfig = {
   displayName: "fourGrid",
+    duration: 5,
   slots: [
     {
       name: "Media 1",

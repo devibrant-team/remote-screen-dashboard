@@ -4,7 +4,7 @@ import {
   setSlots,
   updateSlotMedia,
   updateSlotScale,
-} from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+} from "../../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import { ThreeRowGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
 import type { RootState } from "../../../../../store";
 

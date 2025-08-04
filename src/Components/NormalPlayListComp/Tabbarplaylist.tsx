@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import {
   setPlaylistName,
   setDuration,
-} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+} from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
 
 const Tabbarplaylist = () => {

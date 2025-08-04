@@ -1,79 +1,72 @@
-// Redux/slices/playlistEditorSlice.ts
+// Redux/slices/playlistSlice.ts
 
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
+import type { NormalPlaylistState } from "./SlideNormalPlaylistSlice";
 
-interface NormalPlaylistState {
+interface PlaylistState {
   name: string;
-  duration: number;
-  scale: string;
-  slots: GridSlotConfig[];
-  selectedGrid: string;
+  type: "Normal"; // future-proofing if you add other types later
+  slides: NormalPlaylistState[];
+  selectedSlideIndex: number | null;
 }
 
-const initialState: NormalPlaylistState = {
+const initialState: PlaylistState = {
   name: "",
-  duration: 10,
-  scale: "Original Scale",
-  slots: [],
-  selectedGrid: "default",
+  type: "Normal",
+  slides: [],
+  selectedSlideIndex: null,
 };
 
-const NormalPlaylistSlice = createSlice({
-  name: "NormalPlaylist",
+const playlistSlice = createSlice({
+  name: "playlist",
   initialState,
   reducers: {
-    setSelectedGrid: (state, action: PayloadAction<string>) => {
-      state.selectedGrid = action.payload;
-    },
     setPlaylistName: (state, action: PayloadAction<string>) => {
       state.name = action.payload;
     },
-    setDuration: (state, action: PayloadAction<number>) => {
-      state.duration = action.payload;
+
+    setSelectedSlideIndex: (state, action: PayloadAction<number | null>) => {
+      state.selectedSlideIndex = action.payload;
     },
-    setScale: (state, action: PayloadAction<string>) => {
-      state.scale = action.payload;
+
+    addSlide: (state, action: PayloadAction<NormalPlaylistState>) => {
+      state.slides.push(action.payload);
     },
-    setSlots: (state, action: PayloadAction<GridSlotConfig[]>) => {
-      state.slots = action.payload;
-    },
-    updateSlotMedia: (
+
+    updateSlideAtIndex: (
       state,
-      action: PayloadAction<{
-        index: number;
-        media: string | null;
-        mediaType: "image" | "video";
-      }>
+      action: PayloadAction<{ index: number; updatedSlide: NormalPlaylistState }>
     ) => {
-      const slot = state.slots.find((s) => s.index === action.payload.index);
-      if (slot) {
-        slot.media = action.payload.media;
-        slot.mediaType = action.payload.mediaType;
+      const { index, updatedSlide } = action.payload;
+      if (index >= 0 && index < state.slides.length) {
+        state.slides[index] = updatedSlide;
       }
     },
 
-    updateSlotScale: (
-      state,
-      action: PayloadAction<{ index: number; scale: GridSlotConfig["scale"] }>
-    ) => {
-      const slot = state.slots.find((s) => s.index === action.payload.index);
-      if (slot) {
-        slot.scale = action.payload.scale;
+    removeSlideAtIndex: (state, action: PayloadAction<number>) => {
+      state.slides.splice(action.payload, 1);
+      if (state.selectedSlideIndex === action.payload) {
+        state.selectedSlideIndex = null;
+      } else if (
+        state.selectedSlideIndex !== null &&
+        state.selectedSlideIndex > action.payload
+      ) {
+        state.selectedSlideIndex -= 1;
       }
     },
+
+    clearPlaylist: () => initialState,
   },
 });
 
 export const {
   setPlaylistName,
-  setDuration,
-  setScale,
-  setSlots,
-  updateSlotMedia,
-  updateSlotScale,
-  setSelectedGrid,
-} = NormalPlaylistSlice.actions;
+  setSelectedSlideIndex,
+  addSlide,
+  updateSlideAtIndex,
+  removeSlideAtIndex,
+  clearPlaylist,
+} = playlistSlice.actions;
 
-export default NormalPlaylistSlice.reducer;
+export default playlistSlice.reducer;

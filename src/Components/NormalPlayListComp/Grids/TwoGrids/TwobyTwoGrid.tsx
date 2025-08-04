@@ -4,7 +4,7 @@ import {
   setSlots,
   updateSlotMedia,
   updateSlotScale,
-} from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+} from "../../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import { TwoByTwoConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
 import type { RootState } from "../../../../../store";
 
@@ -27,7 +27,7 @@ const TwobyTwoGrid = () => {
   const dispatch = useDispatch();
   const TwoTemplate = useMemo(() => TwoByTwoConfig, []);
   const slots = useSelector((state: RootState) => state.normalplaylist.slots);
-
+  console.log(slots);
   useEffect(() => {
     if (TwoTemplate) {
       const preparedSlots = TwoTemplate.slots.map((slot) => ({
