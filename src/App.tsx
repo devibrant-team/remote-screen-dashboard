@@ -23,13 +23,14 @@ import LicenseKey from './../LicenseKey/LicenseKey';
 import LoginScreen from './Screens/AuthScreens/LoginScreen';
 import PlayList from './Screens/Playlist/Normal/PlayList';
 import Test from './Screens/Test';
+import CreateInteractivePlaylist from './Components/InteractivePlaylist/InteractivePlaylist';
 
 function App() {
   
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Test />} />
+        <Route path="/" element={<CreateInteractivePlaylist />} />
         <Route path="/playlist" element={<PlayList />} />
         {/* Add more routes as needed */}
       </Routes>
