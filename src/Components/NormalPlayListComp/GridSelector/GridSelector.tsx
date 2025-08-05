@@ -1,14 +1,24 @@
-import { useDispatch } from "react-redux";
-import { setSelectedGrid } from "../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { updateSlideGrid } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import type { RootState } from "../../../../store";
+
+
 type GridSelectorProps = {
   onClose: () => void;
 };
 const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
   const dispatch = useDispatch();
-  const handleSelect = (gridKey: string) => {
-    dispatch(setSelectedGrid(gridKey));
-    onClose();
-  };
+const selectedSlideIndex = useSelector(
+  (state: RootState) => state.playlist.selectedSlideIndex
+);
+
+const handleSelect = (gridKey: string) => {
+  if (selectedSlideIndex !== null) {
+    dispatch(updateSlideGrid({ index: selectedSlideIndex, selectedGrid: gridKey }));
+  }
+  onClose();
+};
+
 
   const gridOptions = [
     { key: "default", label: "Default" },
@@ -25,7 +35,7 @@ const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
         return (
           <div className="flex flex-col w-14 h-16 gap-1">
             {[...Array(1)].map((_, i) => (
-              <div key={i} className="bg-gray-400 flex-1 rounded-sm" />
+              <div key={i} className="bg-red-400 flex-1 rounded-sm" />
             ))}
           </div>
         );
@@ -34,7 +44,7 @@ const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
         return (
           <div className="grid grid-cols-2 grid-rows-2 w-full h-16 gap-0.5">
             {[...Array(2)].map((_, i) => (
-              <div key={i} className="bg-gray-400 w-full h-full rounded-sm" />
+              <div key={i} className="bg-red-400 w-full h-full rounded-sm" />
             ))}
           </div>
         );
@@ -42,7 +52,7 @@ const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
         return (
           <div className="grid grid-cols-2 grid-rows-2 w-16 h-16 gap-0.5">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-gray-400 w-full h-full rounded-sm" />
+              <div key={i} className="bg-red-400 w-full h-full rounded-sm" />
             ))}
           </div>
         );
@@ -50,7 +60,7 @@ const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
         return (
           <div className="flex flex-col w-14 h-16 gap-1">
             {[...Array(2)].map((_, i) => (
-              <div key={i} className="bg-gray-400 flex-1 rounded-sm" />
+              <div key={i} className="bg-red-400 flex-1 rounded-sm" />
             ))}
           </div>
         );
@@ -58,7 +68,7 @@ const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
         return (
           <div className="flex w-16 h-14 gap-0.5">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-gray-400 flex-1 rounded-sm" />
+              <div key={i} className="bg-red-400 flex-1 rounded-sm" />
             ))}
           </div>
         );
@@ -66,7 +76,7 @@ const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
         return (
           <div className="flex flex-col w-14 h-16 gap-1">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="bg-gray-400 flex-1 rounded-sm" />
+              <div key={i} className="bg-red-400 flex-1 rounded-sm" />
             ))}
           </div>
         );

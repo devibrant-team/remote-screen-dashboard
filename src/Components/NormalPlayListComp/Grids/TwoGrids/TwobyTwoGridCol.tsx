@@ -1,11 +1,7 @@
-import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  setSlots,
-  updateSlotMedia,
-  updateSlotScale,
-} from "../../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
+import { useInitGrid } from "../useInitGrid"; // ✅ custom hook
 import { TwoByTwoColConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
+import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 
 const getScaleClass = (scale: string) => {
@@ -25,24 +21,56 @@ const getScaleClass = (scale: string) => {
 
 const TwobyTwoGridCol = () => {
   const dispatch = useDispatch();
-  const TwoTemplate = useMemo(() => TwoByTwoColConfig, []);
-  const slots = useSelector((state: RootState) => state.normalplaylist.slots);
-console.log(slots)
-  useEffect(() => {
-    if (TwoTemplate) {
-      const preparedSlots = TwoTemplate.slots.map((slot) => ({
-        ...slot,
-        media: null,
-        mediaType: undefined,
-      }));
-      dispatch(setSlots(preparedSlots));
-    }
-  }, [TwoTemplate, dispatch]);
 
-  const handleMediaUpload = (index: number, file: File) => {
+  const selectedSlideIndex = useSelector(
+    (state: RootState) => state.playlist.selectedSlideIndex
+  );
+
+  const slide = useSelector((state: RootState) =>
+    selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
+  );
+
+  const templateSlots = TwoByTwoColConfig.slots;
+
+  // ✅ auto init grid if needed
+  useInitGrid(slide, selectedSlideIndex, "twobyTwoCol", templateSlots);
+
+  const slots = slide?.slots || [];
+
+  const handleMediaUpload = (slotIndex: number, file: File) => {
+    if (selectedSlideIndex === null) return;
+
     const mediaUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith("video") ? "video" : "image";
-    dispatch(updateSlotMedia({ index, media: mediaUrl, mediaType }));
+
+    dispatch(
+      updateSlotInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex,
+        media: mediaUrl,
+        mediaType,
+      })
+    );
+  };
+
+  const handleScaleChange = (
+    slotIndex: number,
+    scale: "fit" | "fill" | "blur" | "original"
+  ) => {
+    if (selectedSlideIndex === null || !slide) return;
+
+    const slot = slide.slots.find((s) => s.index === slotIndex);
+    if (!slot || !slot.media || !slot.mediaType) return;
+
+    dispatch(
+      updateSlotInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex,
+        media: slot.media,
+        mediaType: slot.mediaType,
+        scale,
+      })
+    );
   };
 
   return (
@@ -52,7 +80,7 @@ console.log(slots)
           {slots.map((slot) => (
             <div
               key={slot.index}
-              className="flex-1 relative group bg-black  overflow-hidden"
+              className="flex-1 relative group bg-white overflow-hidden"
             >
               {slot.media ? (
                 slot.mediaType === "video" ? (
@@ -94,24 +122,18 @@ console.log(slots)
                 </label>
               )}
 
-              {/* Hover overlay */}
+              {/* Hover Overlay */}
               {slot.media && (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
                   <select
                     value={slot.scale}
                     onChange={(e) =>
-                      dispatch(
-                        updateSlotScale({
-                          index: slot.index,
-                          scale: e.target.value as
-                            | "fit"
-                            | "fill"
-                            | "blur"
-                            | "original",
-                        })
+                      handleScaleChange(
+                        slot.index,
+                        e.target.value as "fit" | "fill" | "blur" | "original"
                       )
                     }
-                    className="p-2 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-400 font-bold"
+                    className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
                   >
                     <option value="fit">🖼️ Fit (Contain)</option>
                     <option value="fill">📱 Fill (Cover)</option>

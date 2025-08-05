@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Upload, Plus, Layers } from "lucide-react";
+import { Upload, Layers } from "lucide-react";
 import { useDispatch } from "react-redux";
 import {
   setPlaylistName,
-  setDuration,
-} from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
+} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
+
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -41,21 +41,7 @@ const Tabbarplaylist = () => {
                 />
               </div>
 
-              <div className="space-y-1">
-                <label
-                  htmlFor="duration"
-                  className="text-base lg:text-lg font-semibold"
-                >
-                  Duration (seconds)
-                </label>
-                <input
-                  id="duration"
-                  type="number"
-                  defaultValue={10}
-                  onChange={(e) => dispatch(setDuration(Number(e.target.value)))}
-                  className="w-full p-2 rounded-md text-black border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
-                />
-              </div>
+              
 
               <div className="space-y-2">
                 <h4 className="text-base lg:text-lg font-semibold">Media</h4>
@@ -70,7 +56,7 @@ const Tabbarplaylist = () => {
                   onClick={() => setShowGridSelector(true)} // ✅ open modal
                   className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
                 >
-                  <Plus size={18} /> Add Template
+                  Choose Collage 
                 </button>
 
                 <button

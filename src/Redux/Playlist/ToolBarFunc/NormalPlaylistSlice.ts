@@ -3,6 +3,7 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { NormalPlaylistState } from "./SlideNormalPlaylistSlice";
+import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 
 interface PlaylistState {
   name: string;
@@ -12,7 +13,7 @@ interface PlaylistState {
 }
 
 const initialState: PlaylistState = {
-  name: "",
+  name: "HEHHE",
   type: "Normal",
   slides: [],
   selectedSlideIndex: null,
@@ -36,11 +37,49 @@ const playlistSlice = createSlice({
 
     updateSlideAtIndex: (
       state,
-      action: PayloadAction<{ index: number; updatedSlide: NormalPlaylistState }>
+      action: PayloadAction<{
+        index: number;
+        updatedSlide: NormalPlaylistState;
+      }>
     ) => {
       const { index, updatedSlide } = action.payload;
       if (index >= 0 && index < state.slides.length) {
         state.slides[index] = updatedSlide;
+      }
+    },
+    updateSlideSlots: (
+      state,
+      action: PayloadAction<{ index: number; slots: GridSlotConfig[] }>
+    ) => {
+      state.slides[action.payload.index].slots = action.payload.slots;
+    },
+
+    updateSlideGrid: (
+      state,
+      action: PayloadAction<{ index: number; selectedGrid: string }>
+    ) => {
+      state.slides[action.payload.index].selectedGrid =
+        action.payload.selectedGrid;
+    },
+
+    updateSlotInSlide: (
+      state,
+      action: PayloadAction<{
+        slideIndex: number;
+        slotIndex: number;
+        media: string;
+        mediaType: "image" | "video";
+        scale?: GridSlotConfig["scale"];
+      }>
+    ) => {
+      const slide = state.slides[action.payload.slideIndex];
+      const slot = slide?.slots.find(
+        (s) => s.index === action.payload.slotIndex
+      );
+      if (slot) {
+        slot.media = action.payload.media;
+        slot.mediaType = action.payload.mediaType;
+        if (action.payload.scale) slot.scale = action.payload.scale;
       }
     },
 
@@ -67,6 +106,9 @@ export const {
   updateSlideAtIndex,
   removeSlideAtIndex,
   clearPlaylist,
+  updateSlideSlots,
+  updateSlotInSlide,
+  updateSlideGrid,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;

@@ -1,11 +1,7 @@
-import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  setSlots,
-  updateSlotMedia,
-  updateSlotScale,
-} from "../../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
+import { useInitGrid } from "../useInitGrid";
 import { FourImageGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
+import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 
 const getScaleClass = (scale: string) => {
@@ -25,35 +21,68 @@ const getScaleClass = (scale: string) => {
 
 const FourGrid = () => {
   const dispatch = useDispatch();
-  const FourTemplate = useMemo(() => FourImageGridConfig, []);
-  const slots = useSelector((state: RootState) => state.normalplaylist.slots);
 
-  useEffect(() => {
-    if (FourTemplate) {
-      const preparedSlots = FourTemplate.slots.map((slot) => ({
-        ...slot,
-        media: null,
-        mediaType: undefined,
-      }));
-      dispatch(setSlots(preparedSlots));
-    }
-  }, [FourTemplate, dispatch]);
+  const selectedSlideIndex = useSelector(
+    (state: RootState) => state.playlist.selectedSlideIndex
+  );
 
-  const handleMediaUpload = (index: number, file: File) => {
+  const slide = useSelector((state: RootState) =>
+    selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
+  );
+
+  const templateSlots = FourImageGridConfig.slots;
+
+  // ✅ Auto initialize if needed
+  useInitGrid(slide, selectedSlideIndex, "fourGrid", templateSlots);
+
+  const slots = slide?.slots || [];
+
+  const handleMediaUpload = (slotIndex: number, file: File) => {
+    if (selectedSlideIndex === null) return;
+
     const mediaUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith("video") ? "video" : "image";
-    dispatch(updateSlotMedia({ index, media: mediaUrl, mediaType }));
+
+    dispatch(
+      updateSlotInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex,
+        media: mediaUrl,
+        mediaType,
+      })
+    );
+  };
+
+  const handleScaleChange = (
+    slotIndex: number,
+    scale: "fit" | "fill" | "blur" | "original"
+  ) => {
+    if (selectedSlideIndex === null || !slide) return;
+
+    const slot = slide.slots.find((s) => s.index === slotIndex);
+    if (!slot || !slot.media || !slot.mediaType) return;
+
+    dispatch(
+      updateSlotInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex,
+        media: slot.media,
+        mediaType: slot.mediaType,
+        scale,
+      })
+    );
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto my-10">
       {slots.length === 4 && (
-        <div className="grid grid-cols-2 grid-rows-2  w-full aspect-square max-w-[700px] mx-auto rounded-xl overflow-hidden">
+        <div className="grid grid-cols-2 grid-rows-2 w-full aspect-square max-w-[700px] mx-auto rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
-              className="relative group bg-black  overflow-hidden aspect-square w-full h-full"
+              className="relative group bg-black overflow-hidden aspect-square w-full h-full"
             >
+              {/* MEDIA */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
                   <video
@@ -73,9 +102,7 @@ const FourGrid = () => {
                     <img
                       src={slot.media}
                       alt={slot.name}
-                      className={`${getScaleClass(
-                        slot.scale
-                      )} transition-transform duration-200 group-hover:scale-105`}
+                      className={`${getScaleClass(slot.scale)} transition-transform duration-200 group-hover:scale-105`}
                     />
                   </div>
                 )
@@ -94,23 +121,18 @@ const FourGrid = () => {
                 </label>
               )}
 
+              {/* CONTROLS */}
               {slot.media && (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
                   <select
                     value={slot.scale}
                     onChange={(e) =>
-                      dispatch(
-                        updateSlotScale({
-                          index: slot.index,
-                          scale: e.target.value as
-                            | "fit"
-                            | "fill"
-                            | "blur"
-                            | "original",
-                        })
+                      handleScaleChange(
+                        slot.index,
+                        e.target.value as "fit" | "fill" | "blur" | "original"
                       )
                     }
-                    className="p-2 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-400 font-bold"
+                    className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
                   >
                     <option value="fit">🖼️ Fit (Contain)</option>
                     <option value="fill">📱 Fill (Cover)</option>

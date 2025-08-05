@@ -1,11 +1,7 @@
-import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  setSlots,
-  updateSlotMedia,
-  updateSlotScale,
-} from "../../../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
+import { useInitGrid } from "../useInitGrid"; // ✅ shared custom hook
 import { ThreeColGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
+import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 
 const getScaleClass = (scale: string) => {
@@ -25,36 +21,68 @@ const getScaleClass = (scale: string) => {
 
 const ThreeInCol = () => {
   const dispatch = useDispatch();
-  const ThreeTemplate = useMemo(() => ThreeColGridConfig, []);
-  const slots = useSelector((state: RootState) => state.normalplaylist.slots);
 
-  useEffect(() => {
-    if (ThreeTemplate) {
-      const preparedSlots = ThreeTemplate.slots.map((slot) => ({
-        ...slot,
-        media: null,
-        mediaType: undefined,
-      }));
-      dispatch(setSlots(preparedSlots));
-    }
-  }, [ThreeTemplate, dispatch]);
+  const selectedSlideIndex = useSelector(
+    (state: RootState) => state.playlist.selectedSlideIndex
+  );
 
-  const handleMediaUpload = (index: number, file: File) => {
+  const slide = useSelector((state: RootState) =>
+    selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
+  );
+
+  const templateSlots = ThreeColGridConfig.slots;
+
+  // ✅ shared logic: initialize once if uninitialized
+  useInitGrid(slide, selectedSlideIndex, "threeCol", templateSlots);
+
+  const slots = slide?.slots || [];
+
+  const handleMediaUpload = (slotIndex: number, file: File) => {
+    if (selectedSlideIndex === null) return;
+
     const mediaUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith("video") ? "video" : "image";
-    dispatch(updateSlotMedia({ index, media: mediaUrl, mediaType }));
+
+    dispatch(
+      updateSlotInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex,
+        media: mediaUrl,
+        mediaType,
+      })
+    );
+  };
+
+  const handleScaleChange = (
+    slotIndex: number,
+    scale: "fit" | "fill" | "blur" | "original"
+  ) => {
+    if (selectedSlideIndex === null || !slide) return;
+
+    const slot = slide.slots.find((s) => s.index === slotIndex);
+    if (!slot || !slot.media || !slot.mediaType) return;
+
+    dispatch(
+      updateSlotInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex,
+        media: slot.media,
+        mediaType: slot.mediaType,
+        scale,
+      })
+    );
   };
 
   return (
     <div className="w-full max-w-4xl mx-auto my-10">
       {slots.length === 3 && (
-        <div className="w-full h-[80vh] max-h-[850px] flex flex-col   rounded-xl overflow-hidden">
+        <div className="w-full h-[80vh] max-h-[850px] flex flex-col rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
-              className="flex-1 relative group bg-black  overflow-hidden"
+              className="flex-1 relative group bg-black overflow-hidden"
             >
-              {/* Media Display */}
+              {/* Media Preview */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
                   <video
@@ -95,21 +123,15 @@ const ThreeInCol = () => {
                 </label>
               )}
 
-              {/* Hover Overlay Controls */}
+              {/* Hover Controls */}
               {slot.media && (
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
                   <select
                     value={slot.scale}
                     onChange={(e) =>
-                      dispatch(
-                        updateSlotScale({
-                          index: slot.index,
-                          scale: e.target.value as
-                            | "fit"
-                            | "fill"
-                            | "blur"
-                            | "original",
-                        })
+                      handleScaleChange(
+                        slot.index,
+                        e.target.value as "fit" | "fill" | "blur" | "original"
                       )
                     }
                     className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
