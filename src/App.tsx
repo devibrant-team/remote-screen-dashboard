@@ -1,39 +1,31 @@
-
-// import LicenseKey from './../LicenseKey/LicenseKey';
-// import { useSelector } from 'react-redux';
-// import type { RootState } from '../store';
-// import LoginScreen from './Screens/AuthScreens/LoginScreen';
-// import PlayList from './Screens/Playlist/Normal/PlayList';
-
-// function App() {
-//   const machineId: string | null = useSelector((state: RootState) => state.machine.machineId);
-
-//   return (
-//     <>
-//       {/* <LicenseKey />
-//      <LoginScreen/> */}
-//      <PlayList/>
-//     </>
-//   );
-// }
-
-// export default App;
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
-import LicenseKey from './../LicenseKey/LicenseKey';
-import LoginScreen from './Screens/AuthScreens/LoginScreen';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import ToolBar from './layout/Tabbar';
+import MediaContent from './Screens/MediaContent/MediaContent';
 import PlayList from './Screens/Playlist/Normal/PlayList';
-import Test from './Screens/Test';
 import CreateInteractivePlaylist from './Components/InteractivePlaylist/InteractivePlaylist';
+import LoginScreen from './Screens/AuthScreens/LoginScreen';
+import LicenseKey from './../LicenseKey/LicenseKey';
+import Test from './Screens/Test';
 
 function App() {
-  
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Test />} />
-        <Route path="/playlist" element={<PlayList />} />
-        {/* Add more routes as needed */}
-      </Routes>
+      <div className="flex">
+        {/* Sidebar always visible */}
+        <ToolBar />
+
+        {/* Main content area */}
+        <div className="flex-1 bg-[var(--white-200)]  p-4 w-full">
+          <Routes>
+            <Route path="/mediacontent" element={<MediaContent />} />
+            <Route path="/playlist" element={<PlayList />} />
+            <Route path="/interactive" element={<CreateInteractivePlaylist />} />
+            <Route path="/login" element={<LoginScreen />} />
+            <Route path="/license" element={<LicenseKey />} />
+            <Route path="/test" element={<Test />} />
+          </Routes>
+        </div>
+      </div>
     </Router>
   );
 }
