@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import { useDispatch } from "react-redux";
-import { savePlaylist} from '../../Redux/Playlist/ToolBarFunc/interactivePlaylist/playlistInteractiveSlice'
+import { savePlaylist} from '../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice';
 import ImageSlider from "./ImageSlider";
 
 interface ImagePreview {

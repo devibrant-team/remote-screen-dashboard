@@ -30,7 +30,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<CreateInteractivePlaylist />} />
+        <Route path="/" element={<Test />} />
         <Route path="/playlist" element={<PlayList />} />
         {/* Add more routes as needed */}
       </Routes>
