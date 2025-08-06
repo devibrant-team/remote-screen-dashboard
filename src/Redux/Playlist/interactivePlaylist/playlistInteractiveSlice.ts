@@ -11,6 +11,7 @@ interface PlaylistData {
   type: string;
   numberSlide: number;
   slides: Slide[];
+  layoutId?: number;
 }
 
 interface PlaylistState {
@@ -27,11 +28,33 @@ const playlistInteractiveSlice = createSlice({
   name: "playlistinteractive",
   initialState,
   reducers: {
+    // Save full playlist
     savePlaylist: (state, action: PayloadAction<PlaylistData>) => {
       console.log("🎧 Saved Playlist Data:", action.payload);
       state.playlistData = action.payload;
       localStorage.setItem("playlistinteractive", JSON.stringify(action.payload));
     },
+
+    // ✅ NEW: Save only layoutId
+    saveLayoutId: (state, action: PayloadAction<number>) => {
+      console.log("💾 Saved layoutId:", action.payload);
+
+      if (!state.playlistData) {
+        state.playlistData = {
+          Playlist_Name: "",
+          type: "Interactive",
+          numberSlide: 0,
+          slides: [],
+          layoutId: action.payload,
+        };
+      } else {
+        state.playlistData.layoutId = action.payload;
+      }
+
+      localStorage.setItem("playlistinteractive", JSON.stringify(state.playlistData));
+    },
+
+    // Clear all
     clearPlaylist: (state) => {
       console.log("🧹 Playlist cleared");
       state.playlistData = null;
@@ -40,5 +63,5 @@ const playlistInteractiveSlice = createSlice({
   },
 });
 
-export const { savePlaylist, clearPlaylist } = playlistInteractiveSlice.actions;
+export const { savePlaylist, saveLayoutId, clearPlaylist } = playlistInteractiveSlice.actions;
 export default playlistInteractiveSlice.reducer;
