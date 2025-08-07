@@ -44,9 +44,9 @@ const PlaylistTypeModal = () => {
   const handleCreateAndNavigate = () => {
     if (!firstSlideCreated) {
       const defaultSlide = {
-        name: "",
+
         duration: 10,
-        scale: "Original Scale",
+
         selectedGrid: "default",
         slots: OneImageGridConfig.slots.map((slot) => ({
           ...slot,

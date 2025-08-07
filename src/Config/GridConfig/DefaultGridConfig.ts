@@ -1,10 +1,9 @@
 export type GridSlotConfig = {
   mediaType?: "image" | "video"; // <== NEW
   media?: string | null; // URL of the image or video
-  name: string;
   scale: "fit" | "fill" | "stretch" | "blur" | "original";
   index: number;
-
+ file?: File | null;   
 };
 
 export type GridLayoutConfig = {
@@ -20,7 +19,7 @@ export const OneImageGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
-      name: "Media 1",
+
       mediaType: "image",
       media: null,
       scale: "fit",
@@ -37,14 +36,14 @@ export const TwoByTwoConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
-      name: "Media 1",
+ 
       mediaType: "image",
       media: null,
       scale: "fit",
       index: 0,
     },
     {
-      name: "Media 2",
+    
       mediaType: "image",
       media: null,
       scale: "fill",
@@ -60,14 +59,13 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
-      name: "Media 1",
+
       mediaType: "image",
       media: null,
       scale: "fit",
       index: 0,
     },
     {
-      name: "Media 2",
       mediaType: "image",
       media: null,
       scale: "fill",
@@ -82,21 +80,21 @@ export const ThreeColGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
-      name: "Media 1",
+
       mediaType: "image",
       media: null,
       scale: "fit",
       index: 0,
     },
     {
-      name: "Media 2",
+  
       mediaType: "image",
       media: null,
       scale: "fill",
       index: 1,
     },
     {
-      name: "Media 3",
+
       mediaType: "image",
       media: null,
       scale: "fill",
@@ -110,21 +108,21 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
-      name: "Media 1",
+
       mediaType: "image",
       media: null,
       scale: "fit",
       index: 0,
     },
     {
-      name: "Media 2",
+ 
       mediaType: "image",
       media: null,
       scale: "fill",
       index: 1,
     },
     {
-      name: "Media 3",
+
       mediaType: "image",
       media: null,
       scale: "fill",
@@ -139,28 +137,28 @@ export const FourImageGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
-      name: "Media 1",
+ 
       mediaType: "image",
       media: null,
       scale: "fit",
       index: 0,
     },
     {
-      name: "Media 2",
+    
       mediaType: "image",
       media: null,
       scale: "fill",
       index: 1,
     },
     {
-      name: "Media 3",
+
       mediaType: "image",
       media: null,
       scale: "fill",
       index: 2,
     },
     {
-      name: "Media 4",
+
       mediaType: "image",
       media: null,
       scale: "fill",

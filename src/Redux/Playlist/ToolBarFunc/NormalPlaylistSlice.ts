@@ -8,7 +8,7 @@ import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfi
 export interface PlaylistState {
   id: number;
   name: string;
-  type: "Normal"; // future-proofing if you add other types later
+  type: number; // future-proofing if you add other types later
   slides: NormalPlaylistState[];
   selectedSlideIndex: number | null;
 }
@@ -16,7 +16,7 @@ export interface PlaylistState {
 const initialState: PlaylistState = {
   id: 1,
   name: "HEHHE",
-  type: "Normal",
+  type: 1,
   slides: [],
   selectedSlideIndex: null,
 };
@@ -55,15 +55,18 @@ const playlistSlice = createSlice({
     ) => {
       state.slides[action.payload.index].slots = action.payload.slots;
     },
-
     updateSlideGrid: (
       state,
-      action: PayloadAction<{ index: number; selectedGrid: string }>
+      action: PayloadAction<{
+        index: number;
+        selectedGrid: string;
+        grid_style: number;
+      }>
     ) => {
-      state.slides[action.payload.index].selectedGrid =
-        action.payload.selectedGrid;
+      const { index, selectedGrid, grid_style } = action.payload;
+      state.slides[index].selectedGrid = selectedGrid;
+      state.slides[index].grid_style = grid_style;
     },
-
     updateSlotInSlide: (
       state,
       action: PayloadAction<{
@@ -72,6 +75,7 @@ const playlistSlice = createSlice({
         media: string;
         mediaType: "image" | "video";
         scale?: GridSlotConfig["scale"];
+         file?: File;
       }>
     ) => {
       const slide = state.slides[action.payload.slideIndex];

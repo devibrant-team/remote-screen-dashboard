@@ -3,6 +3,7 @@ import { useInitGrid } from "../useInitGrid";
 import { FourImageGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
+import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -27,31 +28,19 @@ const FourGrid = () => {
   );
 
   const slide = useSelector((state: RootState) =>
-    selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
+    selectedSlideIndex !== null
+      ? state.playlist.slides[selectedSlideIndex]
+      : null
   );
 
   const templateSlots = FourImageGridConfig.slots;
 
   // ✅ Auto initialize if needed
-  useInitGrid(slide, selectedSlideIndex, "fourGrid", templateSlots);
+  useInitGrid(slide, selectedSlideIndex, "fourGrid", templateSlots ,FourImageGridConfig);
 
   const slots = slide?.slots || [];
 
-  const handleMediaUpload = (slotIndex: number, file: File) => {
-    if (selectedSlideIndex === null) return;
-
-    const mediaUrl = URL.createObjectURL(file);
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    dispatch(
-      updateSlotInSlide({
-        slideIndex: selectedSlideIndex,
-        slotIndex,
-        media: mediaUrl,
-        mediaType,
-      })
-    );
-  };
+  const handleMediaUpload = useHandleMediaUpload(selectedSlideIndex);
 
   const handleScaleChange = (
     slotIndex: number,
@@ -102,7 +91,9 @@ const FourGrid = () => {
                     <img
                       src={slot.media}
                       alt={slot.name}
-                      className={`${getScaleClass(slot.scale)} transition-transform duration-200 group-hover:scale-105`}
+                      className={`${getScaleClass(
+                        slot.scale
+                      )} transition-transform duration-200 group-hover:scale-105`}
                     />
                   </div>
                 )

@@ -4,6 +4,7 @@ import type { RootState } from "../../../../store";
 import {
   addSlide,
   setSelectedSlideIndex,
+  updateSlideAtIndex, // ✅ Make sure this exists
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 
@@ -14,19 +15,18 @@ const NormalSlider = () => {
     (state: RootState) => state.playlist.slides
   );
   const playlist = useSelector((state: RootState) => state.playlist);
-  useEffect(() => {
-    console.log("📦 Full Playlist Structure:", playlist);
-  }, [playlist]);
 
   const selectedSlide = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
-  console.log("HEHE", selectedSlide);
-  // Add current slide to playlist
+
+  useEffect(() => {
+    console.log("📦 Full Playlist Structure:", playlist);
+  }, [playlist]);
+
   const handleAddSlide = () => {
     const defaultSlide = {
       duration: 10,
-      scale: "Original Scale",
       selectedGrid: "default",
       slots: OneImageGridConfig.slots.map((slot) => ({
         ...slot,
@@ -35,21 +35,21 @@ const NormalSlider = () => {
       })),
     };
 
-    // Get the index of the new slide BEFORE adding it
     const newIndex = playlistSlides.length;
-
     dispatch(addSlide(defaultSlide));
-    dispatch(setSelectedSlideIndex(newIndex)); // ✅ Select the new one
+    dispatch(setSelectedSlideIndex(newIndex));
   };
 
-  // Auto-select the first slide by default
+  const handleDurationChange = (index: number, newDuration: number) => {
+    const updatedSlide = { ...playlistSlides[index], duration: newDuration };
+    dispatch(updateSlideAtIndex({ index, updatedSlide }));
+  };
+
   useEffect(() => {
     if (playlistSlides.length > 0 && selectedSlide === null) {
       dispatch(setSelectedSlideIndex(0));
     }
   }, [playlistSlides, selectedSlide, dispatch]);
-
-  // Logging for debugging
 
   return (
     <div className="p-4">
@@ -62,13 +62,12 @@ const NormalSlider = () => {
         Add Current Slide to Playlist
       </button>
 
-      {/* Slide Thumbnails Preview */}
       <div className="flex gap-4 flex-wrap">
         {playlistSlides.map((slide, index) => (
           <div
             key={index}
             onClick={() => dispatch(setSelectedSlideIndex(index))}
-            className={`cursor-pointer rounded-lg border-4 transition-all duration-200 ${
+            className={`cursor-pointer rounded-lg border-4 p-2 transition-all duration-200 ${
               selectedSlide === index ? "border-blue-600" : "border-transparent"
             }`}
           >
@@ -91,7 +90,26 @@ const NormalSlider = () => {
                 </div>
               )}
             </div>
-            <p className="text-center text-sm mt-1 font-medium">{index + 1}</p>
+
+            <p className="text-center text-sm mt-1 font-medium">
+              Slide {index + 1}
+            </p>
+
+            {/* 🔢 Duration input */}
+            <div className="mt-1">
+              <label className="block text-xs text-gray-600 text-center">
+                Duration (sec)
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={slide.duration}
+                onChange={(e) =>
+                  handleDurationChange(index, Number(e.target.value))
+                }
+                className="w-full text-center border rounded p-1 text-sm"
+              />
+            </div>
           </div>
         ))}
       </div>

@@ -3,6 +3,7 @@ import { updateSlideGrid } from "../../../Redux/Playlist/ToolBarFunc/NormalPlayl
 import type { RootState } from "../../../../store";
 
 
+
 type GridSelectorProps = {
   onClose: () => void;
 };
@@ -12,21 +13,25 @@ const selectedSlideIndex = useSelector(
   (state: RootState) => state.playlist.selectedSlideIndex
 );
 
-const handleSelect = (gridKey: string) => {
+const handleSelect = (gridKey: string, gridStyleId: number) => {
   if (selectedSlideIndex !== null) {
-    dispatch(updateSlideGrid({ index: selectedSlideIndex, selectedGrid: gridKey }));
+    dispatch(updateSlideGrid({
+      index: selectedSlideIndex,
+      selectedGrid: gridKey,
+      grid_style: gridStyleId,
+    }));
   }
   onClose();
 };
 
 
   const gridOptions = [
-    { key: "default", label: "Default" },
-    { key: "twobyTwo", label: "2x2" },
-    { key: "twobyTwoCol", label: "2Col" },
-    { key: "threeRow", label: "3Row" },
-    { key: "threeCol", label: "3Col" },
-    { key: "fourGrid", label: "4Grid" },
+    { id:1 ,key: "default", label: "Default" },
+    { id:2 , key: "twobyTwo", label: "2x2" },
+    { id:3 , key: "twobyTwoCol", label: "2Col" },
+    { id:4 , key: "threeRow", label: "3Row" },
+    { id:5 , key: "threeCol", label: "3Col" },
+    { id:6 , key: "fourGrid", label: "4Grid" },
   ];
 
   const renderGridPreview = (key: string) => {
@@ -99,7 +104,8 @@ const handleSelect = (gridKey: string) => {
               {gridOptions.map((grid) => (
                 <button
                   key={grid.key}
-                  onClick={() => handleSelect(grid.key)}
+                 onClick={() => handleSelect(grid.key, grid.id)}
+
                   className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition"
                 >
                   {renderGridPreview(grid.key)}

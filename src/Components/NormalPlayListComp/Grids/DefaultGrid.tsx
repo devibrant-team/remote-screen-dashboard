@@ -1,8 +1,11 @@
 import { useDispatch, useSelector } from "react-redux";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-import { updateSlotInSlide } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import {
+  updateSlideAtIndex,
+  updateSlotInSlide,
+} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { useInitGrid } from "./useInitGrid";
-import type { RootState } from "../../../../store";
+import { store, type RootState } from "../../../../store";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -31,21 +34,70 @@ const DefaultGrid = () => {
   );
 
   const templateSlots = OneImageGridConfig.slots;
-  useInitGrid(slide, selectedSlideIndex, "default", templateSlots);
+  useInitGrid(slide, selectedSlideIndex, "default", templateSlots , OneImageGridConfig);
 
   const handleMediaUpload = (slotIndex: number, file: File) => {
     if (selectedSlideIndex === null) return;
+
     const mediaUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith("video") ? "video" : "image";
 
-    dispatch(
-      updateSlotInSlide({
-        slideIndex: selectedSlideIndex,
-        slotIndex,
-        media: mediaUrl,
-        mediaType,
-      })
-    );
+    if (mediaType === "video") {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.src = mediaUrl;
+
+      video.onloadedmetadata = () => {
+        const duration = Math.round(video.duration);
+
+        console.log("🎬 Video Duration:", duration);
+
+        // 1. Update slot
+        dispatch(
+          updateSlotInSlide({
+            slideIndex: selectedSlideIndex,
+            slotIndex,
+            media: mediaUrl,
+            mediaType,
+          })
+        );
+
+        // 2. Get updated slide from store BEFORE updating again
+        const latestSlide = {
+          ...store.getState().playlist.slides[selectedSlideIndex], // get latest
+          duration,
+        };
+
+        dispatch(
+          updateSlideAtIndex({
+            index: selectedSlideIndex,
+            updatedSlide: latestSlide,
+          })
+        );
+      };
+    } else {
+      dispatch(
+        updateSlotInSlide({
+          slideIndex: selectedSlideIndex,
+          slotIndex,
+          media: mediaUrl,
+          mediaType,
+        })
+      );
+
+      // Same fix for image: re-pull slide
+      const latestSlide = {
+        ...store.getState().playlist.slides[selectedSlideIndex],
+        duration: 10,
+      };
+
+      dispatch(
+        updateSlideAtIndex({
+          index: selectedSlideIndex,
+          updatedSlide: latestSlide,
+        })
+      );
+    }
   };
 
   const handleScaleChange = (
@@ -96,7 +148,6 @@ const DefaultGrid = () => {
                     )}
                     <img
                       src={slot.media}
-                      alt={slot.name}
                       className={`${getScaleClass(
                         slot.scale
                       )} transition-transform duration-200 group-hover:scale-105`}

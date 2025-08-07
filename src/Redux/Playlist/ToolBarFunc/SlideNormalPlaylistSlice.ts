@@ -7,17 +7,16 @@ import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfi
 export interface NormalPlaylistState {
 
   duration: number;
-  scale: string;
   slots: GridSlotConfig[];
   selectedGrid: string;
+   grid_style?: number;
 }
 
 const initialState: NormalPlaylistState = {
-
   duration: 10,
-  scale: "Original Scale",
   slots: [],
   selectedGrid: "default",
+  
 };
 
 const NormalPlaylistSlice = createSlice({
@@ -31,9 +30,7 @@ const NormalPlaylistSlice = createSlice({
     setDuration: (state, action: PayloadAction<number>) => {
       state.duration = action.payload;
     },
-    setScale: (state, action: PayloadAction<string>) => {
-      state.scale = action.payload;
-    },
+ 
     setSlots: (state, action: PayloadAction<GridSlotConfig[]>) => {
       state.slots = action.payload;
     },
@@ -68,7 +65,6 @@ const NormalPlaylistSlice = createSlice({
 export const {
 
   setDuration,
-  setScale,
   setSlots,
   updateSlotMedia,
   updateSlotScale,

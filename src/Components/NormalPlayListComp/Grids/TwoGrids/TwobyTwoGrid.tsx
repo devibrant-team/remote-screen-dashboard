@@ -1,11 +1,10 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useInitGrid } from "../useInitGrid";
 import { TwoByTwoConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
-import {
-  updateSlotInSlide,
-} from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 
+import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -27,30 +26,17 @@ const TwobyTwoGrid = () => {
     (state: RootState) => state.playlist.selectedSlideIndex
   );
   const slide = useSelector((state: RootState) =>
-    selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
+    selectedSlideIndex !== null
+      ? state.playlist.slides[selectedSlideIndex]
+      : null
   );
 
   const templateSlots = TwoByTwoConfig.slots;
-  useInitGrid(slide, selectedSlideIndex, "twobyTwo", templateSlots);
+  useInitGrid(slide, selectedSlideIndex, "twobyTwo", templateSlots ,TwoByTwoConfig);
 
   const slots = slide?.slots || [];
 
-  const handleMediaUpload = (slotIndex: number, file: File) => {
-    if (selectedSlideIndex === null) return;
-
-    const mediaUrl = URL.createObjectURL(file);
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    dispatch(
-      updateSlotInSlide({
-        slideIndex: selectedSlideIndex,
-        slotIndex,
-        media: mediaUrl,
-        mediaType,
-      })
-    );
-  };
-
+  const handleMediaUpload = useHandleMediaUpload(selectedSlideIndex);
   const handleScaleChange = (
     slotIndex: number,
     scale: "fit" | "fill" | "blur" | "original"
@@ -80,7 +66,11 @@ const TwobyTwoGrid = () => {
         >
           {slot.media ? (
             slot.mediaType === "video" ? (
-              <video src={slot.media} controls className="w-full h-full object-cover" />
+              <video
+                src={slot.media}
+                controls
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="w-full h-full relative flex items-center justify-center">
                 {slot.scale === "blur" && (

@@ -3,6 +3,7 @@ import { useInitGrid } from "../useInitGrid";
 import { ThreeRowGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
+import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -35,25 +36,11 @@ const ThreeInRow = () => {
   const templateSlots = ThreeRowGridConfig.slots;
 
   // 🧠 auto init if not yet done
-  useInitGrid(slide, selectedSlideIndex, "threeRow", templateSlots);
+  useInitGrid(slide, selectedSlideIndex, "threeRow", templateSlots ,ThreeRowGridConfig);
 
   const slots = slide?.slots || [];
 
-  const handleMediaUpload = (slotIndex: number, file: File) => {
-    if (selectedSlideIndex === null) return;
-
-    const mediaUrl = URL.createObjectURL(file);
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    dispatch(
-      updateSlotInSlide({
-        slideIndex: selectedSlideIndex,
-        slotIndex,
-        media: mediaUrl,
-        mediaType,
-      })
-    );
-  };
+  const handleMediaUpload = useHandleMediaUpload(selectedSlideIndex);
 
   const handleScaleChange = (
     slotIndex: number,
