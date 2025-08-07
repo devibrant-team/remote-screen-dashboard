@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import { useDispatch } from "react-redux";
-import { savePlaylist} from '../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice';
+import { savePlaylist } from "../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 import ImageSlider from "./ImageSlider";
 
 interface ImagePreview {
@@ -8,7 +8,13 @@ interface ImagePreview {
   url: string;
 }
 
-export default function CreateInteractivePlaylist() {
+interface CreateInteractivePlaylistProps {
+  onCloseAll: () => void;
+}
+
+export default function CreateInteractivePlaylist({
+  onCloseAll,
+}: CreateInteractivePlaylistProps) {
   const [playlistName, setPlaylistName] = useState<string>("");
   const [images, setImages] = useState<ImagePreview[]>([]);
   const dispatch = useDispatch();
@@ -65,6 +71,7 @@ export default function CreateInteractivePlaylist() {
     };
     dispatch(savePlaylist(structuredData));
     alert("Playlist saved to Redux!");
+    onCloseAll();
   };
 
   useEffect(() => {
@@ -75,9 +82,9 @@ export default function CreateInteractivePlaylist() {
   }, [images]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-10">
-      <div className="w-full max-w-3xl bg-white rounded-2xl shadow-lg p-6 sm:p-8">
-        <h2 className="text-2xl font-semibold mb-6 text-gray-800 text-center">
+    <div className="fixed inset-0 z-50 w-screen h-screen bg-white overflow-y-auto overflow-x-auto ">
+      <div className="bg-white w-full max-w-4xl mx-5  sm:mx-auto rounded-2xl p-6 sm:p-8 my-10">
+        <h2 className="text-3xl font-bold mb-6 text-gray-800 text-center">
           Create Interactive Playlist
         </h2>
 
@@ -141,7 +148,10 @@ export default function CreateInteractivePlaylist() {
         )}
 
         <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6">
-          <button className="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 text-gray-800 hover:bg-gray-100">
+          <button
+            onClick={onCloseAll}
+            className="w-full sm:w-auto px-4 py-2 rounded-md border border-gray-300 text-gray-800 hover:bg-gray-100"
+          >
             Cancel
           </button>
           <button
