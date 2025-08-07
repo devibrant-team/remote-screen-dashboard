@@ -49,7 +49,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
   };
 
   return (
-    <div className="mb-6 flex gap-4 overflow-x-auto pb-2 scroll-smooth hide-scrollbar">
+    <div className="mb-6 flex gap-4 overflow-x-auto pb-2 scroll-smooth md:hide-scrollbar">
       {images.map((img, index) => (
         <div
           key={index}
