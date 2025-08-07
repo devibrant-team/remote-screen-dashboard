@@ -43,6 +43,7 @@ const NormalPlaylistSlice = createSlice({
         index: number;
         media: string | null;
         mediaType: "image" | "video";
+      
       }>
     ) => {
       const slot = state.slots.find((s) => s.index === action.payload.index);

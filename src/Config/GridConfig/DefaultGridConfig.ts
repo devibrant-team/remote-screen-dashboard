@@ -4,15 +4,18 @@ export type GridSlotConfig = {
   name: string;
   scale: "fit" | "fill" | "stretch" | "blur" | "original";
   index: number;
+
 };
 
 export type GridLayoutConfig = {
   displayName: string;
   slots: GridSlotConfig[];
-  duration: number; 
+  duration: number;
+  id:number;
 };
 // === Grid: One Images ===
 export const OneImageGridConfig: GridLayoutConfig = {
+  id:1,
   displayName: "default",
   duration: 5,
   slots: [
@@ -22,14 +25,16 @@ export const OneImageGridConfig: GridLayoutConfig = {
       media: null,
       scale: "fit",
       index: 0,
+
     },
   ],
 };
 
 // === Grid: Two Images ===
 export const TwoByTwoConfig: GridLayoutConfig = {
+  id:2,
   displayName: "twobyTwo",
-    duration: 5,
+  duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -50,8 +55,9 @@ export const TwoByTwoConfig: GridLayoutConfig = {
 
 // === Grid: Two Images ===
 export const TwoByTwoColConfig: GridLayoutConfig = {
+  id:3,
   displayName: "twobyTwoCol",
-    duration: 5,
+  duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -71,8 +77,9 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
 };
 // === Grid: Three Images ===
 export const ThreeColGridConfig: GridLayoutConfig = {
+  id:4,
   displayName: "threeCol",
-    duration: 5,
+  duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -98,8 +105,9 @@ export const ThreeColGridConfig: GridLayoutConfig = {
   ],
 };
 export const ThreeRowGridConfig: GridLayoutConfig = {
+  id:5,
   displayName: "threeRow",
-    duration: 5,
+  duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -126,8 +134,9 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
 };
 // === Grid: Four Images ===
 export const FourImageGridConfig: GridLayoutConfig = {
+  id:6,
   displayName: "fourGrid",
-    duration: 5,
+  duration: 5,
   slots: [
     {
       name: "Media 1",
@@ -150,7 +159,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       scale: "fill",
       index: 2,
     },
-     {
+    {
       name: "Media 4",
       mediaType: "image",
       media: null,
@@ -159,4 +168,3 @@ export const FourImageGridConfig: GridLayoutConfig = {
     },
   ],
 };
-

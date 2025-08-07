@@ -5,7 +5,8 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import type { NormalPlaylistState } from "./SlideNormalPlaylistSlice";
 import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 
-interface PlaylistState {
+export interface PlaylistState {
+  id: number;
   name: string;
   type: "Normal"; // future-proofing if you add other types later
   slides: NormalPlaylistState[];
@@ -13,6 +14,7 @@ interface PlaylistState {
 }
 
 const initialState: PlaylistState = {
+  id: 1,
   name: "HEHHE",
   type: "Normal",
   slides: [],

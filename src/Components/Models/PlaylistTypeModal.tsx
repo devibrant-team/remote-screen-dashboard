@@ -2,8 +2,15 @@ import { ListVideo, ActivitySquare, Globe } from "lucide-react";
 import InteractiveLayoutDemos from "../InteractivePlaylist/InteractiveLayoutDemos/InteractiveLayoutDemos";
 import BaseModal from "./BaseModal";
 import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { OneImageGridConfig } from "../../Config/GridConfig/DefaultGridConfig";
+import {
+  addSlide,
+  setSelectedSlideIndex,
+} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
-// Static playlist styles treeslider id 2 and continus slider is 4 
+// Static playlist styles treeslider id 2 and continus slider is 4
 const playlistTypes = [
   {
     id: 1,
@@ -31,12 +38,40 @@ const iconMap: Record<string, any> = {
 
 const PlaylistTypeModal = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [firstSlideCreated, setFirstSlideCreated] = useState(false);
+  const handleCreateAndNavigate = () => {
+    if (!firstSlideCreated) {
+      const defaultSlide = {
+        name: "",
+        duration: 10,
+        scale: "Original Scale",
+        selectedGrid: "default",
+        slots: OneImageGridConfig.slots.map((slot) => ({
+          ...slot,
+          media: null,
+          mediaType: undefined,
+        })),
+      };
+
+      dispatch(addSlide(defaultSlide));
+      dispatch(setSelectedSlideIndex(0));
+      setFirstSlideCreated(true); // ✅ prevent duplicate
+    } else {
+      dispatch(setSelectedSlideIndex(0)); // Just select and go
+    }
+
+    navigate("/playlist");
+  };
 
   const handleSelect = (type: string) => {
     if (type === "Interactive") {
       setModalOpen(true);
     } else if (type === "Website") {
       console.log("Website type selected");
+    } else {
+      handleCreateAndNavigate();
     }
   };
 
