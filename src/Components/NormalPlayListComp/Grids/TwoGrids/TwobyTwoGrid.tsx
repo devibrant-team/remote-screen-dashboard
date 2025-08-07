@@ -82,7 +82,6 @@ const TwobyTwoGrid = () => {
                 )}
                 <img
                   src={slot.media}
-                  alt={slot.name}
                   className={`${getScaleClass(
                     slot.scale
                   )} transition-transform duration-200 group-hover:scale-105`}
