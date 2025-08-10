@@ -1,3 +1,200 @@
+import axios from "axios";
+import {
+  updateSlideAtIndex,
+  updateSlotInSlide,
+  type PlaylistState,
+} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { useDispatch } from "react-redux";
+import { store } from "../../../store";
+import { PlaylistPostApi } from "../../API/API";
+
+// Format and send playlist to backend
+export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
+  const formData = new FormData();
+
+  const totalDuration = playlist.slides.reduce(
+    (sum, slide) => sum + (slide.duration || 0),
+    0
+  );
+
+  // Basic fields
+  formData.append("id", String(playlist.id));
+  formData.append("name", playlist.name);
+  formData.append("type", String(playlist.type));
+  formData.append("NumberOfSlides", String(playlist.slides.length));
+  formData.append("total_duration", String(totalDuration));
+
+  // Add slides as structured fields
+  playlist.slides.forEach((slide, slideIndex) => {
+    formData.append(`slides[${slideIndex}][index]`, String(slideIndex));
+    formData.append(
+      `slides[${slideIndex}][duration]`,
+      String(slide.duration || 0)
+    );
+    formData.append(
+      `slides[${slideIndex}][grid_style]`,
+      String(slide.grid_style)
+    );
+
+    slide.slots.forEach((slot, slotIndex) => {
+      const mediaKey = `slides[${slideIndex}][slots][${slotIndex}][media]`;
+
+      if (slot.media instanceof File) {
+        formData.append(mediaKey, slot.media); // ✅ File will be handled properly
+      } else {
+        formData.append(mediaKey, slot.media || "");
+      }
+
+      formData.append(
+        `slides[${slideIndex}][slots][${slotIndex}][index]`,
+        String(slot.index)
+      );
+      formData.append(
+        `slides[${slideIndex}][slots][${slotIndex}][mediaType]`,
+        slot.mediaType || ""
+      );
+      formData.append(
+        `slides[${slideIndex}][slots][${slotIndex}][scale]`,
+        slot.scale || ""
+      );
+    });
+  });
+
+  const response = await axios.post(PlaylistPostApi, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return response.data;
+};
+
+// Format the payload structure
+export const formatPlaylistPayload = (playlist: PlaylistState) => {
+  const totalDuration = playlist.slides.reduce(
+    (sum, slide) => sum + (slide.duration || 0),
+    0
+  );
+  return {
+    id: playlist.id,
+    name: playlist.name,
+    type: playlist.type,
+    NumberOfSlides: playlist.slides.length,
+    total_duration: totalDuration,
+    slides: playlist.slides.map((slide, index) => {
+      const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
+      return {
+        ...slideWithoutSelectedGrid,
+        index,
+        grid_style: slide.grid_style,
+      };
+    }),
+  };
+};
+
+export const useHandleMediaUpload = (selectedSlideIndex: number | null) => {
+  const dispatch = useDispatch();
+
+  const handleMediaUpload = (slotIndex: number, file: File) => {
+    if (selectedSlideIndex === null) return;
+
+    const media = file;
+    const mediaType = file.type.startsWith("video") ? "video" : "image";
+
+    if (mediaType === "video") {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.src = URL.createObjectURL(media); // only for duration reading
+
+      video.onloadedmetadata = () => {
+        const uploadedDuration = Math.round(video.duration);
+        console.log(
+          `🎥 Uploaded video slot ${slotIndex} duration:`,
+          uploadedDuration
+        );
+
+        dispatch(
+          updateSlotInSlide({
+            slideIndex: selectedSlideIndex,
+            slotIndex,
+            media, // ✅ the actual File
+            mediaType,
+          })
+        );
+
+        setTimeout(() => {
+          const currentSlide =
+            store.getState().playlist.slides[selectedSlideIndex];
+
+          const durationPromises = currentSlide.slots
+            .filter(
+              (slot) => slot.mediaType === "video" && slot.media instanceof File
+            )
+            .map((slot) => {
+              return new Promise<number>((resolve) => {
+                if (!(slot.media instanceof File)) {
+                  return resolve(0); // Skip if media is not a File
+                }
+
+                const tempVid = document.createElement("video");
+                tempVid.preload = "metadata";
+                tempVid.src = URL.createObjectURL(slot.media); // ✅ now safe
+                tempVid.onloadedmetadata = () => resolve(tempVid.duration);
+                tempVid.onerror = () => resolve(0);
+              });
+            });
+
+          Promise.all(durationPromises).then((durations) => {
+            const maxDuration = Math.round(
+              Math.max(...durations, uploadedDuration)
+            );
+            console.log(
+              "🕒 Final slide duration (longest video):",
+              maxDuration
+            );
+
+            dispatch(
+              updateSlideAtIndex({
+                index: selectedSlideIndex,
+                updatedSlide: {
+                  ...currentSlide,
+                  duration: maxDuration,
+                },
+              })
+            );
+          });
+        }, 100);
+      };
+    } else {
+      dispatch(
+        updateSlotInSlide({
+          slideIndex: selectedSlideIndex,
+          slotIndex,
+          media, // ✅ the actual File
+          mediaType,
+        })
+      );
+    }
+  };
+
+  return handleMediaUpload;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 {
   "name": "userdashboard",
   "version": "1.1.1",

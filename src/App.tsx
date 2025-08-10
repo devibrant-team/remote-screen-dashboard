@@ -6,6 +6,7 @@ import CreateInteractivePlaylist from './Components/InteractivePlaylist/Interact
 import LoginScreen from './Screens/AuthScreens/LoginScreen';
 import LicenseKey from './../LicenseKey/LicenseKey';
 import Test from './Screens/Test';
+import ScreenManagement from './Screens/ScreenManagement/ScreenManagement';
 
 function AppWrapper() {
   const location = useLocation();
@@ -24,6 +25,7 @@ function AppWrapper() {
         <Routes>
           <Route path="/mediacontent" element={<MediaContent />} />
           <Route path="/playlist" element={<PlayList />} />
+               <Route path="/screenmanagement" element={<ScreenManagement />} />
           <Route path="/interactive" element={<CreateInteractivePlaylist />} />
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/license" element={<LicenseKey />} />
