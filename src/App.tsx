@@ -7,7 +7,7 @@ import {
 import ToolBar from "./layout/Tabbar";
 import MediaContent from "./Screens/MediaContent/MediaContent";
 import PlayList from "./Screens/Playlist/Normal/PlayList";
-import CreateInteractivePlaylist from "./Components/InteractivePlaylist/InteractivePlaylist";
+// import CreateInteractivePlaylist from "./Components/InteractivePlaylist/InteractivePlaylist";
 import LoginScreen from "./Screens/AuthScreens/LoginScreen";
 import LicenseKey from "./../LicenseKey/LicenseKey";
 import Test from "./Screens/Test";
@@ -31,7 +31,7 @@ function AppWrapper() {
           <Route path="/mediacontent" element={<MediaContent />} />
           <Route path="/playlist" element={<PlayList />} />
           <Route path="/screenmanagement" element={<ScreenManagement />} />
-          <Route path="/interactive" element={<CreateInteractivePlaylist />} />
+          {/* <Route path="/interactive" element={<CreateInteractivePlaylist />} /> */}
           <Route path="/login" element={<LoginScreen />} />
           <Route path="/license" element={<LicenseKey />} />
           <Route path="/test" element={<Test />} />

@@ -1,6 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { savePlaylist } from "../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
+import {  useSelector } from "react-redux";
+// import { savePlaylist } from "../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 import ImageSlider from "./ImageSlider";
 import type { RootState } from "../../../store";
 import { usePostPlaylistInteractive } from "./../../Hook/PlaylistInterActive/usePostPlaylistInteractive";
@@ -19,7 +19,7 @@ export default function CreateInteractivePlaylist({
 }: CreateInteractivePlaylistProps) {
   const [playlistName, setPlaylistName] = useState<string>("");
   const [images, setImages] = useState<ImagePreview[]>([]);
-  const dispatch = useDispatch();
+  // const dispatch = useDispatch();
 
   const layoutId = useSelector(
     (state: RootState) => state.playlistInteractive.playlistData?.layoutId
@@ -66,46 +66,47 @@ export default function CreateInteractivePlaylist({
     updateImages(reordered);
   };
 
-const handleSave = () => {
-  if (!layoutId) {
-    alert("❌ Please select a layout before saving.");
-    return;
-  }
+  const handleSave = () => {
+    if (!layoutId) {
+      alert("❌ Please select a layout before saving.");
+      return;
+    }
 
-  if (images.length === 0) {
-    alert("❌ Please upload at least one image.");
-    return;
-  }
+    if (images.length === 0) {
+      alert("❌ Please upload at least one image.");
+      return;
+    }
 
-  const formData = new FormData();
-  formData.append("name", playlistName);
-  formData.append("style_id", layoutId.toString());
-  formData.append("slide_number", images.length.toString());
+    const formData = new FormData();
+    formData.append("name", playlistName);
+    formData.append("style_id", layoutId.toString());
+    formData.append("slide_number", images.length.toString());
 
-  images.forEach((img, index) => {
-    formData.append(`slides[${index}][index]`, index.toString());
-    formData.append(`slides[${index}][media_id]`, null); // or null if backend supports it
-    formData.append(`slides[${index}][media]`, img.file); // ✅ This must be the actual File
-  });
-
-  mutate(formData, {
-    onSuccess: () => {
-      alert("✅ Playlist uploaded successfully!");
-      onCloseAll();
-    },
-    onError: (err: unknown) => {
-      if (err instanceof Error) {
-        console.error("❌ Upload failed:", err.message);
-        alert("Failed to upload playlist: " + err.message);
-      } else {
-        console.error("❌ Upload failed:", err);
-        alert("An unknown error occurred.");
+    images.forEach((img, index) => {
+      formData.append(`slides[${index}][index]`, index.toString());
+      const mediaId: string | number | null = null; // or your value
+      if (mediaId != null) {
+        formData.append(`slides[${index}][media_id]`, String(mediaId));
       }
-    },
-  });
-};
+      formData.append(`slides[${index}][media]`, img.file); // ✅ This must be the actual File
+    });
 
-
+    mutate(formData, {
+      onSuccess: () => {
+        alert("✅ Playlist uploaded successfully!");
+        onCloseAll();
+      },
+      onError: (err: unknown) => {
+        if (err instanceof Error) {
+          console.error("❌ Upload failed:", err.message);
+          alert("Failed to upload playlist: " + err.message);
+        } else {
+          console.error("❌ Upload failed:", err);
+          alert("An unknown error occurred.");
+        }
+      },
+    });
+  };
 
   useEffect(() => {
     const slider = document.querySelector(".scroll-smooth");

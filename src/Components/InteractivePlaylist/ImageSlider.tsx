@@ -15,7 +15,7 @@ interface ImageSliderProps {
 
 const ImageSlider: React.FC<ImageSliderProps> = ({
   images,
-  setImages,
+  // setImages,
   handleReplaceImage,
   handleDeleteImage,
   handleReorder,
