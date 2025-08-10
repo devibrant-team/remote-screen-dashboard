@@ -9,7 +9,7 @@ import {
 } from "../../Hook/Playlist/PostNormalPlaylist";
 import type { RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
-import { clearPlaylist } from "../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
+import { clearPlaylist } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -43,8 +43,9 @@ const Tabbarplaylist = () => {
 
   const handleCancel = () => {
     dispatch(clearPlaylist());
-    navigate("/playlist", { replace: true });
+    navigate("/mediacontent");
   };
+
   return (
     <>
       {showGridSelector && (

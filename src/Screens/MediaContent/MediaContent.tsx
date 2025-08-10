@@ -3,10 +3,20 @@ import MediaCard from "./MediaCard";
 import { useState } from "react";
 import BaseModal from "../../Components/Models/BaseModal";
 import PlaylistTypeModal from "../../Components/Models/PlaylistTypeModal";
-
+import { fetchPlaylists } from "../../Redux/Playlist/getPlaylistSlice";
+import type { PlayListItem } from "../../Redux/Playlist/PlaylistInterface";
+import { useQuery } from "@tanstack/react-query";
 const MediaContent = () => {
   const [modalOpen, setModalOpen] = useState(false);
-
+  const {
+    data = [],
+    isLoading,
+    error,
+  } = useQuery<PlayListItem[]>({
+    queryKey: ["playlist"],
+    queryFn: fetchPlaylists,
+  });
+  console.log(data)
   return (
     <div className="px-3 sm:px-4 lg:px-6 py-4 bg-[var(--white-200)] min-h-screen space-y-8">
       {/* Header */}
