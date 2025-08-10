@@ -1,6 +1,9 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useInitGrid } from "../useInitGrid"; // ✅ custom hook
-import { TwoByTwoColConfig, TwoByTwoConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
+import {
+  TwoByTwoColConfig,
+  TwoByTwoConfig,
+} from "../../../../Config/GridConfig/DefaultGridConfig";
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
@@ -36,7 +39,13 @@ const TwobyTwoGridCol = () => {
   const templateSlots = TwoByTwoColConfig.slots;
 
   // ✅ auto init grid if needed
-  useInitGrid(slide, selectedSlideIndex, "twobyTwoCol", templateSlots ,TwoByTwoColConfig);
+  useInitGrid(
+    slide,
+    selectedSlideIndex,
+    "twobyTwoCol",
+    templateSlots,
+    TwoByTwoColConfig
+  );
 
   const slots = slide?.slots || [];
 
@@ -48,13 +57,14 @@ const TwobyTwoGridCol = () => {
     if (selectedSlideIndex === null || !slide) return;
 
     const slot = slide.slots.find((s) => s.index === slotIndex);
-    if (!slot || !slot.media || !slot.mediaType) return;
+    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
 
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
+        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
         scale,
       })
@@ -64,7 +74,7 @@ const TwobyTwoGridCol = () => {
   return (
     <div className="w-full max-w-4xl mx-auto my-10">
       {slots.length === 2 && (
-        <div className="w-full h-[70vh] max-h-[800px] flex flex-col rounded-xl overflow-hidden">
+        <div className="w-full h-[50vh] max-h-[800px] flex flex-col rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
@@ -96,7 +106,7 @@ const TwobyTwoGridCol = () => {
                 )
               ) : (
                 <label className="w-full h-full flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg">
-                  No media selected
+                  No media uploaded
                   <input
                     type="file"
                     accept="image/*,video/*"

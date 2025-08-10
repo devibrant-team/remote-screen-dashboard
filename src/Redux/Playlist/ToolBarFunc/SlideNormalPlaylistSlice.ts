@@ -5,18 +5,16 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 
 export interface NormalPlaylistState {
-
   duration: number;
   slots: GridSlotConfig[];
   selectedGrid: string;
-   grid_style?: number;
+  grid_style?: number;
 }
 
 const initialState: NormalPlaylistState = {
   duration: 10,
   slots: [],
   selectedGrid: "default",
-  
 };
 
 const NormalPlaylistSlice = createSlice({
@@ -26,11 +24,11 @@ const NormalPlaylistSlice = createSlice({
     setSelectedGrid: (state, action: PayloadAction<string>) => {
       state.selectedGrid = action.payload;
     },
- 
+
     setDuration: (state, action: PayloadAction<number>) => {
       state.duration = action.payload;
     },
- 
+
     setSlots: (state, action: PayloadAction<GridSlotConfig[]>) => {
       state.slots = action.payload;
     },
@@ -40,7 +38,6 @@ const NormalPlaylistSlice = createSlice({
         index: number;
         media: string | null;
         mediaType: "image" | "video";
-      
       }>
     ) => {
       const slot = state.slots.find((s) => s.index === action.payload.index);
@@ -63,7 +60,6 @@ const NormalPlaylistSlice = createSlice({
 });
 
 export const {
-
   setDuration,
   setSlots,
   updateSlotMedia,

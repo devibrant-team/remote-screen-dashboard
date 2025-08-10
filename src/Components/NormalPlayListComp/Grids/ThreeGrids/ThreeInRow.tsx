@@ -36,7 +36,13 @@ const ThreeInRow = () => {
   const templateSlots = ThreeRowGridConfig.slots;
 
   // 🧠 auto init if not yet done
-  useInitGrid(slide, selectedSlideIndex, "threeRow", templateSlots ,ThreeRowGridConfig);
+  useInitGrid(
+    slide,
+    selectedSlideIndex,
+    "threeRow",
+    templateSlots,
+    ThreeRowGridConfig
+  );
 
   const slots = slide?.slots || [];
 
@@ -51,11 +57,14 @@ const ThreeInRow = () => {
     const slot = slide.slots.find((s) => s.index === slotIndex);
     if (!slot || !slot.media || !slot.mediaType) return;
 
+    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
+
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
+        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
         scale,
       })
@@ -65,7 +74,7 @@ const ThreeInRow = () => {
   return (
     <div className="w-full max-w-6xl mx-auto my-10">
       {slots.length === 3 && (
-        <div className="w-full h-[60vh] flex rounded-xl overflow-hidden">
+        <div className="w-full h-[50vh] flex rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
@@ -98,7 +107,7 @@ const ThreeInRow = () => {
                 )
               ) : (
                 <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg">
-                  No media selected
+                  No media uploaded
                   <input
                     type="file"
                     accept="image/*,video/*"

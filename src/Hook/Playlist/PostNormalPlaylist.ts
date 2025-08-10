@@ -10,18 +10,64 @@ import { PlaylistPostApi } from "../../API/API";
 
 // Format and send playlist to backend
 export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
-  const payload = formatPlaylistPayload(playlist);
+  const formData = new FormData();
 
-  const response = await axios.post(
-    PlaylistPostApi,
-    payload
-  ); // 🔁 Replace with your API URL
+  // Playlist metadata
+  formData.append("id", playlist.id.toString());
+  formData.append("name", playlist.name);
+  formData.append("type", playlist.type.toString());
+  formData.append("NumberOfSlides", playlist.slides.length.toString());
+  formData.append(
+    "total_duration",
+    playlist.slides
+      .reduce((sum, slide) => sum + (slide.duration || 0), 0)
+      .toString()
+  );
+
+  // Slides
+  playlist.slides.forEach((slide, slideIndex) => {
+    formData.append(`slides[${slideIndex}][index]`, slideIndex.toString());
+    formData.append(
+      `slides[${slideIndex}][grid_style]`,
+      String(slide.grid_style ?? "")
+    );
+    formData.append(`slides[${slideIndex}][duration]`, String(slide.duration));
+    slide.slots.forEach((slot, slotIndex) => {
+      formData.append(
+        `slides[${slideIndex}][slots][${slotIndex}][index]`,
+        slot.index.toString()
+      );
+      formData.append(
+        `slides[${slideIndex}][slots][${slotIndex}][mediaType]`,
+        slot.mediaType || ""
+      );
+      formData.append(
+        `slides[${slideIndex}][slots][${slotIndex}][scale]`,
+        slot.scale || ""
+      );
+
+      // Append the file if it exists
+      if (slot.ImageFile instanceof File) {
+        formData.append(
+          `slides[${slideIndex}][slots][${slotIndex}][ImageFile]`,
+          slot.ImageFile,
+          slot.ImageFile.name
+        );
+      }
+    });
+  });
+
+  // Send request
+  const response = await axios.post(PlaylistPostApi, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
   return response.data;
 };
 
 // Format the payload structure
 export const formatPlaylistPayload = (playlist: PlaylistState) => {
-    const totalDuration = playlist.slides.reduce(
+  const totalDuration = playlist.slides.reduce(
     (sum, slide) => sum + (slide.duration || 0),
     0
   );
@@ -30,18 +76,17 @@ export const formatPlaylistPayload = (playlist: PlaylistState) => {
     name: playlist.name,
     type: playlist.type,
     NumberOfSlides: playlist.slides.length,
-     total_duration: totalDuration, 
+    total_duration: totalDuration,
     slides: playlist.slides.map((slide, index) => {
-      const { selectedGrid, ...slideWithoutSelectedGrid } = slide; 
+      const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
       return {
         ...slideWithoutSelectedGrid,
         index,
-        grid_style: slide.grid_style, 
+        grid_style: slide.grid_style,
       };
     }),
   };
 };
-
 
 export const useHandleMediaUpload = (selectedSlideIndex: number | null) => {
   const dispatch = useDispatch();
@@ -70,6 +115,7 @@ export const useHandleMediaUpload = (selectedSlideIndex: number | null) => {
             slideIndex: selectedSlideIndex,
             slotIndex,
             media: mediaUrl,
+            ImageFile: file,
             file,
             mediaType,
           })
@@ -119,7 +165,7 @@ export const useHandleMediaUpload = (selectedSlideIndex: number | null) => {
           slideIndex: selectedSlideIndex,
           slotIndex,
           media: mediaUrl,
-          file,
+          ImageFile: file,
           mediaType,
         })
       );

@@ -36,7 +36,13 @@ const FourGrid = () => {
   const templateSlots = FourImageGridConfig.slots;
 
   // ✅ Auto initialize if needed
-  useInitGrid(slide, selectedSlideIndex, "fourGrid", templateSlots ,FourImageGridConfig);
+  useInitGrid(
+    slide,
+    selectedSlideIndex,
+    "fourGrid",
+    templateSlots,
+    FourImageGridConfig
+  );
 
   const slots = slide?.slots || [];
 
@@ -51,11 +57,14 @@ const FourGrid = () => {
     const slot = slide.slots.find((s) => s.index === slotIndex);
     if (!slot || !slot.media || !slot.mediaType) return;
 
+    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
+
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
+        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
         scale,
       })
@@ -65,7 +74,7 @@ const FourGrid = () => {
   return (
     <div className="w-full max-w-4xl mx-auto my-10">
       {slots.length === 4 && (
-        <div className="grid grid-cols-2 grid-rows-2 w-full aspect-square max-w-[700px] mx-auto rounded-xl overflow-hidden">
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-[50vh]  aspect-square max-w-[700px] mx-auto rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
@@ -98,7 +107,7 @@ const FourGrid = () => {
                 )
               ) : (
                 <label className="w-full h-full flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg">
-                  No media selected
+                  No media uploaded
                   <input
                     type="file"
                     accept="image/*,video/*"

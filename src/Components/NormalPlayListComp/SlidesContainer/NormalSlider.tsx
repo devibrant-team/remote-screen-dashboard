@@ -4,9 +4,10 @@ import type { RootState } from "../../../../store";
 import {
   addSlide,
   setSelectedSlideIndex,
-  updateSlideAtIndex, // ✅ Make sure this exists
+  updateSlideAtIndex,
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
+import { Plus, Clock } from "lucide-react";
 
 const NormalSlider = () => {
   const dispatch = useDispatch();
@@ -15,7 +16,6 @@ const NormalSlider = () => {
     (state: RootState) => state.playlist.slides
   );
   const playlist = useSelector((state: RootState) => state.playlist);
-
   const selectedSlide = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
@@ -28,10 +28,10 @@ const NormalSlider = () => {
     const defaultSlide = {
       duration: 10,
       selectedGrid: "default",
-      slots: OneImageGridConfig.slots.map((slot) => ({
+      slots: OneImageGridConfig.slots.map((slot: any) => ({
         ...slot,
-        media: null,
-        mediaType: undefined,
+        media: null as string | null,
+        mediaType: undefined as "image" | "video" | undefined,
       })),
     };
 
@@ -52,72 +52,86 @@ const NormalSlider = () => {
   }, [playlistSlides, selectedSlide, dispatch]);
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Normal Slider Test</h2>
+    <section className="p-4 md:p-6 max-h-screen">
+      <div className="mb-5 flex items-center justify-between">
+        <h2 className="text-lg md:text-xl font-semibold tracking-tight">
+          Normal Slider
+        </h2>
 
-      <button
-        onClick={handleAddSlide}
-        className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 mb-6"
-      >
-        Add Current Slide to Playlist
-      </button>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-600">
+            Total slides: <b>{playlistSlides.length}</b>
+          </span>
+          <button
+            onClick={handleAddSlide}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm hover:shadow transition bg-white hover:bg-gray-50 active:scale-[0.99]"
+            aria-label="Add current slide to playlist"
+          >
+            <Plus size={16} color="red" />
+            Add slide
+          </button>
+        </div>
+      </div>
 
-      <div className="flex gap-4 flex-wrap">
-        {playlistSlides.map((slide, index) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+        {playlistSlides.map((slide: any, index: number) => (
           <div
             key={index}
             onClick={() => dispatch(setSelectedSlideIndex(index))}
-            className={`cursor-pointer rounded-lg border-4 p-2 transition-all duration-200 ${
-              selectedSlide === index ? "border-blue-600" : "border-transparent"
-            }`}
+            aria-pressed={selectedSlide === index}
+            className={`group cursor-pointer rounded-2xl border p-2 transition-all duration-200 bg-white
+              ${
+                selectedSlide === index
+                  ? "border-red-500 ring-2 ring-red-200 shadow-md"
+                  : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+              }`}
           >
-            <div className="w-28 h-20 overflow-hidden bg-gray-100 rounded-md">
+            <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">
               {slide.slots[0]?.media ? (
                 slide.slots[0].mediaType === "video" ? (
-                  <div className="flex items-center justify-center w-full h-full bg-red-300 text-white text-xs">
-                    🎥 Video
+                  <div className="flex items-center justify-center w-full h-full text-xs font-medium">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-gray-900/80 px-2 py-1 text-white">
+                      🎥 Video
+                    </span>
                   </div>
                 ) : (
                   <img
-                    src={slide.slots[0].media}
+                    src={slide.slots[0].media as string}
                     alt={`Slide ${index + 1}`}
-                    className="object-cover w-full h-full"
+                    className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-[1.02]"
                   />
                 )
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-                  No Media
+                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                  No media
                 </div>
               )}
             </div>
 
-            <p className="text-center text-sm mt-1 font-medium">
+            <p className="text-center text-sm mt-2 font-medium">
               Slide {index + 1}
             </p>
 
-            {/* 🔢 Duration input */}
-            <div className="mt-1">
-              <label className="block text-xs text-gray-600 text-center">
-                Duration (sec)
+            <div className="mt-2">
+              <label className="mb-1 flex items-center justify-center gap-1 text-[11px] text-gray-500">
+                <Clock size={12} /> Duration (sec)
               </label>
               <input
                 type="number"
                 min={1}
+                step={1}
+                inputMode="numeric"
                 value={slide.duration}
                 onChange={(e) =>
                   handleDurationChange(index, Number(e.target.value))
                 }
-                className="w-full text-center border rounded p-1 text-sm"
+                className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
               />
             </div>
           </div>
         ))}
       </div>
-
-      <p className="mt-4 text-gray-700">
-        Total slides in playlist: {playlistSlides.length}
-      </p>
-    </div>
+    </section>
   );
 };
 

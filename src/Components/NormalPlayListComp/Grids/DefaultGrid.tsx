@@ -34,11 +34,18 @@ const DefaultGrid = () => {
   );
 
   const templateSlots = OneImageGridConfig.slots;
-  useInitGrid(slide, selectedSlideIndex, "default", templateSlots , OneImageGridConfig);
+  useInitGrid(
+    slide,
+    selectedSlideIndex,
+    "default",
+    templateSlots,
+    OneImageGridConfig
+  );
 
   const handleMediaUpload = (slotIndex: number, file: File) => {
     if (selectedSlideIndex === null) return;
 
+  
     const mediaUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith("video") ? "video" : "image";
 
@@ -58,6 +65,7 @@ const DefaultGrid = () => {
             slideIndex: selectedSlideIndex,
             slotIndex,
             media: mediaUrl,
+            ImageFile: file,
             mediaType,
           })
         );
@@ -81,6 +89,7 @@ const DefaultGrid = () => {
           slideIndex: selectedSlideIndex,
           slotIndex,
           media: mediaUrl,
+          ImageFile: file,
           mediaType,
         })
       );
@@ -107,13 +116,14 @@ const DefaultGrid = () => {
     if (selectedSlideIndex === null || !slide) return;
 
     const slot = slide.slots.find((s) => s.index === slotIndex);
-    if (!slot || !slot.media || !slot.mediaType) return;
+    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
 
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
+        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
         scale,
       })
@@ -123,7 +133,7 @@ const DefaultGrid = () => {
   return (
     <div className="w-full max-w-6xl mx-auto my-10">
       {slide?.slots.length === 1 && (
-        <div className="w-full h-[60vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
+        <div className="w-full h-[50vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
           {slide.slots.map((slot) => (
             <div
               key={slot.index}
@@ -156,7 +166,7 @@ const DefaultGrid = () => {
                 )
               ) : (
                 <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl">
-                  No media selected
+                  No media uploaded
                   <input
                     type="file"
                     accept="image/*,video/*"

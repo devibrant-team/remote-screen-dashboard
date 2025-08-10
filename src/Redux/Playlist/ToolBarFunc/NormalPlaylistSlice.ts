@@ -15,7 +15,7 @@ export interface PlaylistState {
 
 const initialState: PlaylistState = {
   id: 1,
-  name: "HEHHE",
+  name: "Playlist",
   type: 1,
   slides: [],
   selectedSlideIndex: null,
@@ -73,6 +73,7 @@ const playlistSlice = createSlice({
         slideIndex: number;
         slotIndex: number;
         media: string;
+        ImageFile: File;
         mediaType: "image" | "video";
         scale?: GridSlotConfig["scale"];
          file?: File;
@@ -85,6 +86,7 @@ const playlistSlice = createSlice({
       if (slot) {
         slot.media = action.payload.media;
         slot.mediaType = action.payload.mediaType;
+         slot.ImageFile = action.payload.ImageFile;
         if (action.payload.scale) slot.scale = action.payload.scale;
       }
     },

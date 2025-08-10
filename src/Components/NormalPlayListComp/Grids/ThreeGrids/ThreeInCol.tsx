@@ -36,7 +36,13 @@ const ThreeInCol = () => {
   const templateSlots = ThreeColGridConfig.slots;
 
   // ✅ shared logic: initialize once if uninitialized
-  useInitGrid(slide, selectedSlideIndex, "threeCol", templateSlots ,ThreeColGridConfig);
+  useInitGrid(
+    slide,
+    selectedSlideIndex,
+    "threeCol",
+    templateSlots,
+    ThreeColGridConfig
+  );
 
   const slots = slide?.slots || [];
 
@@ -49,13 +55,14 @@ const ThreeInCol = () => {
     if (selectedSlideIndex === null || !slide) return;
 
     const slot = slide.slots.find((s) => s.index === slotIndex);
-    if (!slot || !slot.media || !slot.mediaType) return;
+    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
 
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
+        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
         scale,
       })
@@ -65,7 +72,7 @@ const ThreeInCol = () => {
   return (
     <div className="w-full max-w-4xl mx-auto my-10">
       {slots.length === 3 && (
-        <div className="w-full h-[80vh] max-h-[850px] flex flex-col rounded-xl overflow-hidden">
+        <div className="w-full h-[50vh] max-h-[850px] flex flex-col rounded-xl overflow-hidden">
           {slots.map((slot) => (
             <div
               key={slot.index}
@@ -98,7 +105,7 @@ const ThreeInCol = () => {
                 )
               ) : (
                 <label className="w-full h-full flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg transition hover:bg-[#2a2f3b]">
-                  No media selected
+                 No media uploaded
                   <input
                     type="file"
                     accept="image/*,video/*"

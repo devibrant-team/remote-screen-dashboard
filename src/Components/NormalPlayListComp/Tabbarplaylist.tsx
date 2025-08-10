@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, Layers } from "lucide-react";
+import { Layers, Grid2X2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setPlaylistName } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
@@ -8,33 +8,43 @@ import {
   savePlaylistToDatabase,
 } from "../../Hook/Playlist/PostNormalPlaylist";
 import type { RootState } from "../../../store";
+import { useNavigate } from "react-router-dom";
+import { clearPlaylist } from "../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [error, setError] = useState("");
+
   const handleSavePlaylist = async () => {
     setSaving(true);
     setSaveMessage("");
     setError("");
 
     try {
-      const payload = formatPlaylistPayload(playlist); // ✅ get formatted payload
+      const payload = formatPlaylistPayload(playlist);
+      console.log("📦 Final Playlist Payload to DB:", payload);
 
-      console.log("📦 Final Playlist Payload to DB:", payload); // ✅ print payload
+      await savePlaylistToDatabase(playlist);
 
-      await savePlaylistToDatabase(playlist); // or pass the payload directly if you prefer
       setSaveMessage("✅ Playlist saved successfully!");
+      window.alert("✅ Playlist saved successfully!"); // ✅ alert on success
     } catch (err: any) {
       console.error("❌ Save failed", err);
       setError("❌ Failed to save playlist.");
+      window.alert("❌ Failed to save playlist."); // ✅ alert on error
     } finally {
       setSaving(false);
     }
   };
 
+  const handleCancel = () => {
+    dispatch(clearPlaylist());
+    navigate("/playlist", { replace: true });
+  };
   return (
     <>
       {showGridSelector && (
@@ -68,18 +78,15 @@ const Tabbarplaylist = () => {
               <div className="space-y-2">
                 <h4 className="text-base lg:text-lg font-semibold">Media</h4>
 
-                <button className="flex items-center justify-center gap-2 w-full bg-white text-black font-semibold py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 transition">
-                  <Upload size={18} /> Upload Media
-                </button>
-
                 <button
-                  onClick={() => setShowGridSelector(true)} // ✅ open modal
+                  onClick={() => setShowGridSelector(true)}
                   className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
                 >
+                  <Grid2X2 size={18} />
                   Choose Collage
                 </button>
 
-                <button className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition">
+                <button className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md  hover:bg-red-600 transition">
                   <Layers size={18} /> Add Widget
                 </button>
               </div>
@@ -87,13 +94,16 @@ const Tabbarplaylist = () => {
           </div>
 
           <div className="border-t pt-4 pb-6 px-4 space-y-2 border-gray-300">
-            <button className="w-full bg-white text-black font-semibold py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 transition">
+            <button
+              onClick={handleCancel} // ✅ navigate + clear
+              className="w-full bg-white text-black font-semibold py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 transition"
+            >
               Cancel
             </button>
             <button
               onClick={handleSavePlaylist}
               disabled={saving}
-              className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
+              className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
             >
               {saving ? "Saving..." : "Save Playlist"}
             </button>

@@ -32,7 +32,13 @@ const TwobyTwoGrid = () => {
   );
 
   const templateSlots = TwoByTwoConfig.slots;
-  useInitGrid(slide, selectedSlideIndex, "twobyTwo", templateSlots ,TwoByTwoConfig);
+  useInitGrid(
+    slide,
+    selectedSlideIndex,
+    "twobyTwo",
+    templateSlots,
+    TwoByTwoConfig
+  );
 
   const slots = slide?.slots || [];
 
@@ -44,13 +50,14 @@ const TwobyTwoGrid = () => {
     if (selectedSlideIndex === null || !slide) return;
 
     const slot = slide.slots.find((s) => s.index === slotIndex);
-    if (!slot || !slot.media || !slot.mediaType) return;
+    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
 
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
+        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
         scale,
       })
@@ -58,11 +65,11 @@ const TwobyTwoGrid = () => {
   };
 
   return (
-    <div className="w-full h-[60vh] flex gap-1 bg-white">
+    <div className="w-full h-[50vh] flex  bg-white">
       {slots.map((slot) => (
         <div
           key={slot.index}
-          className="w-1/2 h-full relative group bg-white overflow-hidden rounded"
+          className="w-1/2 h-full relative group bg-white overflow-hidden "
         >
           {slot.media ? (
             slot.mediaType === "video" ? (
@@ -90,7 +97,7 @@ const TwobyTwoGrid = () => {
             )
           ) : (
             <label className="w-full h-full  flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg">
-              Upload
+              No media uploaded
               <input
                 type="file"
                 accept="image/*,video/*"
