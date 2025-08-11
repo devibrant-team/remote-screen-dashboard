@@ -15,14 +15,11 @@ const NormalSlider = () => {
   const playlistSlides = useSelector(
     (state: RootState) => state.playlist.slides
   );
-  const playlist = useSelector((state: RootState) => state.playlist);
+
   const selectedSlide = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
 
-  useEffect(() => {
-    console.log("📦 Full Playlist Structure:", playlist);
-  }, [playlist]);
 
   const handleAddSlide = () => {
     const defaultSlide = {

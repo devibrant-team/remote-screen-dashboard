@@ -57,7 +57,7 @@ const DefaultGrid = () => {
       video.onloadedmetadata = () => {
         const duration = Math.round(video.duration);
 
-        console.log("🎬 Video Duration:", duration);
+   
 
         // 1. Update slot
         dispatch(

@@ -25,9 +25,8 @@ const Tabbarplaylist = () => {
     setError("");
 
     try {
-      const payload = formatPlaylistPayload(playlist);
-      console.log("📦 Final Playlist Payload to DB:", payload);
-
+     
+   
       await savePlaylistToDatabase(playlist);
 
       setSaveMessage("✅ Playlist saved successfully!");
