@@ -1,10 +1,22 @@
+export type WeatherWidgetConfig = {
+  type: "weather";
+  city: "Baalbek"; // fixed for now
+  position:
+    | "center"
+    | "top-left"
+    | "top-right"
+    | "bottom-left"
+    | "bottom-right";
+};
+
 export type GridSlotConfig = {
   mediaType?: "image" | "video";
-  media?: string | null; 
+  media?: string | null;
   ImageFile: File | null;
   scale: "fit" | "fill" | "stretch" | "blur" | "original";
   index: number;
   file?: File | null;
+  widget?: WeatherWidgetConfig | null;
 };
 
 export type GridLayoutConfig = {
@@ -25,6 +37,7 @@ export const OneImageGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fit",
       index: 0,
+      widget: null,
     },
   ],
 };
@@ -41,6 +54,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fit",
       index: 0,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -48,6 +62,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 1,
+      widget: null,
     },
   ],
 };
@@ -64,6 +79,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fit",
       index: 0,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -71,6 +87,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 1,
+      widget: null,
     },
   ],
 };
@@ -86,6 +103,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fit",
       index: 0,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -93,6 +111,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 1,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -100,6 +119,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 2,
+      widget: null,
     },
   ],
 };
@@ -114,6 +134,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fit",
       index: 0,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -121,6 +142,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 1,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -128,6 +150,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 2,
+      widget: null,
     },
   ],
 };
@@ -143,6 +166,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       scale: "fit",
       index: 0,
       ImageFile: null,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -150,6 +174,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 1,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -157,6 +182,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 2,
+      widget: null,
     },
     {
       mediaType: "image",
@@ -164,6 +190,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       ImageFile: null,
       scale: "fill",
       index: 3,
+      widget: null,
     },
   ],
 };

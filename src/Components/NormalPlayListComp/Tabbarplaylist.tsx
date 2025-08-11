@@ -7,26 +7,34 @@ import {
   formatPlaylistPayload,
   savePlaylistToDatabase,
 } from "../../Hook/Playlist/PostNormalPlaylist";
-import type { RootState } from "../../../store";
+import { store, type RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
 import { clearPlaylist } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
+import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
   const [saving, setSaving] = useState(false);
+  const DEFAULT_BG = "/assets/weather_default_bg.jpg";
   const [saveMessage, setSaveMessage] = useState("");
   const [error, setError] = useState("");
-
+  const selectedSlideIndex = useSelector(
+    (state: RootState) => state.playlist.selectedSlideIndex
+  );
+  const slide = useSelector((state: RootState) =>
+    selectedSlideIndex !== null
+      ? state.playlist.slides[selectedSlideIndex]
+      : null
+  );
   const handleSavePlaylist = async () => {
     setSaving(true);
     setSaveMessage("");
     setError("");
 
     try {
-     
-   
       await savePlaylistToDatabase(playlist);
 
       setSaveMessage("✅ Playlist saved successfully!");
@@ -43,6 +51,67 @@ const Tabbarplaylist = () => {
   const handleCancel = () => {
     dispatch(clearPlaylist());
     navigate("/mediacontent");
+  };
+
+  const handleAddWeatherWidget = () => {
+    console.log("🛠 Add Widget clicked");
+    console.log("Selected slide index:", selectedSlideIndex);
+    console.log("Slide BEFORE:", slide);
+
+    if (selectedSlideIndex === null || !slide) {
+      alert("Please select/create a slide first.");
+      return;
+    }
+
+    const slotIndex = 0;
+    const slot = slide.slots[slotIndex];
+    console.log("Slot BEFORE:", slot);
+
+    if (!slot?.media) {
+      console.log("No background -> setting DEFAULT_BG:", DEFAULT_BG);
+      dispatch(
+        updateSlotMedia({
+          index: slotIndex,
+          media: DEFAULT_BG,
+          mediaType: "image",
+        })
+      );
+    } else {
+      console.log(
+        "Background already set:",
+        slot.media,
+        "mediaType:",
+        slot.mediaType
+      );
+    }
+
+    const widget = {
+      type: "weather",
+      city: "Baalbek",
+      position: "center",
+    } as const;
+    console.log("Dispatching widget:", widget);
+
+    dispatch(
+      updateSlotWidgetInSlide({
+        slideIndex: selectedSlideIndex!, // ✅ which slide
+        slotIndex: 0, // ✅ which slot in that slide
+        widget: {
+          type: "weather",
+          city: "Baalbek",
+          position: "center",
+        },
+      })
+    );
+
+    // Inspect AFTER dispatch
+    setTimeout(() => {
+      const after = (store.getState() as RootState).playlist.slides[
+        selectedSlideIndex!
+      ];
+      console.log("Slide AFTER:", after);
+      console.log("Slot AFTER:", after.slots[slotIndex]);
+    }, 0);
   };
 
   return (
@@ -86,7 +155,10 @@ const Tabbarplaylist = () => {
                   Choose Collage
                 </button>
 
-                <button className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md  hover:bg-red-600 transition">
+                <button
+                  onClick={handleAddWeatherWidget}
+                  className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md  hover:bg-red-600 transition"
+                >
                   <Layers size={18} /> Add Widget
                 </button>
               </div>

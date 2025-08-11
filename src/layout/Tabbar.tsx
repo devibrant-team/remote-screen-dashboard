@@ -20,6 +20,7 @@ const menuItems = [
   { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
   { label: "Account", icon: User, path: "/account" },
   { label: "Support", icon: LifeBuoy, path: "/support" },
+  { label: "Logout", icon: LifeBuoy, path: "/login" },
 ];
 
 const ToolBar = () => {

@@ -6,7 +6,8 @@ import {
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { useInitGrid } from "./useInitGrid";
 import { store, type RootState } from "../../../../store";
-
+import WeatherWidget from "../Widgets/WeatherWidget";
+import { useEffect } from "react";
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -24,6 +25,15 @@ const getScaleClass = (scale: string) => {
 
 const DefaultGrid = () => {
   const dispatch = useDispatch();
+  const DEFAULT_BG =
+    "https://images.twinkl.co.uk/tw1n/image/private/t_630/u/ux/wolfgang-hasselmann-br-gllg7bs-unsplash-2_ver_1.jpg";
+  const posToClass: Record<string, string> = {
+    center: "items-center justify-center",
+    "top-left": "items-start justify-start",
+    "top-right": "items-start justify-end",
+    "bottom-left": "items-end justify-start",
+    "bottom-right": "items-end justify-end",
+  };
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
@@ -42,10 +52,10 @@ const DefaultGrid = () => {
     OneImageGridConfig
   );
 
+
   const handleMediaUpload = (slotIndex: number, file: File) => {
     if (selectedSlideIndex === null) return;
 
-  
     const mediaUrl = URL.createObjectURL(file);
     const mediaType = file.type.startsWith("video") ? "video" : "image";
 
@@ -56,8 +66,6 @@ const DefaultGrid = () => {
 
       video.onloadedmetadata = () => {
         const duration = Math.round(video.duration);
-
-   
 
         // 1. Update slot
         dispatch(
@@ -129,26 +137,25 @@ const DefaultGrid = () => {
       })
     );
   };
-
   return (
     <div className="w-full max-w-6xl mx-auto my-10">
       {slide?.slots.length === 1 && (
-        <div className="w-full h-[50vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
+        <div className="w-full h-[50vh] relative rounded-xl overflow-hidden bg-gray-100">
           {slide.slots.map((slot) => (
             <div
               key={slot.index}
               className="w-full h-full relative group rounded-xl overflow-hidden"
             >
-              {/* Media Preview */}
+              {/* BACKGROUND MEDIA (image/video OR fallback) */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
                   <video
                     src={slot.media}
                     controls
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="w-full h-full relative flex items-center justify-center">
+                  <div className="absolute inset-0 w-full h-full">
                     {slot.scale === "blur" && (
                       <img
                         src={slot.media}
@@ -158,30 +165,40 @@ const DefaultGrid = () => {
                     )}
                     <img
                       src={slot.media}
+                      alt=""
                       className={`${getScaleClass(
                         slot.scale
-                      )} transition-transform duration-200 group-hover:scale-105`}
+                      )} absolute inset-0 transition-transform duration-200 group-hover:scale-105`}
                     />
                   </div>
                 )
               ) : (
-                <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl">
-                  No media uploaded
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={(e) =>
-                      e.target.files?.[0] &&
-                      handleMediaUpload(slot.index, e.target.files[0])
-                    }
-                    className="hidden"
-                  />
-                </label>
+                // fallback background if no media
+                <img
+                  src={DEFAULT_BG}
+                  alt=""
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
               )}
 
-              {/* Hover overlay */}
-              {slot.media && (
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
+              {/* WIDGET OVERLAY (only if present) */}
+              {slot?.widget?.type === "weather" && (
+                <div
+                  className={`absolute inset-0 z-10 flex p-4 ${
+                    posToClass[
+                      (slot.widget.position as keyof typeof posToClass) ||
+                        "center"
+                    ]
+                  }`}
+                >
+                  <WeatherWidget city={slot.widget.city} />
+                </div>
+              )}
+
+              {/* HOVER OVERLAY FOR BACKGROUND CONTROLS (shown even if widget exists) */}
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-between p-4 transition-opacity duration-300 z-20">
+                {/* Scale selector (applies to background image only) */}
+                <div className="flex gap-2">
                   <select
                     value={slot.scale}
                     onChange={(e) =>
@@ -192,24 +209,42 @@ const DefaultGrid = () => {
                     }
                     className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
                   >
-                    <option value="fit">🖼️ Fit (Contain)</option>
-                    <option value="fill">📱 Fill (Cover)</option>
-                    <option value="blur">🌫️ Fit + Blur BG</option>
-                    <option value="original">🧱 Original Size</option>
+                    <option value="fit">Fit</option>
+                    <option value="fill">Fill</option>
+                    <option value="blur">Blur BG</option>
+                    <option value="original">Original</option>
                   </select>
-                  <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
-                    Replace
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={(e) =>
-                        e.target.files?.[0] &&
-                        handleMediaUpload(slot.index, e.target.files[0])
-                      }
-                      className="hidden"
-                    />
-                  </label>
                 </div>
+
+                {/* Replace background */}
+                <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
+                  Replace Background
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(e) =>
+                      e.target.files?.[0] &&
+                      handleMediaUpload(slot.index, e.target.files[0])
+                    }
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* EMPTY STATE (no media and no widget) — allow upload */}
+              {!slot.media && !slot.widget && (
+                <label className="absolute inset-0 flex items-center justify-center text-white bg-[#1e2530] cursor-pointer text-lg">
+                  Upload Media
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(e) =>
+                      e.target.files?.[0] &&
+                      handleMediaUpload(slot.index, e.target.files[0])
+                    }
+                    className="hidden"
+                  />
+                </label>
               )}
             </div>
           ))}

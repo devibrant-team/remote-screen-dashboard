@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginUser } from "../../Redux/Authentications/AuthSlice";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
+import { useNavigate } from "react-router-dom";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -18,6 +19,7 @@ interface LoginPayload extends LoginFormInputs {
 
 const LoginScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const machineId: string | null = useSelector(
     (state: RootState) => state.machine.machineId
@@ -33,6 +35,9 @@ const LoginScreen = () => {
   const onSubmit = (data: LoginFormInputs) => {
     const payload: LoginPayload = { ...data, machineId };
     dispatch(loginUser(payload));
+    navigate("/mediacontent")
+    
+    
   };
 
   return (

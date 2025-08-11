@@ -2,36 +2,35 @@ import { useDispatch, useSelector } from "react-redux";
 import { updateSlideGrid } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../store";
 
-
-
 type GridSelectorProps = {
   onClose: () => void;
 };
 const GridSelector: React.FC<GridSelectorProps> = ({ onClose }) => {
   const dispatch = useDispatch();
-const selectedSlideIndex = useSelector(
-  (state: RootState) => state.playlist.selectedSlideIndex
-);
+  const selectedSlideIndex = useSelector(
+    (state: RootState) => state.playlist.selectedSlideIndex
+  );
 
-const handleSelect = (gridKey: string, gridStyleId: number) => {
-  if (selectedSlideIndex !== null) {
-    dispatch(updateSlideGrid({
-      index: selectedSlideIndex,
-      selectedGrid: gridKey,
-      grid_style: gridStyleId,
-    }));
-  }
-  onClose();
-};
-
+  const handleSelect = (gridKey: string, gridStyleId: number) => {
+    if (selectedSlideIndex !== null) {
+      dispatch(
+        updateSlideGrid({
+          index: selectedSlideIndex,
+          selectedGrid: gridKey,
+          grid_style: gridStyleId,
+        })
+      );
+    }
+    onClose();
+  };
 
   const gridOptions = [
-    { id:1 ,key: "default", label: "Default" },
-    { id:2 , key: "twobyTwo", label: "2x2" },
-    { id:3 , key: "twobyTwoCol", label: "2Col" },
-    { id:4 , key: "threeRow", label: "3Row" },
-    { id:5 , key: "threeCol", label: "3Col" },
-    { id:6 , key: "fourGrid", label: "4Grid" },
+    { id: 1, key: "default", label: "Default" },
+    { id: 2, key: "twobyTwo", label: "2x2" },
+    { id: 3, key: "twobyTwoCol", label: "2Col" },
+    { id: 4, key: "threeRow", label: "3Row" },
+    { id: 5, key: "threeCol", label: "3Col" },
+    { id: 6, key: "fourGrid", label: "4Grid" },
   ];
 
   const renderGridPreview = (key: string) => {
@@ -93,36 +92,32 @@ const handleSelect = (gridKey: string, gridStyleId: number) => {
 
   return (
     <div>
+      <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 w-[90%] max-w-md shadow-xl space-y-5">
+          <h3 className="text-lg font-bold text-gray-800 text-center">
+            Select Grid Layout
+          </h3>
 
-        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-[90%] max-w-md shadow-xl space-y-5">
-            <h3 className="text-lg font-bold text-gray-800 text-center">
-              Select Grid Layout
-            </h3>
-
-            <div className="grid grid-cols-3 gap-4">
-              {gridOptions.map((grid) => (
-                <button
-                  key={grid.key}
-                 onClick={() => handleSelect(grid.key, grid.id)}
-
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition"
-                >
-                  {renderGridPreview(grid.key)}
-                </button>
-              ))}
-            </div>
-
-            <button
-             onClick={() => onClose()}
-
-              className="text-sm text-white bg-red-500 py-1 px-2 rounded-lg hover:underline block text-center mt-3"
-            >
-              Cancel
-            </button>
+          <div className="grid grid-cols-3 gap-4">
+            {gridOptions.map((grid) => (
+              <button
+                key={grid.key}
+                onClick={() => handleSelect(grid.key, grid.id)}
+                className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-gray-200 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-red-500 transition"
+              >
+                {renderGridPreview(grid.key)}
+              </button>
+            ))}
           </div>
+
+          <button
+            onClick={() => onClose()}
+            className="text-sm text-white bg-red-500 py-1 px-2 rounded-lg hover:underline block text-center mt-3"
+          >
+            Cancel
+          </button>
         </div>
-   
+      </div>
     </div>
   );
 };

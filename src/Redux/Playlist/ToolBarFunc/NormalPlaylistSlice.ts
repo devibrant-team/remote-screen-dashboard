@@ -76,7 +76,7 @@ const playlistSlice = createSlice({
         ImageFile: File;
         mediaType: "image" | "video";
         scale?: GridSlotConfig["scale"];
-         file?: File;
+        file?: File;
       }>
     ) => {
       const slide = state.slides[action.payload.slideIndex];
@@ -86,9 +86,42 @@ const playlistSlice = createSlice({
       if (slot) {
         slot.media = action.payload.media;
         slot.mediaType = action.payload.mediaType;
-         slot.ImageFile = action.payload.ImageFile;
+        slot.ImageFile = action.payload.ImageFile;
         if (action.payload.scale) slot.scale = action.payload.scale;
       }
+    },
+    // add this action next to updateSlotInSlide etc.
+    updateSlotWidgetInSlide: (
+      state,
+      action: PayloadAction<{
+        slideIndex: number;
+        slotIndex: number;
+        widget: {
+          type: "weather";
+          city: "Baalbek";
+          position:
+            | "center"
+            | "top-left"
+            | "top-right"
+            | "bottom-left"
+            | "bottom-right";
+        };
+      }>
+    ) => {
+      const { slideIndex, slotIndex, widget } = action.payload;
+      const slide = state.slides[slideIndex];
+      if (!slide) return;
+      const slot = slide.slots.find((s: any) => s.index === slotIndex);
+      if (!slot) return;
+      console.log(
+        "🧩 Reducer:updateSlotWidgetInSlide BEFORE",
+        JSON.parse(JSON.stringify(slot))
+      );
+      slot.widget = widget; // ✅ only set the object; don't touch media/mediaType
+      console.log(
+        "🧩 Reducer:updateSlotWidgetInSlide AFTER",
+        JSON.parse(JSON.stringify(slot))
+      );
     },
 
     removeSlideAtIndex: (state, action: PayloadAction<number>) => {
@@ -113,6 +146,7 @@ export const {
   addSlide,
   updateSlideAtIndex,
   removeSlideAtIndex,
+  updateSlotWidgetInSlide,
   clearPlaylist,
   updateSlideSlots,
   updateSlotInSlide,

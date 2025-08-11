@@ -3,7 +3,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-
 export interface NormalPlaylistState {
   duration: number;
   slots: GridSlotConfig[];
@@ -56,6 +55,7 @@ const NormalPlaylistSlice = createSlice({
         slot.scale = action.payload.scale;
       }
     },
+   
   },
 });
 
