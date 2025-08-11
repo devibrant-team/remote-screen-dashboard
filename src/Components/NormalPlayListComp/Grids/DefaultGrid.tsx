@@ -7,7 +7,7 @@ import {
 import { useInitGrid } from "./useInitGrid";
 import { store, type RootState } from "../../../../store";
 import WeatherWidget from "../Widgets/WeatherWidget";
-import { useEffect } from "react";
+
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -51,7 +51,6 @@ const DefaultGrid = () => {
     templateSlots,
     OneImageGridConfig
   );
-
 
   const handleMediaUpload = (slotIndex: number, file: File) => {
     if (selectedSlideIndex === null) return;
@@ -140,22 +139,22 @@ const DefaultGrid = () => {
   return (
     <div className="w-full max-w-6xl mx-auto my-10">
       {slide?.slots.length === 1 && (
-        <div className="w-full h-[50vh] relative rounded-xl overflow-hidden bg-gray-100">
+        <div className="w-full h-[50vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
           {slide.slots.map((slot) => (
             <div
               key={slot.index}
               className="w-full h-full relative group rounded-xl overflow-hidden"
             >
-              {/* BACKGROUND MEDIA (image/video OR fallback) */}
+              {/* Media Preview */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
                   <video
                     src={slot.media}
                     controls
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className="absolute inset-0 w-full h-full">
+                  <div className="w-full h-full relative flex items-center justify-center">
                     {slot.scale === "blur" && (
                       <img
                         src={slot.media}
@@ -165,40 +164,43 @@ const DefaultGrid = () => {
                     )}
                     <img
                       src={slot.media}
-                      alt=""
                       className={`${getScaleClass(
                         slot.scale
-                      )} absolute inset-0 transition-transform duration-200 group-hover:scale-105`}
+                      )} transition-transform duration-200 group-hover:scale-105`}
                     />
                   </div>
                 )
               ) : (
-                // fallback background if no media
-                <img
-                  src={DEFAULT_BG}
-                  alt=""
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+                <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl">
+                  No media uploaded
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    onChange={(e) =>
+                      e.target.files?.[0] &&
+                      handleMediaUpload(slot.index, e.target.files[0])
+                    }
+                    className="hidden"
+                  />
+                </label>
               )}
-
-              {/* WIDGET OVERLAY (only if present) */}
               {slot?.widget?.type === "weather" && (
                 <div
-                  className={`absolute inset-0 z-10 flex p-4 ${
+                  className={`absolute inset-0 z-10 flex p-4 pointer-events-none ${
                     posToClass[
                       (slot.widget.position as keyof typeof posToClass) ||
                         "center"
                     ]
                   }`}
                 >
-                  <WeatherWidget city={slot.widget.city} />
+                  <div className="pointer-events-auto">
+                    <WeatherWidget city={slot.widget.city} />
+                  </div>
                 </div>
               )}
-
-              {/* HOVER OVERLAY FOR BACKGROUND CONTROLS (shown even if widget exists) */}
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-end justify-between p-4 transition-opacity duration-300 z-20">
-                {/* Scale selector (applies to background image only) */}
-                <div className="flex gap-2">
+              {/* Hover overlay */}
+              {slot.media && (
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
                   <select
                     value={slot.scale}
                     onChange={(e) =>
@@ -209,42 +211,24 @@ const DefaultGrid = () => {
                     }
                     className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
                   >
-                    <option value="fit">Fit</option>
-                    <option value="fill">Fill</option>
-                    <option value="blur">Blur BG</option>
-                    <option value="original">Original</option>
+                    <option value="fit">🖼️ Fit (Contain)</option>
+                    <option value="fill">📱 Fill (Cover)</option>
+                    <option value="blur">🌫️ Fit + Blur BG</option>
+                    <option value="original">🧱 Original Size</option>
                   </select>
+                  <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
+                    Replace
+                    <input
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={(e) =>
+                        e.target.files?.[0] &&
+                        handleMediaUpload(slot.index, e.target.files[0])
+                      }
+                      className="hidden"
+                    />
+                  </label>
                 </div>
-
-                {/* Replace background */}
-                <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
-                  Replace Background
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={(e) =>
-                      e.target.files?.[0] &&
-                      handleMediaUpload(slot.index, e.target.files[0])
-                    }
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {/* EMPTY STATE (no media and no widget) — allow upload */}
-              {!slot.media && !slot.widget && (
-                <label className="absolute inset-0 flex items-center justify-center text-white bg-[#1e2530] cursor-pointer text-lg">
-                  Upload Media
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={(e) =>
-                      e.target.files?.[0] &&
-                      handleMediaUpload(slot.index, e.target.files[0])
-                    }
-                    className="hidden"
-                  />
-                </label>
               )}
             </div>
           ))}
