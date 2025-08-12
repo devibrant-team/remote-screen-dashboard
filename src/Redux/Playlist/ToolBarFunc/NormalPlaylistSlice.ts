@@ -11,6 +11,7 @@ export interface PlaylistState {
   type: number; // future-proofing if you add other types later
   slides: NormalPlaylistState[];
   selectedSlideIndex: number | null;
+  selectedRatio : string;
 }
 
 const initialState: PlaylistState = {
@@ -19,6 +20,7 @@ const initialState: PlaylistState = {
   type: 1,
   slides: [],
   selectedSlideIndex: null,
+  selectedRatio:"16:9"
 };
 
 const playlistSlice = createSlice({
@@ -27,6 +29,9 @@ const playlistSlice = createSlice({
   reducers: {
     setPlaylistName: (state, action: PayloadAction<string>) => {
       state.name = action.payload;
+    },
+    setPlaylistRatio: (state, action: PayloadAction<string>) => {
+      state.selectedRatio = action.payload;
     },
 
     setSelectedSlideIndex: (state, action: PayloadAction<number | null>) => {
@@ -98,7 +103,7 @@ const playlistSlice = createSlice({
         slotIndex: number;
         widget: {
           type: "weather";
-          city: "Baalbek";
+          city: "Zahle";
           position:
             | "center"
             | "top-left"
@@ -151,6 +156,7 @@ export const {
   updateSlideSlots,
   updateSlotInSlide,
   updateSlideGrid,
+  setPlaylistRatio,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;

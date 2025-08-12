@@ -11,7 +11,7 @@ type Props = {
   compact?: boolean;    // optional smaller variant
 };
 
-const WeatherWidget = ({ city = "Baalbek", className = "", compact = false }: Props) => {
+const WeatherWidget = ({ city = "Zahle", className = "", compact = false }: Props) => {
   const [weather, setWeather] = useState<WeatherData | null>(null);
   const [error, setError] = useState<string | null>(null);
 

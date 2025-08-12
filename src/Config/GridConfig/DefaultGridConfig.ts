@@ -1,6 +1,6 @@
 export type WeatherWidgetConfig = {
   type: "weather";
-  city: "Baalbek"; // fixed for now
+  city: "Zahle"; // fixed for now
   position:
     | "center"
     | "top-left"

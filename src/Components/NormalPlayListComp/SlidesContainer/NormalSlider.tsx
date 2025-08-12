@@ -20,7 +20,8 @@ const NormalSlider = () => {
     (state: RootState) => state.playlist.selectedSlideIndex
   );
 
-
+const p = useSelector((state:RootState)=>state.playlist.slides)
+console.log(p)
   const handleAddSlide = () => {
     const defaultSlide = {
       duration: 10,

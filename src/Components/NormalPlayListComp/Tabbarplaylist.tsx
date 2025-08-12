@@ -1,17 +1,16 @@
 import { useState } from "react";
-import { Layers, Grid2X2 } from "lucide-react";
+import { Layers, Grid2X2, ChevronDown } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { setPlaylistName } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
-import {
-  formatPlaylistPayload,
-  savePlaylistToDatabase,
-} from "../../Hook/Playlist/PostNormalPlaylist";
+import { savePlaylistToDatabase } from "../../Hook/Playlist/PostNormalPlaylist";
 import { store, type RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
 import { clearPlaylist } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import type { Root } from "react-dom/client";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -19,8 +18,12 @@ const Tabbarplaylist = () => {
   const playlist = useSelector((state: RootState) => state.playlist);
   const [saving, setSaving] = useState(false);
   const DEFAULT_BG = "/assets/weather_default_bg.jpg";
-  const [saveMessage, setSaveMessage] = useState("");
-  const [error, setError] = useState("");
+  const [, setSaveMessage] = useState("");
+  const [, setError] = useState("");
+  const selectedRatio = useSelector(
+    (state: RootState) => state.playlist.selectedRatio
+  );
+  console.log(selectedRatio);
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
@@ -87,7 +90,7 @@ const Tabbarplaylist = () => {
 
     const widget = {
       type: "weather",
-      city: "Baalbek",
+      city: "Zahle",
       position: "center",
     } as const;
     console.log("Dispatching widget:", widget);
@@ -98,7 +101,7 @@ const Tabbarplaylist = () => {
         slotIndex: 0, // ✅ which slot in that slide
         widget: {
           type: "weather",
-          city: "Baalbek",
+          city: "Zahle",
           position: "center",
         },
       })
@@ -112,6 +115,11 @@ const Tabbarplaylist = () => {
       console.log("Slide AFTER:", after);
       console.log("Slot AFTER:", after.slots[slotIndex]);
     }, 0);
+  };
+
+  const handleRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value as "16:9" | "21:9" | "9:16" | "4:3";
+    dispatch(setPlaylistRatio(value));
   };
 
   return (
@@ -161,6 +169,25 @@ const Tabbarplaylist = () => {
                 >
                   <Layers size={18} /> Add Widget
                 </button>
+              </div>
+              <h4 className="text-base lg:text-lg font-semibold">Ratio</h4>
+              <div className="relative border-2 rounded-2xl py-2 px-3 border-gray-300 shadow flex items-center">
+                <select
+                  value={selectedRatio}
+                  onChange={handleRatioChange}
+                  className="w-full appearance-none bg-transparent outline-none pr-8"
+                  aria-label="Aspect ratio"
+                >
+                  <option value="16:9">16:9</option>
+                  <option value="21:9">21:9</option>
+                  <option value="9:16">9:16</option>
+                  <option value="4:3">4:3</option>
+                  <option value="3:4">3:4</option>
+                </select>
+                <ChevronDown
+                  className="absolute right-3 text-red-500 pointer-events-none"
+                  size={18}
+                />
               </div>
             </div>
           </div>

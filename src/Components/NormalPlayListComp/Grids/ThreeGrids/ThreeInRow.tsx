@@ -4,6 +4,7 @@ import { ThreeRowGridConfig } from "../../../../Config/GridConfig/DefaultGridCon
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
+import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -26,6 +27,12 @@ const ThreeInRow = () => {
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
+  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+  const style = useAspectStyle(ratio, {
+    maxW: 1200,
+    sideMargin: 48,
+    topBottomMargin: 220,
+  });
 
   const slide = useSelector((state: RootState) =>
     selectedSlideIndex !== null
@@ -72,74 +79,46 @@ const ThreeInRow = () => {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto my-10">
-      {slots.length === 3 && (
-        <div className="w-full h-[50vh] flex rounded-xl overflow-hidden">
-          {slots.map((slot) => (
-            <div
-              key={slot.index}
-              className="flex-1 h-full relative group overflow-hidden bg-black"
-            >
-              {/* MEDIA PREVIEW */}
-              {slot.media ? (
-                slot.mediaType === "video" ? (
-                  <video
-                    src={slot.media}
-                    controls
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full relative flex items-center justify-center">
-                    {slot.scale === "blur" && (
+    <div className="w-full mx-auto my-10 flex justify-center">
+      {slots.length > 0 && (
+        <div
+          className="rounded-xl overflow-hidden bg-white shadow w-full max-w-none"
+          style={style} // <- locks aspect & responsive width
+        >
+          {/* Row layout: 1, 2, or 3 items automatically share width */}
+          <div className="flex w-full h-full">
+            {slots.slice(0, 3).map((slot) => (
+              <div
+                key={slot.index}
+                className="flex-1 h-full relative group overflow-hidden bg-black"
+              >
+                {slot.media ? (
+                  slot.mediaType === "video" ? (
+                    <video
+                      src={slot.media}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full relative flex items-center justify-center">
+                      {slot.scale === "blur" && (
+                        <img
+                          src={slot.media}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover blur-md scale-110"
+                        />
+                      )}
                       <img
                         src={slot.media}
-                        alt=""
-                        className="absolute inset-0 w-full h-full object-cover blur-md scale-110"
+                        className={`${getScaleClass(
+                          slot.scale
+                        )} transition-transform duration-200 group-hover:scale-105`}
                       />
-                    )}
-                    <img
-                      src={slot.media}
-                      className={`${getScaleClass(
-                        slot.scale
-                      )} transition-transform duration-200 group-hover:scale-105`}
-                    />
-                  </div>
-                )
-              ) : (
-                <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg">
-                  No media uploaded
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={(e) =>
-                      e.target.files?.[0] &&
-                      handleMediaUpload(slot.index, e.target.files[0])
-                    }
-                    className="hidden"
-                  />
-                </label>
-              )}
-
-              {/* HOVER CONTROLS */}
-              {slot.media && (
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
-                  <select
-                    value={slot.scale}
-                    onChange={(e) =>
-                      handleScaleChange(
-                        slot.index,
-                        e.target.value as "fit" | "fill" | "blur" | "original"
-                      )
-                    }
-                    className="p-2 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-400 font-bold"
-                  >
-                    <option value="fit">🖼️ Fit (Contain)</option>
-                    <option value="fill">📱 Fill (Cover)</option>
-                    <option value="blur">🌫️ Fit + Blur BG</option>
-                    <option value="original">🧱 Original Size</option>
-                  </select>
-                  <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
-                    Replace
+                    </div>
+                  )
+                ) : (
+                  <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg">
+                    No media uploaded
                     <input
                       type="file"
                       accept="image/*,video/*"
@@ -150,14 +129,45 @@ const ThreeInRow = () => {
                       className="hidden"
                     />
                   </label>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+
+                {slot.media && (
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-3 transition-opacity duration-300 z-10">
+                    <select
+                      value={slot.scale}
+                      onChange={(e) =>
+                        handleScaleChange(
+                          slot.index,
+                          e.target.value as "fit" | "fill" | "blur" | "original"
+                        )
+                      }
+                      className="p-2 bg-white rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-400 font-bold"
+                    >
+                      <option value="fit">🖼️ Fit (Contain)</option>
+                      <option value="fill">📱 Fill (Cover)</option>
+                      <option value="blur">🌫️ Fit + Blur BG</option>
+                      <option value="original">🧱 Original Size</option>
+                    </select>
+                    <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
+                      Replace
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        onChange={(e) =>
+                          e.target.files?.[0] &&
+                          handleMediaUpload(slot.index, e.target.files[0])
+                        }
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
 };
-
 export default ThreeInRow;

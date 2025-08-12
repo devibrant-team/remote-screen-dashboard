@@ -7,6 +7,7 @@ import {
 import { useInitGrid } from "./useInitGrid";
 import { store, type RootState } from "../../../../store";
 import WeatherWidget from "../Widgets/WeatherWidget";
+import { useAspectStyle } from "../../../Hook/Playlist/RatioHook/RatiotoAspect";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -25,8 +26,12 @@ const getScaleClass = (scale: string) => {
 
 const DefaultGrid = () => {
   const dispatch = useDispatch();
-  const DEFAULT_BG =
-    "https://images.twinkl.co.uk/tw1n/image/private/t_630/u/ux/wolfgang-hasselmann-br-gllg7bs-unsplash-2_ver_1.jpg";
+  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+  const style = useAspectStyle(ratio, {
+    maxW: 1200,
+    sideMargin: 48,
+    topBottomMargin: 220,
+  });
   const posToClass: Record<string, string> = {
     center: "items-center justify-center",
     "top-left": "items-start justify-start",
@@ -136,10 +141,14 @@ const DefaultGrid = () => {
       })
     );
   };
+  //flex items-center justify-center rounded-xl overflow-hidden
   return (
-    <div className="w-full max-w-6xl mx-auto my-10">
+    <div className="w-full mx-auto my-10 flex justify-center">
       {slide?.slots.length === 1 && (
-        <div className="w-full h-[50vh] flex items-center justify-center rounded-xl overflow-hidden bg-gray-100">
+        <div
+          className="rounded-xl overflow-hidden bg-white shadow "
+          style={style}
+        >
           {slide.slots.map((slot) => (
             <div
               key={slot.index}

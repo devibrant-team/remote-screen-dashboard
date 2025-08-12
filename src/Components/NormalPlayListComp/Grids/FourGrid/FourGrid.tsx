@@ -4,6 +4,7 @@ import { FourImageGridConfig } from "../../../../Config/GridConfig/DefaultGridCo
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
 import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
+import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -26,6 +27,12 @@ const FourGrid = () => {
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
+  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+  const style = useAspectStyle(ratio, {
+    maxW: 1200,
+    sideMargin: 48,
+    topBottomMargin: 220,
+  });
 
   const slide = useSelector((state: RootState) =>
     selectedSlideIndex !== null
@@ -70,24 +77,20 @@ const FourGrid = () => {
       })
     );
   };
-
-  return (
-    <div className="w-full max-w-4xl mx-auto my-10">
-      {slots.length === 4 && (
-        <div className="grid grid-cols-2 grid-rows-2 w-full h-[50vh]  aspect-square max-w-[700px] mx-auto rounded-xl overflow-hidden">
+ return (
+  <div className="w-full mx-auto my-10 flex justify-center">
+    {slots.length === 4 && (
+      <div
+        className="rounded-xl overflow-hidden bg-white shadow w-full max-w-none"
+        style={style} // from useAspectStyle(selectedRatio, ...)
+      >
+        <div className="grid grid-cols-2 grid-rows-2 w-full h-full">
           {slots.map((slot) => (
-            <div
-              key={slot.index}
-              className="relative group bg-black overflow-hidden aspect-square w-full h-full"
-            >
+            <div key={slot.index} className="relative group overflow-hidden">
               {/* MEDIA */}
               {slot.media ? (
                 slot.mediaType === "video" ? (
-                  <video
-                    src={slot.media}
-                    controls
-                    className="w-full h-full object-cover"
-                  />
+                  <video src={slot.media} controls className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full relative flex items-center justify-center">
                     {slot.scale === "blur" && (
@@ -99,9 +102,7 @@ const FourGrid = () => {
                     )}
                     <img
                       src={slot.media}
-                      className={`${getScaleClass(
-                        slot.scale
-                      )} transition-transform duration-200 group-hover:scale-105`}
+                      className={`${getScaleClass(slot.scale)} transition-transform duration-200 group-hover:scale-105`}
                     />
                   </div>
                 )
@@ -112,8 +113,7 @@ const FourGrid = () => {
                     type="file"
                     accept="image/*,video/*"
                     onChange={(e) =>
-                      e.target.files?.[0] &&
-                      handleMediaUpload(slot.index, e.target.files[0])
+                      e.target.files?.[0] && handleMediaUpload(slot.index, e.target.files[0])
                     }
                     className="hidden"
                   />
@@ -144,8 +144,7 @@ const FourGrid = () => {
                       type="file"
                       accept="image/*,video/*"
                       onChange={(e) =>
-                        e.target.files?.[0] &&
-                        handleMediaUpload(slot.index, e.target.files[0])
+                        e.target.files?.[0] && handleMediaUpload(slot.index, e.target.files[0])
                       }
                       className="hidden"
                     />
@@ -155,9 +154,11 @@ const FourGrid = () => {
             </div>
           ))}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
+
 };
 
 export default FourGrid;
