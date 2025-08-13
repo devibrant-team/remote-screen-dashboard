@@ -1,21 +1,21 @@
 import React, { useRef } from "react";
 
-interface ImagePreview {
-  file: File;
+export type ImagePreview = {
   url: string;
-}
+  type?: "image" | "video";
+  mediaId?: number; // from library
+  file?: File;      // from upload
+};
 
-interface ImageSliderProps {
+type ImageSliderProps = {
   images: ImagePreview[];
-  setImages: React.Dispatch<React.SetStateAction<ImagePreview[]>>;
   handleReplaceImage: (index: number, file: File) => void;
   handleDeleteImage: (index: number) => void;
   handleReorder: (newImages: ImagePreview[]) => void;
-}
+};
 
 const ImageSlider: React.FC<ImageSliderProps> = ({
   images,
-  // setImages,
   handleReplaceImage,
   handleDeleteImage,
   handleReorder,
@@ -36,14 +36,16 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
       dragItem.current === null ||
       dragOverItem.current === null ||
       dragItem.current === dragOverItem.current
-    )
+    ) {
       return;
+    }
 
     const reordered = [...images];
     const dragged = reordered[dragItem.current];
     reordered.splice(dragItem.current, 1);
     reordered.splice(dragOverItem.current, 0, dragged);
     handleReorder(reordered);
+
     dragItem.current = null;
     dragOverItem.current = null;
   };
@@ -60,19 +62,21 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
             draggable
             onDragStart={() => handleDragStart(index)}
             onDragEnter={() => handleDragEnter(index)}
+            onDragOver={(e) => e.preventDefault()}  // allow drop while dragging
             onDragEnd={handleDrop}
           >
             <img
               src={img.url}
               alt={`preview-${index}`}
               className="w-full h-full object-cover"
+              draggable={false}
             />
 
+            {/* Replace overlay */}
             <div
-              onClick={() =>
-                document.getElementById(`replace-${index}`)?.click()
-              }
+              onClick={() => document.getElementById(`replace-${index}`)?.click()}
               className="absolute inset-0 bg-gray-900/60 flex items-center justify-center text-white text-sm font-semibold opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              title="Replace this slide"
             >
               Replace
             </div>
@@ -82,11 +86,14 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) =>
-                e.target.files && handleReplaceImage(index, e.target.files[0])
-              }
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleReplaceImage(index, e.target.files[0]);
+                }
+              }}
             />
 
+            {/* Delete button */}
             <button
               onClick={() => handleDeleteImage(index)}
               className="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-7 h-7 rounded-full bg-red-600 text-white shadow-md transition hover:bg-red-700"

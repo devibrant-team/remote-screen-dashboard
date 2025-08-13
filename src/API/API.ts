@@ -4,3 +4,5 @@ export const playlisttypeApi = `${http}getplaylistStyle`
 export const PlaylistPostApi = `${http}postNormal`
 export const postplaylistinteractiveApi = `${http}postinteractive`
 export const getmediacontent = `${http}getuser/playlist`
+export const getMediaUserApi = `${http}getuser/media`
+

@@ -10,6 +10,13 @@ import { clearPlaylist } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSl
 import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import type { MediaItem } from "../../Hook/Media/useGetMedia";
+import UserMediaGrid from "../Media/UserMediaGrid";
+import {
+  toggleMediaSelection,
+  selectSelectedMedia,
+  selectSelectedMediaIds,
+} from "../../Redux/Media/MediaSlice";
 import type { Root } from "react-dom/client";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -20,6 +27,7 @@ const Tabbarplaylist = () => {
   const DEFAULT_BG = "/assets/weather_default_bg.jpg";
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
+
   const selectedRatio = useSelector(
     (state: RootState) => state.playlist.selectedRatio
   );
@@ -32,6 +40,20 @@ const Tabbarplaylist = () => {
       ? state.playlist.slides[selectedSlideIndex]
       : null
   );
+  const selectedMedia = useSelector(selectSelectedMedia);
+  const selectedMediaIds = useSelector(selectSelectedMediaIds);
+
+  console.log("hahahhahhahahhahah", selectedMedia);
+  const handleToggleMedia = (item: MediaItem) => {
+    // MediaItem: { id, type, media }
+    dispatch(
+      toggleMediaSelection({
+        id: item.id,
+        url: item.media,
+        type: item.type,
+      })
+    );
+  };
   const handleSavePlaylist = async () => {
     setSaving(true);
     setSaveMessage("");
@@ -57,8 +79,6 @@ const Tabbarplaylist = () => {
   };
 
   const handleAddWeatherWidget = () => {
-
-
     if (selectedSlideIndex === null || !slide) {
       alert("Please select/create a slide first.");
       return;
@@ -66,10 +86,8 @@ const Tabbarplaylist = () => {
 
     const slotIndex = 0;
     const slot = slide.slots[slotIndex];
- 
 
     if (!slot?.media) {
- 
       dispatch(
         updateSlotMedia({
           index: slotIndex,
@@ -86,7 +104,6 @@ const Tabbarplaylist = () => {
       city: "Riyadh",
       position: "center",
     } as const;
-   
 
     dispatch(
       updateSlotWidgetInSlide({
@@ -99,8 +116,6 @@ const Tabbarplaylist = () => {
         },
       })
     );
-
-   
   };
 
   const handleRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -175,6 +190,13 @@ const Tabbarplaylist = () => {
                   size={18}
                 />
               </div>
+              <UserMediaGrid
+                mode="multi"
+                // variant defaults to "normal"
+                selectedIds={selectedMediaIds}
+                onToggle={handleToggleMedia}
+                maxHeight={320}
+              />
             </div>
           </div>
 
