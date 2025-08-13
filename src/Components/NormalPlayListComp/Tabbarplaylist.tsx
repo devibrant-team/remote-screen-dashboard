@@ -4,20 +4,12 @@ import { useDispatch, useSelector } from "react-redux";
 import { setPlaylistName } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
 import { savePlaylistToDatabase } from "../../Hook/Playlist/PostNormalPlaylist";
-import { store, type RootState } from "../../../store";
+import type { RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
 import { clearPlaylist } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
-import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+
 import { setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import type { MediaItem } from "../../Hook/Media/useGetMedia";
-import UserMediaGrid from "../Media/UserMediaGrid";
-import {
-  toggleMediaSelection,
-  selectSelectedMedia,
-  selectSelectedMediaIds,
-} from "../../Redux/Media/MediaSlice";
-import type { Root } from "react-dom/client";
+
 import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
 const Tabbarplaylist = () => {
@@ -27,7 +19,6 @@ const Tabbarplaylist = () => {
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
   const [saving, setSaving] = useState(false);
-  const DEFAULT_BG = "/assets/weather_default_bg.jpg";
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
 
@@ -35,28 +26,6 @@ const Tabbarplaylist = () => {
     (state: RootState) => state.playlist.selectedRatio
   );
 
-  const selectedSlideIndex = useSelector(
-    (state: RootState) => state.playlist.selectedSlideIndex
-  );
-  const slide = useSelector((state: RootState) =>
-    selectedSlideIndex !== null
-      ? state.playlist.slides[selectedSlideIndex]
-      : null
-  );
-  const selectedMedia = useSelector(selectSelectedMedia);
-  const selectedMediaIds = useSelector(selectSelectedMediaIds);
-
-  console.log("hahahhahhahahhahah", selectedMedia);
-  const handleToggleMedia = (item: MediaItem) => {
-    // MediaItem: { id, type, media }
-    dispatch(
-      toggleMediaSelection({
-        id: item.id,
-        url: item.media,
-        type: item.type,
-      })
-    );
-  };
   const handleSavePlaylist = async () => {
     setSaving(true);
     setSaveMessage("");
@@ -79,46 +48,6 @@ const Tabbarplaylist = () => {
   const handleCancel = () => {
     dispatch(clearPlaylist());
     navigate("/mediacontent");
-  };
-
-  const handleAddWeatherWidget = () => {
-    if (selectedSlideIndex === null || !slide) {
-      alert("Please select/create a slide first.");
-      return;
-    }
-
-    const slotIndex = 0;
-    const slot = slide.slots[slotIndex];
-
-    if (!slot?.media) {
-      dispatch(
-        updateSlotMedia({
-          index: slotIndex,
-          media: DEFAULT_BG,
-          mediaType: "image",
-        })
-      );
-    } else {
-      //null
-    }
-
-    const widget = {
-      type: "weather",
-      city: "Riyadh",
-      position: "center",
-    } as const;
-
-    dispatch(
-      updateSlotWidgetInSlide({
-        slideIndex: selectedSlideIndex!, // ✅ which slide
-        slotIndex: 0, // ✅ which slot in that slide
-        widget: {
-          type: "weather",
-          city: "Riyadh",
-          position: "center",
-        },
-      })
-    );
   };
 
   const handleRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -193,13 +122,6 @@ const Tabbarplaylist = () => {
                   size={18}
                 />
               </div>
-              <UserMediaGrid
-                mode="multi"
-                // variant defaults to "normal"
-                selectedIds={selectedMediaIds}
-                onToggle={handleToggleMedia}
-                maxHeight={320}
-              />
             </div>
           </div>
 
@@ -226,7 +148,7 @@ const Tabbarplaylist = () => {
         onClose={() => setModalOpen(false)}
         title="Choose Widget "
       >
-       <WidgetModels onClose={() => setModalOpen(false)} />
+        <WidgetModels onClose={() => setModalOpen(false)} />
       </BaseModal>
     </>
   );

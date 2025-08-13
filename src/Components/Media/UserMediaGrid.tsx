@@ -1,6 +1,6 @@
 // src/components/Media/UserMediaGrid.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useGetMedia, type MediaItem } from "../../Hook/Media/useGetMedia";
+import { useGetMedia, type MediaItem } from "../../ReactQuery/Media/useGetMedia";
 
 type SingleProps = {
   mode?: "single";

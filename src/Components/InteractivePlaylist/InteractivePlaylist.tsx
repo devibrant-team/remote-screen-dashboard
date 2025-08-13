@@ -2,7 +2,7 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import { useSelector } from "react-redux";
 import ImageSlider, { type ImagePreview } from "./ImageSlider";
 import UserMediaGrid from "../Media/UserMediaGrid";
-import type { MediaItem } from "../../Hook/Media/useGetMedia";
+import type { MediaItem } from "../../ReactQuery/Media/useGetMedia";
 import type { RootState } from "../../../store";
 import { usePostPlaylistInteractive } from "./../../Hook/PlaylistInterActive/usePostPlaylistInteractive";
 import { selectSelectedMedia } from "../../Redux/Media/MediaSlice";
