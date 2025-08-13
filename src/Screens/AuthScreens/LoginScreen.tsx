@@ -5,6 +5,7 @@ import { loginUser } from "../../Redux/Authentications/AuthSlice";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -21,6 +22,7 @@ const LoginScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { loading, error } = useSelector((state: RootState) => state.auth);
+  const token = useSelector((state: RootState) => state.auth.token);
   const machineId: string | null = useSelector(
     (state: RootState) => state.machine.machineId
   );
@@ -31,15 +33,19 @@ const LoginScreen = () => {
   } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
   });
-
-  const onSubmit = (data: LoginFormInputs) => {
+  useEffect(() => {
+    if (token) navigate("/mediacontent", { replace: true });
+  }, [token, navigate]);
+  const onSubmit = async (data: LoginFormInputs) => {
     const payload: LoginPayload = { ...data, machineId };
-    dispatch(loginUser(payload));
-    navigate("/mediacontent")
-    
-    
+    try {
+      // unwrap throws on reject (RTK)
+      await dispatch(loginUser(payload)).unwrap();
+      // if your thunk returns token and your slice doesn't persist it:
+    } catch (e) {
+      // error state already set by slice; optional toast here
+    } 
   };
-
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-red-300 to-red-800 flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background IGUANA text with inverted gradient */}

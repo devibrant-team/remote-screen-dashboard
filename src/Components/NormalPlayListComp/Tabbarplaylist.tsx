@@ -23,7 +23,7 @@ const Tabbarplaylist = () => {
   const selectedRatio = useSelector(
     (state: RootState) => state.playlist.selectedRatio
   );
-  console.log(selectedRatio);
+
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
@@ -57,9 +57,7 @@ const Tabbarplaylist = () => {
   };
 
   const handleAddWeatherWidget = () => {
-    console.log("🛠 Add Widget clicked");
-    console.log("Selected slide index:", selectedSlideIndex);
-    console.log("Slide BEFORE:", slide);
+
 
     if (selectedSlideIndex === null || !slide) {
       alert("Please select/create a slide first.");
@@ -68,10 +66,10 @@ const Tabbarplaylist = () => {
 
     const slotIndex = 0;
     const slot = slide.slots[slotIndex];
-    console.log("Slot BEFORE:", slot);
+ 
 
     if (!slot?.media) {
-      console.log("No background -> setting DEFAULT_BG:", DEFAULT_BG);
+ 
       dispatch(
         updateSlotMedia({
           index: slotIndex,
@@ -80,20 +78,15 @@ const Tabbarplaylist = () => {
         })
       );
     } else {
-      console.log(
-        "Background already set:",
-        slot.media,
-        "mediaType:",
-        slot.mediaType
-      );
+      //null
     }
 
     const widget = {
       type: "weather",
-      city: "Zahle",
+      city: "Riyadh",
       position: "center",
     } as const;
-    console.log("Dispatching widget:", widget);
+   
 
     dispatch(
       updateSlotWidgetInSlide({
@@ -101,20 +94,13 @@ const Tabbarplaylist = () => {
         slotIndex: 0, // ✅ which slot in that slide
         widget: {
           type: "weather",
-          city: "Zahle",
+          city: "Riyadh",
           position: "center",
         },
       })
     );
 
-    // Inspect AFTER dispatch
-    setTimeout(() => {
-      const after = (store.getState() as RootState).playlist.slides[
-        selectedSlideIndex!
-      ];
-      console.log("Slide AFTER:", after);
-      console.log("Slot AFTER:", after.slots[slotIndex]);
-    }, 0);
+   
   };
 
   const handleRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

@@ -1,6 +1,6 @@
 export type WeatherWidgetConfig = {
   type: "weather";
-  city: "Zahle"; // fixed for now
+  city: "Riyadh"; // fixed for now
   position:
     | "center"
     | "top-left"

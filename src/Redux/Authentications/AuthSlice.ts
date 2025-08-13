@@ -25,6 +25,7 @@ export const loginUser = createAsyncThunk(
       const response = await axios.post("http://192.168.10.107/remote-screen-backend/public/api/dashboard/login", credentials);
       const token = response.data.token;
       localStorage.setItem("token", token);
+      console.log("TOKEN RECIEVER AND SAVED" , token)
       return token;
     } catch (error: any) {
       return thunkAPI.rejectWithValue(error.response?.data?.message || "Login failed");

@@ -11,7 +11,7 @@ import { PlaylistPostApi } from "../../API/API";
 // Format and send playlist to backend
 export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
   const formData = new FormData();
-
+  const token = localStorage.getItem("token");
   // Playlist metadata
   formData.append("id", playlist.id.toString());
   formData.append("name", playlist.name);
@@ -59,7 +59,10 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
 
   // Send request
   const response = await axios.post(PlaylistPostApi, formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: {
+      "Content-Type": "multipart/form-data",
+      Authorization: `Bearer ${token}`,
+    },
   });
 
   return response.data;

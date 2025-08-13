@@ -103,7 +103,7 @@ const playlistSlice = createSlice({
         slotIndex: number;
         widget: {
           type: "weather";
-          city: "Zahle";
+          city: "Riyadh";
           position:
             | "center"
             | "top-left"
