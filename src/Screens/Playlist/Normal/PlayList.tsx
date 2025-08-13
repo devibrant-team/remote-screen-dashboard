@@ -15,9 +15,9 @@ import { useLeaveGuard } from "../../../Hook/Playlist/useLeaveGuard";
 import { clearPlaylist } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 const PlayList = () => {
-  const dispatch = useDispatch(); // ✅ invoke the hook
+  const dispatch = useDispatch();
 
-  const playlist = useSelector((state: RootState) => state.playlist); // ✅ define playlist
+  const playlist = useSelector((state: RootState) => state.playlist);
 
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
@@ -56,13 +56,39 @@ const PlayList = () => {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-[var(--white-200)]">
-      <Dialog /> 
-      <Tabbarplaylist />
-      <div className="flex-1 p-6">
-        <div className="mt-6">{renderSelectedGrid()}</div>
-        <NormalSlider />
+    // Mobile-first: column; at lg → row with a fixed sidebar on the left
+    <div className="min-h-[100svh] h-dvh bg-[var(--white-200)] overflow-hidden flex flex-col lg:flex-row">
+      <Dialog />
+
+      {/* Sidebar first on lg, on mobile it sits on top full width */}
+      <div className="shrink-0">
+        <Tabbarplaylist />
       </div>
+
+      {/* Main content: grows and scrolls independently */}
+      <main
+        className="
+          flex-1
+          overflow-y-auto
+          px-3 sm:px-4 lg:px-6
+          py-4 lg:py-6
+        "
+      >
+        {/* Grid stage */}
+        <div className="mt-2 sm:mt-4 lg:mt-6">
+          {/* Constrain width on very large screens for readability */}
+          <div className="mx-auto w-full max-w-[1400px]">
+            {renderSelectedGrid()}
+          </div>
+        </div>
+
+        {/* Slider section with nice breathing room */}
+        <section className="mt-6 sm:mt-8 lg:mt-10">
+          <div className="mx-auto w-full max-w-[1400px]">
+            <NormalSlider />
+          </div>
+        </section>
+      </main>
     </div>
   );
 };
