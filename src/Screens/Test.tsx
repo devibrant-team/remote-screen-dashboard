@@ -4,7 +4,10 @@ import { useNavigate } from "react-router-dom";
 
 import { OneImageGridConfig } from "../Config/GridConfig/DefaultGridConfig";
 import type { RootState } from "../../store";
-import { addSlide, setSelectedSlideIndex } from "../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import {
+  addSlide,
+  setSelectedSlideIndex,
+} from "../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 const Test = () => {
   const dispatch = useDispatch();
@@ -17,6 +20,7 @@ const Test = () => {
     if (!firstSlideCreated) {
       const defaultSlide = {
         name: "",
+        id: crypto.randomUUID(),
         duration: 10,
         scale: "Original Scale",
         selectedGrid: "default",

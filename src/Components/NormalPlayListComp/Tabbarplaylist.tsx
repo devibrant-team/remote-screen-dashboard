@@ -18,9 +18,12 @@ import {
   selectSelectedMediaIds,
 } from "../../Redux/Media/MediaSlice";
 import type { Root } from "react-dom/client";
+import BaseModal from "../Models/BaseModal";
+import WidgetModels from "../Models/WidgetModels";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [modalOpen, setModalOpen] = useState(false);
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
   const [saving, setSaving] = useState(false);
@@ -165,7 +168,7 @@ const Tabbarplaylist = () => {
                 </button>
 
                 <button
-                  onClick={handleAddWeatherWidget}
+                  onClick={() => setModalOpen(true)}
                   className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md  hover:bg-red-600 transition"
                 >
                   <Layers size={18} /> Add Widget
@@ -217,6 +220,14 @@ const Tabbarplaylist = () => {
           </div>
         </div>
       </div>
+
+      <BaseModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Choose Widget "
+      >
+       <WidgetModels onClose={() => setModalOpen(false)} />
+      </BaseModal>
     </>
   );
 };

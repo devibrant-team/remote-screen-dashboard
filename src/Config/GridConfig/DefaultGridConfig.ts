@@ -1,13 +1,30 @@
+export type WidgetPosition =
+  | "center"
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
+// Weather
 export type WeatherWidgetConfig = {
   type: "weather";
-  city: "Riyadh"; // fixed for now
-  position:
-    | "center"
-    | "top-left"
-    | "top-right"
-    | "bottom-left"
-    | "bottom-right";
+  city: string;            // ⬅️ was "Riyadh" (literal) → make it string
+  position: WidgetPosition;
 };
+
+// Clock
+export type ClockWidgetConfig = {
+  type: "clock";
+  timezone?: string;       // default: "Asia/Riyadh" (Jeddah)
+  label?: string;          // default: "Jeddah"
+  showSeconds?: boolean;   // default: true
+  twentyFourHour?: boolean;// default: true
+  position: WidgetPosition;
+};
+
+// Union
+export type SlotWidget = WeatherWidgetConfig | ClockWidgetConfig;
+
 
 export type GridSlotConfig = {
   mediaType?: "image" | "video";
@@ -16,7 +33,7 @@ export type GridSlotConfig = {
   scale: "fit" | "fill" | "stretch" | "blur" | "original";
   index: number;
   file?: File | null;
-  widget?: WeatherWidgetConfig | null;
+ widget?: SlotWidget | null;
 };
 
 export type GridLayoutConfig = {
