@@ -1,11 +1,13 @@
 import { useState, useEffect, type ChangeEvent } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import ImageSlider, { type ImagePreview } from "./ImageSlider";
 import UserMediaGrid from "../Media/UserMediaGrid";
-import type { MediaItem } from "../../ReactQuery/Media/useGetMedia";
 import type { RootState } from "../../../store";
 import { usePostPlaylistInteractive } from "./../../Hook/PlaylistInterActive/usePostPlaylistInteractive";
-import { selectSelectedMedia } from "../../Redux/Media/MediaSlice";
+import {
+  selectSelectedMedia,
+  removeSelectedMediaById,
+} from "../../Redux/Media/MediaSlice";
 
 const MAX_SLIDES = 5;
 
@@ -14,17 +16,17 @@ export default function CreateInteractivePlaylist({
 }: {
   onCloseAll: () => void;
 }) {
+  const dispatch = useDispatch();
+
   const [playlistName, setPlaylistName] = useState("");
   const [images, setImages] = useState<ImagePreview[]>([]);
 
   const layoutId = useSelector(
-    (state: RootState) => state.playlistInteractive.playlistData?.layoutId
+    (s: RootState) => s.playlistInteractive.playlistData?.layoutId
   );
   const selectedMedia = useSelector(selectSelectedMedia);
-    console.log("hahahhahhahahhahah", selectedMedia);
   const { mutate, isPending } = usePostPlaylistInteractive();
 
-  // Persist (recommendation: only persist library items because blob URLs won't survive reloads)
   const persistImagesToLocalStorage = (arr: ImagePreview[]) => {
     const simplified = arr
       .filter((i) => typeof i.mediaId === "number")
@@ -43,7 +45,7 @@ export default function CreateInteractivePlaylist({
     persistImagesToLocalStorage(trimmed);
   };
 
-  // ---- Uploads still supported ----
+  // ---- Uploads ----
   const handleFileUpload = (e: ChangeEvent<HTMLInputElement>) => {
     const uploaded = Array.from(e.target.files || []);
     const room = MAX_SLIDES - images.length;
@@ -60,69 +62,70 @@ export default function CreateInteractivePlaylist({
 
   const handleReplaceImage = (index: number, file: File) => {
     const newUrl = URL.createObjectURL(file);
-    const updated = [...images];
-
-    // revoke if old was an uploaded blob
-    const old = updated[index];
-    if (old?.file) URL.revokeObjectURL(old.url);
-
-    updated[index] = { file, url: newUrl, type: "image", mediaId: undefined };
-    updateImages(updated);
+    setImages((prev) => {
+      const next = [...prev];
+      const old = next[index];
+      if (old?.file) URL.revokeObjectURL(old.url);
+      // If replacing a library slide, also remove it from Redux selection
+      if (old?.mediaId) dispatch(removeSelectedMediaById(old.mediaId));
+      next[index] = { file, url: newUrl, type: "image", mediaId: undefined };
+      persistImagesToLocalStorage(next);
+      return next;
+    });
   };
 
   const handleDeleteImage = (index: number) => {
-    const updated = [...images];
-    const removed = updated.splice(index, 1)?.[0];
-    if (removed?.file) URL.revokeObjectURL(removed.url);
-    updateImages(updated);
+    setImages((prev) => {
+      const next = [...prev];
+      const removed = next.splice(index, 1)?.[0];
+      if (removed?.file) URL.revokeObjectURL(removed.url);
+      if (removed?.mediaId) dispatch(removeSelectedMediaById(removed.mediaId));
+      persistImagesToLocalStorage(next);
+      return next;
+    });
   };
+  const normalizeKind = (t: unknown): ImagePreview["type"] =>
+    t === "image" || t === "video" ? t : "image";
 
   const handleReorder = (reordered: ImagePreview[]) => updateImages(reordered);
 
-  // ---- Select from user's media library ----
-  const handleLibraryToggle = (item: MediaItem) => {
-    if (item.type !== "image") {
-      alert(
-        "Only images can be added to this slider (videos are not supported yet)."
-      );
-      return;
-    }
+  // ---- Sync images with Redux-selected media (add/remove) ----
+  useEffect(() => {
+    setImages((prev) => {
+      const byId = new Set(selectedMedia.map((m) => m.id));
 
-    const existsIdx = images.findIndex((s) => s.mediaId === item.id);
-    if (existsIdx >= 0) {
-      handleDeleteImage(existsIdx);
-      return;
-    }
+      let next = prev.filter((img) => !(img.mediaId && !byId.has(img.mediaId)));
 
-    if (images.length >= MAX_SLIDES) {
-      alert(`You can add up to ${MAX_SLIDES} slides.`);
-      return;
-    }
+      selectedMedia.forEach((m) => {
+        if (
+          !next.some((img) => img.mediaId === m.id) &&
+          next.length < MAX_SLIDES
+        ) {
+          next.push({
+            mediaId: m.id,
+            url: m.url,
+            type: normalizeKind(m.type), // now defined
+          });
+        }
+      });
 
-    const slide: ImagePreview = {
-      mediaId: item.id,
-      url: item.media,
-      type: "image",
-    };
-    updateImages([...images, slide]);
-  };
-
-  const selectedIdsFromLibrary = images
-    .map((s) => s.mediaId)
-    .filter((v): v is number => typeof v === "number");
+      const trimmed = next.slice(0, MAX_SLIDES);
+      persistImagesToLocalStorage(trimmed);
+      return trimmed;
+    });
+  }, [selectedMedia]);
 
   // auto-scroll slider when images change
   useEffect(() => {
     const slider = document.querySelector(".scroll-smooth");
-    if (slider) {
+    if (slider)
       (slider as HTMLElement).scrollTo({
         left: (slider as HTMLElement).scrollWidth,
         behavior: "smooth",
       });
-    }
   }, [images]);
 
-  // revoke blob URLs on unmount (safety)
+  // revoke blob URLs on unmount
   useEffect(() => {
     return () => {
       images.forEach((i) => {
@@ -149,12 +152,9 @@ export default function CreateInteractivePlaylist({
 
     images.forEach((img, index) => {
       formData.append(`slides[${index}][index]`, String(index));
-
-      if (img.mediaId) {
+      if (img.mediaId)
         formData.append(`slides[${index}][media_id]`, String(img.mediaId));
-      } else if (img.file) {
-        formData.append(`slides[${index}][media]`, img.file);
-      }
+      else if (img.file) formData.append(`slides[${index}][media]`, img.file);
     });
 
     mutate(formData, {
@@ -229,7 +229,7 @@ export default function CreateInteractivePlaylist({
           </div>
         )}
 
-        {/* Media Library */}
+        {/* Media Library (Redux-driven) */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
@@ -239,14 +239,7 @@ export default function CreateInteractivePlaylist({
               {images.length}/{MAX_SLIDES} slides
             </span>
           </div>
-        <UserMediaGrid
-          variant="interactive"
-          mode="multi"
-          selectedIds={selectedIdsFromLibrary}
-          onToggle={handleLibraryToggle}
-          itemsPerPage={5}     // step size per click
-          cardSize={110}       // compact height; tweak if you want smaller/bigger
-        />
+          <UserMediaGrid />
         </div>
 
         {/* Image Slider */}
