@@ -8,7 +8,7 @@ import { useInitGrid } from "./useInitGrid";
 import { store, type RootState } from "../../../../store";
 import WeatherWidget from "../Widgets/WeatherWidget";
 import { useAspectStyle } from "../../../Hook/Playlist/RatioHook/RatiotoAspect";
-
+import OclockWidget from "../Widgets/OclockWidget";
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -27,11 +27,13 @@ const getScaleClass = (scale: string) => {
 const DefaultGrid = () => {
   const dispatch = useDispatch();
   const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+
   const style = useAspectStyle(ratio, {
     maxW: 1200,
     sideMargin: 48,
     topBottomMargin: 220,
   });
+
   const posToClass: Record<string, string> = {
     center: "items-center justify-center",
     "top-left": "items-start justify-start",
@@ -169,10 +171,14 @@ const DefaultGrid = () => {
                         src={slot.media}
                         alt=""
                         className="absolute inset-0 w-full h-full object-cover blur-md scale-110"
+                        draggable={false}
+                        onDragStart={(e) => e.preventDefault()}
                       />
                     )}
                     <img
                       src={slot.media}
+                      draggable={false}
+                      onDragStart={(e) => e.preventDefault()}
                       className={`${getScaleClass(
                         slot.scale
                       )} transition-transform duration-200 group-hover:scale-105`}
@@ -204,6 +210,20 @@ const DefaultGrid = () => {
                 >
                   <div className="pointer-events-auto">
                     <WeatherWidget city={slot.widget.city} />
+                  </div>
+                </div>
+              )}
+              {slot?.widget?.type === "clock" && (
+                <div
+                  className={`absolute inset-0 z-10 flex p-4 pointer-events-none ${
+                    posToClass[
+                      (slot.widget.position as keyof typeof posToClass) ||
+                        "center"
+                    ]
+                  }`}
+                >
+                  <div className="pointer-events-auto">
+                    <OclockWidget />
                   </div>
                 </div>
               )}

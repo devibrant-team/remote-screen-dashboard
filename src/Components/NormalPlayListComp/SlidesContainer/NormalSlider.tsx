@@ -1,28 +1,58 @@
-import { useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../../store";
 import {
   addSlide,
   setSelectedSlideIndex,
   updateSlideAtIndex,
+  reorderSlide,
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-import { Plus, Clock } from "lucide-react";
+import { Plus } from "lucide-react";
 
-const NormalSlider = () => {
+import {
+  DndContext,
+  closestCenter,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  KeyboardSensor,
+  MeasuringStrategy,
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import {
+  SortableContext,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { DragOverlay } from "@dnd-kit/core";
+
+import SortableSlide from "../SortableSlide";
+
+type SlideType = any; // replace with your NormalPlaylistState type if available
+
+const NormalSlider: React.FC = () => {
   const dispatch = useDispatch();
 
-  const playlistSlides = useSelector(
-    (state: RootState) => state.playlist.slides
+  const slides = useSelector((s: RootState) => s.playlist.slides);
+  const selected = useSelector((s: RootState) => s.playlist.selectedSlideIndex);
+
+  // Use STABLE IDs from the slide objects (not indices)
+  const items = useMemo<string[]>(
+    () => slides.map((s: SlideType) => String(s.id)),
+    [slides]
   );
 
-  const selectedSlide = useSelector(
-    (state: RootState) => state.playlist.selectedSlideIndex
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const handleAddSlide = () => {
-    const defaultSlide = {
+  const handleAddSlide = useCallback(() => {
+    const defaultSlide: SlideType = {
+      id: crypto.randomUUID(), // stable id
       duration: 10,
       selectedGrid: "default",
       slots: OneImageGridConfig.slots.map((slot: any) => ({
@@ -31,38 +61,85 @@ const NormalSlider = () => {
         mediaType: undefined as "image" | "video" | undefined,
       })),
     };
-
-    const newIndex = playlistSlides.length;
+    const newIndex = slides.length;
     dispatch(addSlide(defaultSlide));
     dispatch(setSelectedSlideIndex(newIndex));
-  };
+  }, [dispatch, slides.length]);
 
-  const handleDurationChange = (index: number, newDuration: number) => {
-    const updatedSlide = { ...playlistSlides[index], duration: newDuration };
-    dispatch(updateSlideAtIndex({ index, updatedSlide }));
-  };
+  const handleDurationChange = useCallback(
+    (index: number, newDuration: number) => {
+      const updated = { ...slides[index], duration: newDuration };
+      dispatch(updateSlideAtIndex({ index, updatedSlide: updated }));
+    },
+    [dispatch, slides]
+  );
 
+  const onDragStart = useCallback((e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  }, []);
+
+  const onDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      setActiveId(null);
+      if (!over || active.id === over.id) return;
+
+      const from = slides.findIndex((s: SlideType) => String(s.id) === String(active.id));
+      const to = slides.findIndex((s: SlideType) => String(s.id) === String(over.id));
+
+      if (from !== -1 && to !== -1 && from !== to) {
+        dispatch(reorderSlide({ from, to }));
+        dispatch(setSelectedSlideIndex(to));
+      }
+    },
+    [dispatch, slides]
+  );
+
+  // Initialize selection on first slide
   useEffect(() => {
-    if (playlistSlides.length > 0 && selectedSlide === null) {
+    if (slides.length > 0 && selected === null) {
       dispatch(setSelectedSlideIndex(0));
     }
-  }, [playlistSlides, selectedSlide, dispatch]);
+  }, [slides.length, selected, dispatch]);
+
+  // Memoized render of one card to avoid inline lambdas in map body
+  const renderSlide = useCallback(
+    (slide: SlideType, index: number) => (
+      <SortableSlide
+        key={slide.id}
+        id={String(slide.id)}
+        index={index}
+        slide={slide}
+        isSelected={selected === index}
+        onSelect={() => dispatch(setSelectedSlideIndex(index))}
+        onDurationChange={(v) => handleDurationChange(index, v)}
+      />
+    ),
+    [dispatch, handleDurationChange, selected]
+  );
+
+  // Lightweight overlay content while dragging (no inputs/heavy styles)
+  const activeSlide = useMemo(
+    () => slides.find((s: SlideType) => String(s.id) === activeId),
+    [slides, activeId]
+  );
 
   return (
     <section className="p-4 md:p-6 max-h-screen">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg md:text-xl font-semibold tracking-tight">
           Normal Slider
         </h2>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-gray-600">
-            Total slides: <b>{playlistSlides.length}</b>
+            Total slides: <b>{slides.length}</b>
           </span>
+
           <button
             onClick={handleAddSlide}
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm hover:shadow transition bg-white hover:bg-gray-50 active:scale-[0.99]"
-            aria-label="Add current slide to playlist"
+            aria-label="Add slide"
           >
             <Plus size={16} color="red" />
             Add slide
@@ -70,64 +147,54 @@ const NormalSlider = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-        {playlistSlides.map((slide: any, index: number) => (
-          <div
-            key={index}
-            onClick={() => dispatch(setSelectedSlideIndex(index))}
-            aria-pressed={selectedSlide === index}
-            className={`group cursor-pointer rounded-2xl border p-2 transition-all duration-200 bg-white
-              ${
-                selectedSlide === index
-                  ? "border-red-500 ring-2 ring-red-200 shadow-md"
-                  : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-              }`}
-          >
-            <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">
-              {slide.slots[0]?.media ? (
-                slide.slots[0].mediaType === "video" ? (
-                  <div className="flex items-center justify-center w-full h-full text-xs font-medium">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-gray-900/80 px-2 py-1 text-white">
-                      🎥 Video
-                    </span>
-                  </div>
-                ) : (
-                  <img
-                    src={slide.slots[0].media as string}
-                    alt={`Slide ${index + 1}`}
-                    className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-[1.02]"
-                  />
-                )
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                  No media
-                </div>
-              )}
-            </div>
-
-            <p className="text-center text-sm mt-2 font-medium">
-              Slide {index + 1}
-            </p>
-
-            <div className="mt-2">
-              <label className="mb-1 flex items-center justify-center gap-1 text-[11px] text-gray-500">
-                <Clock size={12} /> Duration (sec)
-              </label>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={slide.duration}
-                onChange={(e) =>
-                  handleDurationChange(index, Number(e.target.value))
-                }
-                className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
-              />
-            </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        measuring={{
+          // cheaper measuring to avoid layout thrash
+          droppable: { strategy: MeasuringStrategy.WhileDragging },
+        }}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
+        <SortableContext items={items} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+            {slides.map(renderSlide)}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+
+        <DragOverlay>
+          {activeSlide ? (
+            <div className="rounded-2xl border border-gray-200 bg-white p-2 w-[220px]">
+              <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">
+                {activeSlide?.slots?.[0]?.media ? (
+                  activeSlide.slots[0].mediaType === "video" ? (
+                    <div className="flex items-center justify-center w-full h-full text-xs font-medium">
+                      <span className="inline-flex items-center gap-1 rounded-md bg-gray-900/80 px-2 py-1 text-white">
+                        🎥 Video
+                      </span>
+                    </div>
+                  ) : (
+                    <img
+                      src={activeSlide.slots[0].media as string}
+                      alt="drag"
+                      loading="lazy"
+                      decoding="async"
+                      fetchPriority="low"
+                      className="object-contain w-full h-full"
+                    />
+                  )
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                    No media
+                  </div>
+                )}
+              </div>
+              <p className="text-center text-xs mt-2">Moving…</p>
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </section>
   );
 };

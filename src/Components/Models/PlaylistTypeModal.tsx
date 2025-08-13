@@ -44,7 +44,7 @@ const PlaylistTypeModal = () => {
   const handleCreateAndNavigate = () => {
     if (!firstSlideCreated) {
       const defaultSlide = {
-
+        id: crypto.randomUUID(),
         duration: 10,
 
         selectedGrid: "default",

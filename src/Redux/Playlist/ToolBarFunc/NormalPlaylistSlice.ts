@@ -4,6 +4,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { NormalPlaylistState } from "./SlideNormalPlaylistSlice";
 import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
+import type { SlotWidget } from "../../../Config/GridConfig/DefaultGridConfig";
 
 export interface PlaylistState {
   id: number;
@@ -11,7 +12,7 @@ export interface PlaylistState {
   type: number; // future-proofing if you add other types later
   slides: NormalPlaylistState[];
   selectedSlideIndex: number | null;
-  selectedRatio : string;
+  selectedRatio: string;
 }
 
 const initialState: PlaylistState = {
@@ -20,7 +21,7 @@ const initialState: PlaylistState = {
   type: 1,
   slides: [],
   selectedSlideIndex: null,
-  selectedRatio:"16:9"
+  selectedRatio: "16:9",
 };
 
 const playlistSlice = createSlice({
@@ -101,16 +102,7 @@ const playlistSlice = createSlice({
       action: PayloadAction<{
         slideIndex: number;
         slotIndex: number;
-        widget: {
-          type: "weather";
-          city: "Riyadh";
-          position:
-            | "center"
-            | "top-left"
-            | "top-right"
-            | "bottom-left"
-            | "bottom-right";
-        };
+        widget: SlotWidget;
       }>
     ) => {
       const { slideIndex, slotIndex, widget } = action.payload;
@@ -118,15 +110,7 @@ const playlistSlice = createSlice({
       if (!slide) return;
       const slot = slide.slots.find((s: any) => s.index === slotIndex);
       if (!slot) return;
-      console.log(
-        "🧩 Reducer:updateSlotWidgetInSlide BEFORE",
-        JSON.parse(JSON.stringify(slot))
-      );
-      slot.widget = widget; // ✅ only set the object; don't touch media/mediaType
-      console.log(
-        "🧩 Reducer:updateSlotWidgetInSlide AFTER",
-        JSON.parse(JSON.stringify(slot))
-      );
+      slot.widget = widget; // can be weather OR clock
     },
 
     removeSlideAtIndex: (state, action: PayloadAction<number>) => {
@@ -138,6 +122,42 @@ const playlistSlice = createSlice({
         state.selectedSlideIndex > action.payload
       ) {
         state.selectedSlideIndex -= 1;
+      }
+    },
+    reorderSlide: (
+      state,
+      action: PayloadAction<{ from: number; to: number }>
+    ) => {
+      const { from, to } = action.payload;
+      if (
+        from === to ||
+        from < 0 ||
+        to < 0 ||
+        from >= state.slides.length ||
+        to >= state.slides.length
+      ) {
+        return;
+      }
+
+      // remove and re-insert
+      const [moved] = state.slides.splice(from, 1);
+      state.slides.splice(to, 0, moved);
+
+      // fix selectedSlideIndex if needed
+      if (state.selectedSlideIndex === null) return;
+
+      if (state.selectedSlideIndex === from) {
+        state.selectedSlideIndex = to;
+      } else if (
+        state.selectedSlideIndex > from &&
+        state.selectedSlideIndex <= to
+      ) {
+        state.selectedSlideIndex -= 1;
+      } else if (
+        state.selectedSlideIndex < from &&
+        state.selectedSlideIndex >= to
+      ) {
+        state.selectedSlideIndex += 1;
       }
     },
 
@@ -157,6 +177,7 @@ export const {
   updateSlotInSlide,
   updateSlideGrid,
   setPlaylistRatio,
+    reorderSlide,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;

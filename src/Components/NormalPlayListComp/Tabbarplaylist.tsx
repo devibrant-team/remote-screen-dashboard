@@ -11,9 +11,12 @@ import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPla
 import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { Root } from "react-dom/client";
+import BaseModal from "../Models/BaseModal";
+import WidgetModels from "../Models/WidgetModels";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [modalOpen, setModalOpen] = useState(false);
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
   const [saving, setSaving] = useState(false);
@@ -57,8 +60,6 @@ const Tabbarplaylist = () => {
   };
 
   const handleAddWeatherWidget = () => {
-
-
     if (selectedSlideIndex === null || !slide) {
       alert("Please select/create a slide first.");
       return;
@@ -66,10 +67,8 @@ const Tabbarplaylist = () => {
 
     const slotIndex = 0;
     const slot = slide.slots[slotIndex];
- 
 
     if (!slot?.media) {
- 
       dispatch(
         updateSlotMedia({
           index: slotIndex,
@@ -86,7 +85,6 @@ const Tabbarplaylist = () => {
       city: "Riyadh",
       position: "center",
     } as const;
-   
 
     dispatch(
       updateSlotWidgetInSlide({
@@ -99,8 +97,6 @@ const Tabbarplaylist = () => {
         },
       })
     );
-
-   
   };
 
   const handleRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -150,7 +146,7 @@ const Tabbarplaylist = () => {
                 </button>
 
                 <button
-                  onClick={handleAddWeatherWidget}
+                  onClick={() => setModalOpen(true)}
                   className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md  hover:bg-red-600 transition"
                 >
                   <Layers size={18} /> Add Widget
@@ -195,6 +191,14 @@ const Tabbarplaylist = () => {
           </div>
         </div>
       </div>
+
+      <BaseModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Choose Widget "
+      >
+       <WidgetModels onClose={() => setModalOpen(false)} />
+      </BaseModal>
     </>
   );
 };
