@@ -8,32 +8,32 @@ export type WidgetPosition =
 // Weather
 export type WeatherWidgetConfig = {
   type: "weather";
-  city: string;            // ⬅️ was "Riyadh" (literal) → make it string
+  city: string; // ⬅️ was "Riyadh" (literal) → make it string
   position: WidgetPosition;
 };
 
 // Clock
 export type ClockWidgetConfig = {
   type: "clock";
-  timezone?: string;       // default: "Asia/Riyadh" (Jeddah)
-  label?: string;          // default: "Jeddah"
-  showSeconds?: boolean;   // default: true
-  twentyFourHour?: boolean;// default: true
+  timezone?: string; // default: "Asia/Riyadh" (Jeddah)
+  label?: string; // default: "Jeddah"
+  showSeconds?: boolean; // default: true
+  twentyFourHour?: boolean; // default: true
   position: WidgetPosition;
 };
 
 // Union
 export type SlotWidget = WeatherWidgetConfig | ClockWidgetConfig;
 
-
 export type GridSlotConfig = {
   mediaType?: "image" | "video";
   media?: string | null;
+  mediaId?: number | null;
   ImageFile: File | null;
   scale: "fit" | "fill" | "stretch" | "blur" | "original";
   index: number;
   file?: File | null;
- widget?: SlotWidget | null;
+  widget?: SlotWidget | null;
 };
 
 export type GridLayoutConfig = {
@@ -51,6 +51,7 @@ export const OneImageGridConfig: GridLayoutConfig = {
     {
       mediaType: "image",
       media: null,
+      mediaId: null,
       ImageFile: null,
       scale: "fit",
       index: 0,
@@ -69,6 +70,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fit",
       index: 0,
       widget: null,
@@ -78,6 +80,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
       media: null,
       ImageFile: null,
       scale: "fill",
+      mediaId: null,
       index: 1,
       widget: null,
     },
@@ -93,6 +96,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
     {
       mediaType: "image",
       media: null,
+      mediaId: null,
       ImageFile: null,
       scale: "fit",
       index: 0,
@@ -102,6 +106,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 1,
       widget: null,
@@ -118,6 +123,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fit",
       index: 0,
       widget: null,
@@ -126,6 +132,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 1,
       widget: null,
@@ -133,6 +140,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
     {
       mediaType: "image",
       media: null,
+      mediaId: null,
       ImageFile: null,
       scale: "fill",
       index: 2,
@@ -149,7 +157,9 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fit",
+
       index: 0,
       widget: null,
     },
@@ -157,6 +167,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 1,
       widget: null,
@@ -165,6 +176,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 2,
       widget: null,
@@ -183,12 +195,14 @@ export const FourImageGridConfig: GridLayoutConfig = {
       scale: "fit",
       index: 0,
       ImageFile: null,
+      mediaId: null,
       widget: null,
     },
     {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 1,
       widget: null,
@@ -197,6 +211,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 2,
       widget: null,
@@ -205,6 +220,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       mediaType: "image",
       media: null,
       ImageFile: null,
+      mediaId: null,
       scale: "fill",
       index: 3,
       widget: null,

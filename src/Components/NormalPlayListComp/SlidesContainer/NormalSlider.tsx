@@ -6,6 +6,7 @@ import {
   setSelectedSlideIndex,
   updateSlideAtIndex,
   reorderSlide,
+  removeSlideAtIndex,
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 import { Plus } from "lucide-react";
@@ -29,12 +30,14 @@ import { DragOverlay } from "@dnd-kit/core";
 
 import SortableSlide from "../SortableSlide";
 
+
 type SlideType = any; // replace with your NormalPlaylistState type if available
 
 const NormalSlider: React.FC = () => {
   const dispatch = useDispatch();
 
   const slides = useSelector((s: RootState) => s.playlist.slides);
+
   const selected = useSelector((s: RootState) => s.playlist.selectedSlideIndex);
 
   // Use STABLE IDs from the slide objects (not indices)
@@ -84,8 +87,12 @@ const NormalSlider: React.FC = () => {
       setActiveId(null);
       if (!over || active.id === over.id) return;
 
-      const from = slides.findIndex((s: SlideType) => String(s.id) === String(active.id));
-      const to = slides.findIndex((s: SlideType) => String(s.id) === String(over.id));
+      const from = slides.findIndex(
+        (s: SlideType) => String(s.id) === String(active.id)
+      );
+      const to = slides.findIndex(
+        (s: SlideType) => String(s.id) === String(over.id)
+      );
 
       if (from !== -1 && to !== -1 && from !== to) {
         dispatch(reorderSlide({ from, to }));
@@ -101,6 +108,27 @@ const NormalSlider: React.FC = () => {
       dispatch(setSelectedSlideIndex(0));
     }
   }, [slides.length, selected, dispatch]);
+  const handleRemoveByIndex = useCallback(
+    (idx: number) => {
+      dispatch(removeSlideAtIndex(idx));
+
+      // keep selection valid
+      if (selected !== null) {
+        if (idx === selected) {
+          // deleted the selected slide → move selection left (or clear if list is now empty)
+          dispatch(
+            setSelectedSlideIndex(
+              slides.length > 1 ? Math.max(0, selected - 1) : null
+            )
+          );
+        } else if (idx < selected) {
+          // a slide before the selected one was removed → shift selection left by 1
+          dispatch(setSelectedSlideIndex(selected - 1));
+        }
+      }
+    },
+    [dispatch, selected, slides.length]
+  );
 
   // Memoized render of one card to avoid inline lambdas in map body
   const renderSlide = useCallback(
@@ -113,9 +141,10 @@ const NormalSlider: React.FC = () => {
         isSelected={selected === index}
         onSelect={() => dispatch(setSelectedSlideIndex(index))}
         onDurationChange={(v) => handleDurationChange(index, v)}
+        onRemove={() => handleRemoveByIndex(index)}
       />
     ),
-    [dispatch, handleDurationChange, selected]
+    [dispatch, handleDurationChange, handleRemoveByIndex, selected]
   );
 
   // Lightweight overlay content while dragging (no inputs/heavy styles)

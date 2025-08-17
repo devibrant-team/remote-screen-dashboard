@@ -1,7 +1,7 @@
 import React from "react";
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
-import { Clock, Move } from "lucide-react";
+import { Clock, Move, Trash2 } from "lucide-react";
 
 type SlideType = any; // replace with your NormalPlaylistState
 
@@ -12,6 +12,7 @@ type Props = {
   isSelected: boolean;
   onSelect: () => void;
   onDurationChange: (v: number) => void;
+  onRemove?: () => void;
 };
 
 const SortableSlide: React.FC<Props> = ({
@@ -21,9 +22,15 @@ const SortableSlide: React.FC<Props> = ({
   isSelected,
   onSelect,
   onDurationChange,
+  onRemove,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useSortable({ id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -41,14 +48,38 @@ const SortableSlide: React.FC<Props> = ({
       onClick={onSelect}
       aria-pressed={isSelected}
       className={`group relative cursor-pointer rounded-2xl border p-2 bg-white transition-[box-shadow,border-color] duration-150
-        ${isSelected ? "border-red-500 ring-2 ring-red-200 shadow-md" : "border-gray-200 hover:border-gray-300 hover:shadow-sm"}
+        ${
+          isSelected
+            ? "border-red-500 ring-2 ring-red-200 shadow-md"
+            : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
+        }
         ${isDragging ? "shadow-sm" : ""}`}
     >
+      <button
+        type="button"
+        aria-label="Remove slide"
+        title="Remove slide"
+        className="absolute top-2 right-2 z-10
+             opacity-0 group-hover:opacity-100 transition-opacity
+             rounded-full p-1 border border-gray-200 bg-white shadow
+             hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
+        onClick={(e) => {
+          e.stopPropagation(); 
+          e.preventDefault();
+          onRemove?.();
+        }}
+        onPointerDown={(e) => {
+    
+          e.stopPropagation();
+        }}
+      >
+        <Trash2 size={16} />
+      </button>
       {/* Preview */}
       <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">
         {slide?.slots?.[0]?.media ? (
           slide.slots[0].mediaType === "video" ? (
-            <div className="flex items-center justify-center w-full h-full text-xs font-medium">
+            <div className="flex items-center justify-center bg-red-400 w-full h-full text-xs font-medium">
               <span className="inline-flex items-center gap-1 rounded-md bg-gray-900/80 px-2 py-1 text-white">
                 🎥 Video
               </span>

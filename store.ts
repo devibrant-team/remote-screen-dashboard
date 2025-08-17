@@ -5,6 +5,7 @@ import NormalPlaylistReducer from "./src/Redux/Playlist/ToolBarFunc/SlideNormalP
 import playlistReducer from "./src/Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import playlistInteractiveReducer from "./src/Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 import MediaReducer from "./src/Redux/Media/MediaSlice";
+import mediaPickerReducer from "./src/Redux/Media/MediaSlice";
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -13,6 +14,7 @@ export const store = configureStore({
     playlist: playlistReducer,
     playlistInteractive: playlistInteractiveReducer,
     media: MediaReducer,
+    mediaPicker: mediaPickerReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

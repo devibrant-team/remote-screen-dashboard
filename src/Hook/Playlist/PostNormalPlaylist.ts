@@ -1,11 +1,6 @@
 import axios from "axios";
-import {
-  updateSlideAtIndex,
-  updateSlotInSlide,
-  type PlaylistState,
-} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import { useDispatch } from "react-redux";
-import { store } from "../../../store";
+import { type PlaylistState } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+
 import { PlaylistPostApi } from "../../API/API";
 
 // Format and send playlist to backend
@@ -17,6 +12,7 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
   formData.append("name", playlist.name);
   formData.append("type", playlist.type.toString());
   formData.append("NumberOfSlides", playlist.slides.length.toString());
+  formData.append("ratio", playlist.selectedRatio);
   formData.append(
     "total_duration",
     playlist.slides
@@ -45,6 +41,12 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
         `slides[${slideIndex}][slots][${slotIndex}][scale]`,
         slot.scale || ""
       );
+      if (slot.mediaId != null) {
+        formData.append(
+          `slides[${slideIndex}][slots][${slotIndex}][mediaId]`,
+          String(slot.mediaId)
+        );
+      }
 
       // Append the file if it exists
       if (slot.ImageFile instanceof File) {
@@ -53,6 +55,53 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
           slot.ImageFile,
           slot.ImageFile.name
         );
+      }
+      // inside your slides.forEach(...slot loop)
+      if (slot.widget) {
+        formData.append(
+          `slides[${slideIndex}][slots][${slotIndex}][widget][type]`,
+          slot.widget.type
+        );
+        formData.append(
+          `slides[${slideIndex}][slots][${slotIndex}][widget][position]`,
+          slot.widget.position
+        );
+
+        if (slot.widget.type === "weather") {
+          const w = slot.widget as { type: "weather"; city: string };
+          formData.append(
+            `slides[${slideIndex}][slots][${slotIndex}][widget][city]`,
+            w.city
+          );
+        } else if (slot.widget.type === "clock") {
+          const c = slot.widget as {
+            type: "clock";
+            timezone?: string;
+            label?: string;
+            showSeconds?: boolean;
+            twentyFourHour?: boolean;
+          };
+          if (c.timezone)
+            formData.append(
+              `slides[${slideIndex}][slots][${slotIndex}][widget][timezone]`,
+              c.timezone
+            );
+          if (c.label)
+            formData.append(
+              `slides[${slideIndex}][slots][${slotIndex}][widget][label]`,
+              c.label
+            );
+          if (typeof c.showSeconds === "boolean")
+            formData.append(
+              `slides[${slideIndex}][slots][${slotIndex}][widget][showSeconds]`,
+              String(c.showSeconds)
+            );
+          if (typeof c.twentyFourHour === "boolean")
+            formData.append(
+              `slides[${slideIndex}][slots][${slotIndex}][widget][twentyFourHour]`,
+              String(c.twentyFourHour)
+            );
+        }
       }
     });
   });
@@ -80,6 +129,7 @@ export const formatPlaylistPayload = (playlist: PlaylistState) => {
     type: playlist.type,
     NumberOfSlides: playlist.slides.length,
     total_duration: totalDuration,
+    ratio: playlist.selectedRatio,
     slides: playlist.slides.map((slide, index) => {
       const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
       return {
@@ -89,91 +139,4 @@ export const formatPlaylistPayload = (playlist: PlaylistState) => {
       };
     }),
   };
-};
-
-export const useHandleMediaUpload = (selectedSlideIndex: number | null) => {
-  const dispatch = useDispatch();
-
-  const handleMediaUpload = (slotIndex: number, file: File) => {
-    if (selectedSlideIndex === null) return;
-
-    const mediaUrl = URL.createObjectURL(file);
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    if (mediaType === "video") {
-      const video = document.createElement("video");
-      video.preload = "metadata";
-      video.src = mediaUrl;
-
-      video.onloadedmetadata = () => {
-        const uploadedDuration = Math.round(video.duration);
-        console.log(
-          `🎥 Uploaded video slot ${slotIndex} duration:`,
-          uploadedDuration
-        );
-
-        // 1. Update slot
-        dispatch(
-          updateSlotInSlide({
-            slideIndex: selectedSlideIndex,
-            slotIndex,
-            media: mediaUrl,
-            ImageFile: file,
-            file,
-            mediaType,
-          })
-        );
-
-        // 2. Wait a tick to ensure Redux state is fresh
-        setTimeout(() => {
-          const currentSlide =
-            store.getState().playlist.slides[selectedSlideIndex];
-
-          const durationPromises = currentSlide.slots
-            .filter((slot) => slot.mediaType === "video" && slot.media)
-            .map((slot) => {
-              return new Promise<number>((resolve) => {
-                const tempVid = document.createElement("video");
-                tempVid.preload = "metadata";
-                tempVid.src = slot.media!;
-                tempVid.onloadedmetadata = () => resolve(tempVid.duration);
-                tempVid.onerror = () => resolve(0);
-              });
-            });
-
-          Promise.all(durationPromises).then((durations) => {
-            const maxDuration = Math.round(
-              Math.max(...durations, uploadedDuration)
-            );
-            console.log(
-              "🕒 Final slide duration (longest video):",
-              maxDuration
-            );
-
-            dispatch(
-              updateSlideAtIndex({
-                index: selectedSlideIndex,
-                updatedSlide: {
-                  ...currentSlide,
-                  duration: maxDuration,
-                },
-              })
-            );
-          });
-        }, 100);
-      };
-    } else {
-      dispatch(
-        updateSlotInSlide({
-          slideIndex: selectedSlideIndex,
-          slotIndex,
-          media: mediaUrl,
-          ImageFile: file,
-          mediaType,
-        })
-      );
-    }
-  };
-
-  return handleMediaUpload;
 };

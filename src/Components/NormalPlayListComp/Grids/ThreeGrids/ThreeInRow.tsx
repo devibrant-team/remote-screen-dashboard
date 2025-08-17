@@ -3,8 +3,9 @@ import { useInitGrid } from "../useInitGrid";
 import { ThreeRowGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
-import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
 import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
+import NormalMediaSelector from "../../MediaSelector/NormalMediaSelector";
+import { useState } from "react";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -23,7 +24,17 @@ const getScaleClass = (scale: string) => {
 
 const ThreeInRow = () => {
   const dispatch = useDispatch();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null);
 
+  const openPickerFor = (slotIndex: number) => {
+    setPickerSlotIndex(slotIndex);
+    setPickerOpen(true);
+  };
+  const closePicker = () => {
+    setPickerOpen(false);
+    setPickerSlotIndex(null);
+  };
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
@@ -53,7 +64,6 @@ const ThreeInRow = () => {
 
   const slots = slide?.slots || [];
 
-  const handleMediaUpload = useHandleMediaUpload(selectedSlideIndex);
 
   const handleScaleChange = (
     slotIndex: number,
@@ -82,7 +92,7 @@ const ThreeInRow = () => {
     <div className="w-full mx-auto my-10 flex justify-center">
       {slots.length > 0 && (
         <div
-          className="rounded-xl overflow-hidden bg-white shadow w-full max-w-none"
+          className="rounded-xl overflow-hidden bg-[#1e2530] shadow w-full max-w-none"
           style={style} // <- locks aspect & responsive width
         >
           {/* Row layout: 1, 2, or 3 items automatically share width */}
@@ -117,18 +127,13 @@ const ThreeInRow = () => {
                     </div>
                   )
                 ) : (
-                  <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg">
-                    No media uploaded
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={(e) =>
-                        e.target.files?.[0] &&
-                        handleMediaUpload(slot.index, e.target.files[0])
-                      }
-                      className="hidden"
-                    />
-                  </label>
+                  <button
+                    type="button"
+                    className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl"
+                    onClick={() => openPickerFor(slot.index)}
+                  >
+                    No media uploaded (click to choose)
+                  </button>
                 )}
 
                 {slot.media && (
@@ -148,18 +153,13 @@ const ThreeInRow = () => {
                       <option value="blur">🌫️ Fit + Blur BG</option>
                       <option value="original">🧱 Original Size</option>
                     </select>
-                    <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
+                    <button
+                      type="button"
+                      onClick={() => openPickerFor(slot.index)}
+                      className="bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+                    >
                       Replace
-                      <input
-                        type="file"
-                        accept="image/*,video/*"
-                        onChange={(e) =>
-                          e.target.files?.[0] &&
-                          handleMediaUpload(slot.index, e.target.files[0])
-                        }
-                        className="hidden"
-                      />
-                    </label>
+                    </button>
                   </div>
                 )}
               </div>
@@ -167,6 +167,16 @@ const ThreeInRow = () => {
           </div>
         </div>
       )}
+      {pickerOpen &&
+        pickerSlotIndex !== null &&
+        selectedSlideIndex !== null && (
+          <NormalMediaSelector
+            open={pickerOpen}
+            onClose={closePicker}
+            slideIndex={selectedSlideIndex}
+            slotIndex={pickerSlotIndex}
+          />
+        )}
     </div>
   );
 };

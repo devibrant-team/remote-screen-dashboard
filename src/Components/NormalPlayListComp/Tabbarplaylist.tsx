@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 
 import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
-import NormalMediaSelector from "./MediaSelector/NormalMediaSelector";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -20,7 +19,7 @@ const Tabbarplaylist = () => {
   const [saving, setSaving] = useState(false);
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
-
+console.log(playlist)
   const selectedRatio = useSelector(
     (state: RootState) => state.playlist.selectedRatio
   );
@@ -62,7 +61,7 @@ const Tabbarplaylist = () => {
       <aside
         className="
           w-full lg:w-80
-          h-[100svh] lg:h-[100svh]                 /* modern mobile browsers */
+          lg:h-[100svh]                 /* modern mobile browsers */
           h-dvh                                     /* fallback */
           bg-[var(--white)] text-[var(--black)]
           border-r border-gray-200 shadow-sm
@@ -134,9 +133,9 @@ const Tabbarplaylist = () => {
           </section>
 
           {/* Media gallery (no extra overflow here; uses the main scroll) */}
-          <section>
+          {/* <section>
             <NormalMediaSelector />
-          </section>
+          </section> */}
         </div>
 
         {/* Sticky footer */}

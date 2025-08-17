@@ -3,8 +3,9 @@ import { useInitGrid } from "../useInitGrid"; // ✅ shared custom hook
 import { ThreeColGridConfig } from "../../../../Config/GridConfig/DefaultGridConfig";
 import { updateSlotInSlide } from "../../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RootState } from "../../../../../store";
-import { useHandleMediaUpload } from "../../../../Hook/Playlist/PostNormalPlaylist";
 import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
+import { useState } from "react";
+import NormalMediaSelector from "../../MediaSelector/NormalMediaSelector";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -23,12 +24,26 @@ const getScaleClass = (scale: string) => {
 
 const ThreeInCol = () => {
   const dispatch = useDispatch();
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null);
 
+  const openPickerFor = (slotIndex: number) => {
+    setPickerSlotIndex(slotIndex);
+    setPickerOpen(true);
+  };
+  const closePicker = () => {
+    setPickerOpen(false);
+    setPickerSlotIndex(null);
+  };
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
-  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio); 
-  const style = useAspectStyle(ratio, { maxW: 1200, sideMargin: 48, topBottomMargin: 220 }); 
+  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+  const style = useAspectStyle(ratio, {
+    maxW: 1200,
+    sideMargin: 48,
+    topBottomMargin: 220,
+  });
   const slide = useSelector((state: RootState) =>
     selectedSlideIndex !== null
       ? state.playlist.slides[selectedSlideIndex]
@@ -47,8 +62,6 @@ const ThreeInCol = () => {
   );
 
   const slots = slide?.slots || [];
-
-  const handleMediaUpload = useHandleMediaUpload(selectedSlideIndex);
 
   const handleScaleChange = (
     slotIndex: number,
@@ -72,16 +85,26 @@ const ThreeInCol = () => {
   };
 
   return (
-       <div className="w-full mx-auto my-10 flex justify-center">
+    <div className="w-full mx-auto my-10 flex justify-center">
       {slots.length > 0 && (
-        <div className="rounded-xl overflow-hidden bg-white shadow w-full max-w-none" style={style}>
+        <div
+          className="rounded-xl overflow-hidden bg-[#1e2530] shadow w-full max-w-none"
+          style={style}
+        >
           {/* Fill full aspect height with 1–3 rows evenly */}
           <div className="flex flex-col w-full h-full">
             {slots.slice(0, 3).map((slot) => (
-              <div key={slot.index} className="flex-1 relative group overflow-hidden">
+              <div
+                key={slot.index}
+                className="flex-1 relative group overflow-hidden"
+              >
                 {slot.media ? (
                   slot.mediaType === "video" ? (
-                    <video src={slot.media} controls className="w-full h-full object-cover" />
+                    <video
+                      src={slot.media}
+                      controls
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full relative flex items-center justify-center">
                       {slot.scale === "blur" && (
@@ -93,22 +116,20 @@ const ThreeInCol = () => {
                       )}
                       <img
                         src={slot.media}
-                        className={`${getScaleClass(slot.scale)} transition-transform duration-200 group-hover:scale-105`}
+                        className={`${getScaleClass(
+                          slot.scale
+                        )} transition-transform duration-200 group-hover:scale-105`}
                       />
                     </div>
                   )
                 ) : (
-                  <label className="w-full h-full flex items-center justify-center bg-[#1e2530] text-white cursor-pointer text-lg">
-                    No media uploaded
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={(e) =>
-                        e.target.files?.[0] && handleMediaUpload(slot.index, e.target.files[0])
-                      }
-                      className="hidden"
-                    />
-                  </label>
+                  <button
+                    type="button"
+                    className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl"
+                    onClick={() => openPickerFor(slot.index)}
+                  >
+                    No media uploaded (click to choose)
+                  </button>
                 )}
 
                 {slot.media && (
@@ -116,7 +137,10 @@ const ThreeInCol = () => {
                     <select
                       value={slot.scale}
                       onChange={(e) =>
-                        handleScaleChange(slot.index, e.target.value as "fit" | "fill" | "blur" | "original")
+                        handleScaleChange(
+                          slot.index,
+                          e.target.value as "fit" | "fill" | "blur" | "original"
+                        )
                       }
                       className="p-2 bg-white rounded text-sm font-bold shadow focus:outline-none focus:ring-2 focus:ring-red-400"
                     >
@@ -125,17 +149,13 @@ const ThreeInCol = () => {
                       <option value="blur">🌫️ Fit + Blur BG</option>
                       <option value="original">🧱 Original Size</option>
                     </select>
-                    <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
+                    <button
+                      type="button"
+                      onClick={() => openPickerFor(slot.index)}
+                      className="bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+                    >
                       Replace
-                      <input
-                        type="file"
-                        accept="image/*,video/*"
-                        onChange={(e) =>
-                          e.target.files?.[0] && handleMediaUpload(slot.index, e.target.files[0])
-                        }
-                        className="hidden"
-                      />
-                    </label>
+                    </button>
                   </div>
                 )}
               </div>
@@ -143,8 +163,17 @@ const ThreeInCol = () => {
           </div>
         </div>
       )}
+      {pickerOpen &&
+        pickerSlotIndex !== null &&
+        selectedSlideIndex !== null && (
+          <NormalMediaSelector
+            open={pickerOpen}
+            onClose={closePicker}
+            slideIndex={selectedSlideIndex}
+            slotIndex={pickerSlotIndex}
+          />
+        )}
     </div>
-
   );
 };
 

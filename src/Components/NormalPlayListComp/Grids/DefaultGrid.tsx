@@ -1,14 +1,13 @@
 import { useDispatch, useSelector } from "react-redux";
 import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-import {
-  updateSlideAtIndex,
-  updateSlotInSlide,
-} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { updateSlotInSlide } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { useInitGrid } from "./useInitGrid";
-import { store, type RootState } from "../../../../store";
+import { type RootState } from "../../../../store";
 import WeatherWidget from "../Widgets/WeatherWidget";
 import { useAspectStyle } from "../../../Hook/Playlist/RatioHook/RatiotoAspect";
+import NormalMediaSelector from "../MediaSelector/NormalMediaSelector";
 import OclockWidget from "../Widgets/OclockWidget";
+import { useState } from "react";
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -27,7 +26,17 @@ const getScaleClass = (scale: string) => {
 const DefaultGrid = () => {
   const dispatch = useDispatch();
   const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null);
 
+  const openPickerFor = (slotIndex: number) => {
+    setPickerSlotIndex(slotIndex);
+    setPickerOpen(true);
+  };
+  const closePicker = () => {
+    setPickerOpen(false);
+    setPickerSlotIndex(null);
+  };
   const style = useAspectStyle(ratio, {
     maxW: 1200,
     sideMargin: 48,
@@ -58,70 +67,6 @@ const DefaultGrid = () => {
     templateSlots,
     OneImageGridConfig
   );
-
-  const handleMediaUpload = (slotIndex: number, file: File) => {
-    if (selectedSlideIndex === null) return;
-
-    const mediaUrl = URL.createObjectURL(file);
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
-
-    if (mediaType === "video") {
-      const video = document.createElement("video");
-      video.preload = "metadata";
-      video.src = mediaUrl;
-
-      video.onloadedmetadata = () => {
-        const duration = Math.round(video.duration);
-
-        // 1. Update slot
-        dispatch(
-          updateSlotInSlide({
-            slideIndex: selectedSlideIndex,
-            slotIndex,
-            media: mediaUrl,
-            ImageFile: file,
-            mediaType,
-          })
-        );
-
-        // 2. Get updated slide from store BEFORE updating again
-        const latestSlide = {
-          ...store.getState().playlist.slides[selectedSlideIndex], // get latest
-          duration,
-        };
-
-        dispatch(
-          updateSlideAtIndex({
-            index: selectedSlideIndex,
-            updatedSlide: latestSlide,
-          })
-        );
-      };
-    } else {
-      dispatch(
-        updateSlotInSlide({
-          slideIndex: selectedSlideIndex,
-          slotIndex,
-          media: mediaUrl,
-          ImageFile: file,
-          mediaType,
-        })
-      );
-
-      // Same fix for image: re-pull slide
-      const latestSlide = {
-        ...store.getState().playlist.slides[selectedSlideIndex],
-        duration: 10,
-      };
-
-      dispatch(
-        updateSlideAtIndex({
-          index: selectedSlideIndex,
-          updatedSlide: latestSlide,
-        })
-      );
-    }
-  };
 
   const handleScaleChange = (
     slotIndex: number,
@@ -186,18 +131,13 @@ const DefaultGrid = () => {
                   </div>
                 )
               ) : (
-                <label className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl">
-                  No media uploaded
-                  <input
-                    type="file"
-                    accept="image/*,video/*"
-                    onChange={(e) =>
-                      e.target.files?.[0] &&
-                      handleMediaUpload(slot.index, e.target.files[0])
-                    }
-                    className="hidden"
-                  />
-                </label>
+                <button
+                  type="button"
+                  className="w-full h-full bg-[#1e2530] flex items-center justify-center text-white cursor-pointer text-lg rounded-xl"
+                  onClick={() => openPickerFor(slot.index)}
+                >
+                  No media uploaded (click to choose)
+                </button>
               )}
               {slot?.widget?.type === "weather" && (
                 <div
@@ -245,24 +185,29 @@ const DefaultGrid = () => {
                     <option value="blur">🌫️ Fit + Blur BG</option>
                     <option value="original">🧱 Original Size</option>
                   </select>
-                  <label className="bg-red-500 text-white px-4 py-1 rounded cursor-pointer text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400">
+                  <button
+                    type="button"
+                    onClick={() => openPickerFor(slot.index)}
+                    className="bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-400"
+                  >
                     Replace
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      onChange={(e) =>
-                        e.target.files?.[0] &&
-                        handleMediaUpload(slot.index, e.target.files[0])
-                      }
-                      className="hidden"
-                    />
-                  </label>
+                  </button>
                 </div>
               )}
             </div>
           ))}
         </div>
       )}
+      {pickerOpen &&
+        pickerSlotIndex !== null &&
+        selectedSlideIndex !== null && (
+          <NormalMediaSelector
+            open={pickerOpen}
+            onClose={closePicker}
+            slideIndex={selectedSlideIndex}
+            slotIndex={pickerSlotIndex}
+          />
+        )}
     </div>
   );
 };

@@ -79,22 +79,33 @@ const playlistSlice = createSlice({
         slideIndex: number;
         slotIndex: number;
         media: string;
-        ImageFile: File;
+        mediaId?: number | null;
+        ImageFile?: File | null; // ✅ optional in payload
         mediaType: "image" | "video";
         scale?: GridSlotConfig["scale"];
-        file?: File;
       }>
     ) => {
-      const slide = state.slides[action.payload.slideIndex];
-      const slot = slide?.slots.find(
-        (s) => s.index === action.payload.slotIndex
-      );
-      if (slot) {
-        slot.media = action.payload.media;
-        slot.mediaType = action.payload.mediaType;
-        slot.ImageFile = action.payload.ImageFile;
-        if (action.payload.scale) slot.scale = action.payload.scale;
+      const { slideIndex, slotIndex } = action.payload;
+      const slide = state.slides[slideIndex];
+      const slot = slide?.slots.find((s) => s.index === slotIndex);
+      if (!slot) return;
+
+      // always set URL + type
+      slot.media = action.payload.media;
+      slot.mediaType = action.payload.mediaType;
+
+      // set ImageFile only if provided (keeps null/unchanged otherwise)
+      if (Object.prototype.hasOwnProperty.call(action.payload, "ImageFile")) {
+        slot.ImageFile = action.payload.ImageFile ?? null;
       }
+
+      // ✅ set mediaId only if provided (allows setting an id, or clearing it with null)
+      if (Object.prototype.hasOwnProperty.call(action.payload, "mediaId")) {
+        slot.mediaId = action.payload.mediaId ?? null;
+      }
+
+      // optional scale
+      if (action.payload.scale) slot.scale = action.payload.scale;
     },
     // add this action next to updateSlotInSlide etc.
     updateSlotWidgetInSlide: (
@@ -177,7 +188,7 @@ export const {
   updateSlotInSlide,
   updateSlideGrid,
   setPlaylistRatio,
-    reorderSlide,
+  reorderSlide,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;

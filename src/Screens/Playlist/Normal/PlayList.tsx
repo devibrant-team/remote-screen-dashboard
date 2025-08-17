@@ -57,7 +57,7 @@ const PlayList = () => {
 
   return (
     // Mobile-first: column; at lg → row with a fixed sidebar on the left
-    <div className="min-h-[100svh] h-dvh bg-[var(--white-200)] overflow-hidden flex flex-col lg:flex-row">
+    <div className="min-h-[100svh] h-dvh bg-white overflow-hidden flex flex-col lg:flex-row">
       <Dialog />
 
       {/* Sidebar first on lg, on mobile it sits on top full width */}
