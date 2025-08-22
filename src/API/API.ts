@@ -5,4 +5,6 @@ export const PlaylistPostApi = `${http}postNormal`
 export const postplaylistinteractiveApi = `${http}postinteractive`
 export const getmediacontent = `${http}getuser/playlist`
 export const getMediaUserApi = `${http}getuser/media`
+export const addBranchApi = `${http}insertbranch`
+export const getBranchApi = `${http}getbranch`
 

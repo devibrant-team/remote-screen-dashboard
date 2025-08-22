@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from "react-redux";
 import ImageSlider, { type ImagePreview } from "./ImageSlider";
 import UserMediaGrid from "../Media/UserMediaGrid";
 import type { RootState } from "../../../store";
-import { usePostPlaylistInteractive } from "./../../Hook/PlaylistInterActive/usePostPlaylistInteractive";
+import { usePostPlaylistInteractive } from "../../ReactQuery/PlaylistInterActive/usePostPlaylistInteractive";
 import {
   selectSelectedMedia,
   removeSelectedMediaById,
