@@ -1,34 +1,26 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 
-export type AspectRatio = "16:9" | "21:9" | "9:16" | "4:3" | "3:4";
-
 export const ratioToAspectString = (r?: string) => {
-  switch (r as AspectRatio) {
-    case "16:9": return "16 / 9";
-    case "21:9": return "21 / 9";
-    case "9:16": return "9 / 16";
-    case "4:3":  return "4 / 3";
-    case "3:4":  return "3 / 4";
-    default:     return "16 / 9";
-  }
+  if (!r) return "16 / 9";
+  const [a, b] = String(r).split(":").map(x => Number(String(x).trim()));
+  return Number.isFinite(a) && Number.isFinite(b) && a > 0 && b > 0 ? `${a} / ${b}` : "16 / 9";
 };
 
 export const ratioToAspectNumber = (r?: string) => {
-  switch (r as AspectRatio) {
-    case "16:9": return 16 / 9;
-    case "21:9": return 21 / 9;
-    case "9:16": return 9 / 16;
-    case "4:3":  return 4 / 3;
-    case "3:4":  return 3 / 4;
-    default:     return 16 / 9;
-  }
+  if (!r) return 16 / 9;
+  const [a, b] = String(r).split(":").map(x => Number(String(x).trim()));
+  return Number.isFinite(a) && Number.isFinite(b) && b !== 0 ? a / b : 16 / 9;
 };
 
 type WidthOpts = {
-  maxW?: number;        // hard max width in px
-  sideMargin?: number;  // total left+right margin to preserve
-  topBottomMargin?: number; // total top+bottom margin to preserve
-  minW?: number;        // optional hard min width
+  maxW?: number;
+  sideMargin?: number;
+  topBottomMargin?: number;
+  minW?: number;
+  fitBy?: "auto" | "height" | "width";
+  /** NEW: bounds from a measured container (preferred) */
+  containerW?: number;
+  containerH?: number;
 };
 
 export function useResponsivePreviewWidth(
@@ -40,35 +32,48 @@ export function useResponsivePreviewWidth(
     sideMargin = 48,
     topBottomMargin = 220,
     minW = 320,
+    fitBy = "auto",
+    containerW,
+    containerH,
   } = opts || {};
 
   const aspect = useMemo(() => ratioToAspectNumber(ratio), [ratio]);
 
   const compute = useCallback(() => {
-    if (typeof window === "undefined") return Math.min(maxW, 600); // SSR fallback
-    const availW = Math.max(minW, window.innerWidth - sideMargin);
-    const availH = Math.max(minW, window.innerHeight - topBottomMargin);
-    // Fit by height for tall ratios; width for wide ratios
-    return Math.min(maxW, availW, availH * aspect);
-  }, [aspect, maxW, minW, sideMargin, topBottomMargin]);
+    // Prefer container dimensions if provided
+    const viewportW = containerW ?? (typeof window !== "undefined" ? window.innerWidth : 0);
+    const viewportH = containerH ?? (typeof window !== "undefined" ? window.innerHeight : 0);
+
+    if (!viewportW && !viewportH) return Math.min(maxW, 600); // SSR fallback
+
+    const availW = Math.max(minW, viewportW - sideMargin);
+    const availH = Math.max(minW, viewportH - topBottomMargin);
+
+    const widthFromWidth  = availW;
+    const widthFromHeight = availH * aspect;
+    const maxCap = Number.isFinite(maxW) ? maxW : Number.POSITIVE_INFINITY;
+
+    let w: number;
+    if (fitBy === "height") {
+      w = Math.min(maxCap, widthFromHeight);
+    } else if (fitBy === "width") {
+      w = Math.min(maxCap, widthFromWidth);
+    } else {
+      w = Math.min(maxCap, widthFromWidth, widthFromHeight);
+    }
+
+    return Math.max(minW, w);
+  }, [aspect, fitBy, maxW, minW, sideMargin, topBottomMargin, containerW, containerH]);
 
   const [w, setW] = useState<number>(() => compute());
 
   useEffect(() => {
-    const onResize = () => setW(compute());
-    onResize(); // recompute on mount in case SSR fallback ran
-    window.addEventListener("resize", onResize);
-    window.addEventListener("orientationchange", onResize);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      window.removeEventListener("orientationchange", onResize);
-    };
+    setW(compute());
   }, [compute]);
 
   return w;
 }
 
-/** Convenience: get a ready-to-spread style object */
 export function useAspectStyle(
   ratio: string | undefined,
   opts?: WidthOpts

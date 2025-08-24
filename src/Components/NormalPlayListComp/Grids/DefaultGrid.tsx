@@ -8,6 +8,10 @@ import { useAspectStyle } from "../../../Hook/Playlist/RatioHook/RatiotoAspect";
 import NormalMediaSelector from "../MediaSelector/NormalMediaSelector";
 import OclockWidget from "../Widgets/OclockWidget";
 import { useState } from "react";
+import {
+  selectRatioString,
+} from "../../../Hook/Playlist/RatioHook/RatioSelectors";
+import { useElementSize } from "../../../Hook/Playlist/RatioHook/useElementSize";
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -25,10 +29,17 @@ const getScaleClass = (scale: string) => {
 
 const DefaultGrid = () => {
   const dispatch = useDispatch();
-  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
+
+  const {
+    ref: wrapRef,
+    height: containerH,
+  } = useElementSize<HTMLDivElement>();
+
+  const ratioStr = useSelector(selectRatioString); // "n:d" for your hook
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerSlotIndex, setPickerSlotIndex] = useState<number | null>(null);
-
+  
+  
   const openPickerFor = (slotIndex: number) => {
     setPickerSlotIndex(slotIndex);
     setPickerOpen(true);
@@ -37,11 +48,15 @@ const DefaultGrid = () => {
     setPickerOpen(false);
     setPickerSlotIndex(null);
   };
-  const style = useAspectStyle(ratio, {
-    maxW: 1200,
-    sideMargin: 48,
-    topBottomMargin: 220,
-  });
+  console.log("ratioStr", ratioStr);
+
+const style = useAspectStyle(ratioStr, {
+  containerH: containerH || 540,
+  maxW: Number.POSITIVE_INFINITY, // or containerW if you also measure it
+  sideMargin: 0,
+  topBottomMargin: 0,
+  fitBy: "height",
+});
 
   const posToClass: Record<string, string> = {
     center: "items-center justify-center",
@@ -88,12 +103,12 @@ const DefaultGrid = () => {
       })
     );
   };
-  //flex items-center justify-center rounded-xl overflow-hidden
+
   return (
-    <div className="w-full mx-auto my-10 flex justify-center">
+   <div ref={wrapRef} className="w-full mx-auto my-10 flex justify-center" style={{ height: '56vh' }}>
       {slide?.slots.length === 1 && (
         <div
-          className="rounded-xl overflow-hidden bg-white shadow "
+          className="rounded-xl overflow-hidden bg-white shadow"
           style={style}
         >
           {slide.slots.map((slot) => (

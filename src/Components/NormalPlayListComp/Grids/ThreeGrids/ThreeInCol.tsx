@@ -6,6 +6,8 @@ import type { RootState } from "../../../../../store";
 import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
 import { useState } from "react";
 import NormalMediaSelector from "../../MediaSelector/NormalMediaSelector";
+import { selectRatioString } from "../../../../Hook/Playlist/RatioHook/RatioSelectors";
+import { useElementSize } from "../../../../Hook/Playlist/RatioHook/useElementSize";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -38,12 +40,17 @@ const ThreeInCol = () => {
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
-  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
-  const style = useAspectStyle(ratio, {
-    maxW: 1200,
-    sideMargin: 48,
-    topBottomMargin: 220,
+  const { ref: wrapRef, height: containerH } = useElementSize<HTMLDivElement>();
+
+  const ratioStr = useSelector(selectRatioString); 
+  const style = useAspectStyle(ratioStr, {
+    containerH: containerH || 540,
+    maxW: Number.POSITIVE_INFINITY, 
+    sideMargin: 0,
+    topBottomMargin: 0,
+    fitBy: "height",
   });
+
   const slide = useSelector((state: RootState) =>
     selectedSlideIndex !== null
       ? state.playlist.slides[selectedSlideIndex]
@@ -85,10 +92,14 @@ const ThreeInCol = () => {
   };
 
   return (
-    <div className="w-full mx-auto my-10 flex justify-center">
+    <div
+      ref={wrapRef}
+      className="w-full mx-auto my-10 flex justify-center"
+      style={{ height: "56vh" }}
+    >
       {slots.length > 0 && (
         <div
-          className="rounded-xl overflow-hidden bg-[#1e2530] shadow w-full max-w-none"
+          className="rounded-xl overflow-hidden bg-[#1e2530]  shadow"
           style={style}
         >
           {/* Fill full aspect height with 1–3 rows evenly */}

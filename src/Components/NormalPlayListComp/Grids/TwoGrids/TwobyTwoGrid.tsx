@@ -6,6 +6,8 @@ import type { RootState } from "../../../../../store";
 import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
 import { useState } from "react";
 import NormalMediaSelector from "../../MediaSelector/NormalMediaSelector";
+import { useElementSize } from "../../../../Hook/Playlist/RatioHook/useElementSize";
+import { selectRatioString } from "../../../../Hook/Playlist/RatioHook/RatioSelectors";
 const getScaleClass = (scale: string) => {
   switch (scale) {
     case "fit":
@@ -43,12 +45,20 @@ const TwobyTwoGrid = () => {
       ? state.playlist.slides[selectedSlideIndex]
       : null
   );
-  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
-  const style = useAspectStyle(ratio, {
-    maxW: 1200,
-    sideMargin: 48,
-    topBottomMargin: 220,
+  const {
+    ref: wrapRef,
+    height: containerH,
+  } = useElementSize<HTMLDivElement>();
+
+  const ratioStr = useSelector(selectRatioString); // "n:d" for your hook
+  const style = useAspectStyle(ratioStr, {
+    containerH: containerH || 540,
+    maxW: Number.POSITIVE_INFINITY, // or containerW if you also measure it
+    sideMargin: 0,
+    topBottomMargin: 0,
+    fitBy: "height",
   });
+
   const templateSlots = TwoByTwoConfig.slots;
   useInitGrid(
     slide,
@@ -82,13 +92,17 @@ const TwobyTwoGrid = () => {
   };
 
   return (
-    <div className="w-full mx-auto my-10 flex justify-center">
+    <div
+      ref={wrapRef}
+      className="w-full mx-auto my-10 flex justify-center"
+      style={{ height: "56vh" }}
+    >
       {slots.length === 2 && (
         <div
-          className=" overflow-hidden bg-[#1e2530]  shadow"
+          className="rounded-xl overflow-hidden bg-[#1e2530]  shadow"
           style={style}
         >
-          <div className="grid grid-cols-2 w-full h-full">
+          <div className="grid grid-cols-2 w-full h-full ">
             {slots.map((slot) => (
               <div key={slot.index} className="relative group overflow-hidden">
                 {slot.media ? (

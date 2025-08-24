@@ -73,7 +73,7 @@ const SortableSlide: React.FC<Props> = ({
           e.stopPropagation();
         }}
       >
-        <Trash2 size={16} />
+        <Trash2 size={16} className="hover:text-white"/>
       </button>
       {/* Preview */}
       <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">

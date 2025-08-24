@@ -1,22 +1,18 @@
 import { Plus } from "lucide-react";
-import MediaCard from "./MediaCard";
 import { useState } from "react";
 import BaseModal from "../../Components/Models/BaseModal";
 import PlaylistTypeModal from "../../Components/Models/PlaylistTypeModal";
-import { fetchPlaylists } from "../../Redux/Playlist/getPlaylistSlice";
-import type { PlayListItem } from "../../Redux/Playlist/PlaylistInterface";
-import { useQuery } from "@tanstack/react-query";
+import NormalPlaylistCard from "./NormalPlaylistCard";
+import InteractivePlaylist from "./InteractivePlaylistCard";
+import NormalMoreModal from "../../Components/Models/PlaylistsModals/NormalMoreModal";
+import InteractiveMoreModal from "../../Components/Models/PlaylistsModals/InteractiveMoreModal";
+
+
+type ModalKind = "none" | "add" | "normalMore" | "interactiveMore";
+
 const MediaContent = () => {
-  const [modalOpen, setModalOpen] = useState(false);
-  const {
-    data = [],
-    isLoading,
-    error,
-  } = useQuery<PlayListItem[]>({
-    queryKey: ["playlist"],
-    queryFn: fetchPlaylists,
-  });
-  console.log(data)
+  const [openModal, setOpenModal] = useState<ModalKind>("none");
+
   return (
     <div className="px-3 sm:px-4 lg:px-6 py-4 bg-[var(--white-200)] min-h-screen space-y-8">
       {/* Header */}
@@ -25,7 +21,7 @@ const MediaContent = () => {
           Media Content
         </h1>
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => setOpenModal("add")}
           className="bg-[var(--mainred)] text-white px-3 py-1.5 rounded-lg flex items-center gap-2 shadow hover:bg-red-600 transition text-sm"
         >
           <Plus size={16} />
@@ -35,28 +31,54 @@ const MediaContent = () => {
 
       {/* Normal Playlist */}
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-[var(--black)] py-3 sm:py-4">
-          Normal Playlist
-        </h2>
-        <MediaCard />
+        <div className="flex justify-between">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--black)] py-3 sm:py-4">
+            Show Playlist
+          </h2>
+          <button
+            className="text-red-500 font-semibold"
+            onClick={() => setOpenModal("normalMore")}
+          >
+            View More
+          </button>
+        </div>
+        <NormalPlaylistCard /> {/* renders first 3 */}
       </div>
 
       {/* Interactive Playlist */}
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-[var(--black)] py-3 sm:py-4">
-          Interactive Playlist
-        </h2>
-        <MediaCard />
+        <div className="flex justify-between">
+          <h2 className="text-lg sm:text-xl font-semibold text-[var(--black)] py-3 sm:py-4">
+            Interactive Playlist
+          </h2>
+          <button
+            className="text-red-500 font-semibold"
+            onClick={() => setOpenModal("interactiveMore")}
+          >
+            View More
+          </button>
+        </div>
+        <InteractivePlaylist /> {/* renders first 3 */}
       </div>
 
-      {/* Playlist Type Modal */}
+      {/* Modals */}
       <BaseModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={openModal === "add"}
+        onClose={() => setOpenModal("none")}
         title="Choose Playlist Type"
       >
         <PlaylistTypeModal />
       </BaseModal>
+
+      <NormalMoreModal
+        open={openModal === "normalMore"}
+        onClose={() => setOpenModal("none")}
+      />
+
+      <InteractiveMoreModal
+        open={openModal === "interactiveMore"}
+        onClose={() => setOpenModal("none")}
+      />
     </div>
   );
 };

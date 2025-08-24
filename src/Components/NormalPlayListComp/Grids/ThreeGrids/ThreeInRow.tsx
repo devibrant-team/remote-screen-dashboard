@@ -6,6 +6,8 @@ import type { RootState } from "../../../../../store";
 import { useAspectStyle } from "../../../../Hook/Playlist/RatioHook/RatiotoAspect";
 import NormalMediaSelector from "../../MediaSelector/NormalMediaSelector";
 import { useState } from "react";
+import { selectRatioString } from "../../../../Hook/Playlist/RatioHook/RatioSelectors";
+import { useElementSize } from "../../../../Hook/Playlist/RatioHook/useElementSize";
 
 const getScaleClass = (scale: string) => {
   switch (scale) {
@@ -38,11 +40,15 @@ const ThreeInRow = () => {
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
-  const ratio = useSelector((s: RootState) => s.playlist.selectedRatio);
-  const style = useAspectStyle(ratio, {
-    maxW: 1200,
-    sideMargin: 48,
-    topBottomMargin: 220,
+  const { ref: wrapRef, height: containerH } = useElementSize<HTMLDivElement>();
+
+  const ratioStr = useSelector(selectRatioString); // "n:d" for your hook
+  const style = useAspectStyle(ratioStr, {
+    containerH: containerH || 540,
+    maxW: Number.POSITIVE_INFINITY, // or containerW if you also measure it
+    sideMargin: 0,
+    topBottomMargin: 0,
+    fitBy: "height",
   });
 
   const slide = useSelector((state: RootState) =>
@@ -63,7 +69,6 @@ const ThreeInRow = () => {
   );
 
   const slots = slide?.slots || [];
-
 
   const handleScaleChange = (
     slotIndex: number,
@@ -89,11 +94,15 @@ const ThreeInRow = () => {
   };
 
   return (
-    <div className="w-full mx-auto my-10 flex justify-center">
+    <div
+      ref={wrapRef}
+      className="w-full mx-auto my-10 flex justify-center"
+      style={{ height: "56vh" }}
+    >
       {slots.length > 0 && (
         <div
-          className="rounded-xl overflow-hidden bg-[#1e2530] shadow w-full max-w-none"
-          style={style} // <- locks aspect & responsive width
+          className="rounded-xl overflow-hidden bg-[#1e2530]  shadow"
+          style={style}
         >
           {/* Row layout: 1, 2, or 3 items automatically share width */}
           <div className="flex w-full h-full">

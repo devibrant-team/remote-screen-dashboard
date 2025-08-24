@@ -1,7 +1,11 @@
 import { useState } from "react";
-import { Layers, Grid2X2, ChevronDown } from "lucide-react";
+import { Layers, Grid2X2 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
-import { setPlaylistName, clearPlaylist, setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import {
+  setPlaylistName,
+  clearPlaylist,
+
+} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
 import { savePlaylistToDatabase } from "../../Hook/Playlist/PostNormalPlaylist";
 import type { RootState } from "../../../store";
@@ -9,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 
 import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
+import RatioDropdown from "../Dropdown/RatioDropdown";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -19,10 +24,8 @@ const Tabbarplaylist = () => {
   const [saving, setSaving] = useState(false);
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
-console.log(playlist)
-  const selectedRatio = useSelector(
-    (state: RootState) => state.playlist.selectedRatio
-  );
+  console.log(playlist);
+  
 
   const handleSavePlaylist = async () => {
     setSaving(true);
@@ -46,10 +49,7 @@ console.log(playlist)
     navigate("/mediacontent");
   };
 
-  const handleRatioChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value as "16:9" | "21:9" | "9:16" | "4:3" | "3:4";
-    dispatch(setPlaylistRatio(value));
-  };
+
 
   return (
     <>
@@ -79,7 +79,10 @@ console.log(playlist)
         <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
           {/* Playlist name */}
           <section className="space-y-2">
-            <label htmlFor="playlist-name" className="text-sm lg:text-base font-semibold">
+            <label
+              htmlFor="playlist-name"
+              className="text-sm lg:text-base font-semibold"
+            >
               Playlist Name
             </label>
             <input
@@ -113,29 +116,12 @@ console.log(playlist)
           </section>
 
           {/* Ratio */}
-          <section className="space-y-2">
+          <section className="space-y-2 w-full">
             <h4 className="text-sm lg:text-base font-semibold">Ratio</h4>
-            <div className="relative border rounded-xl py-2 px-3 border-gray-300 shadow-sm flex items-center">
-              <select
-                value={selectedRatio}
-                onChange={handleRatioChange}
-                className="w-full appearance-none bg-transparent outline-none pr-8"
-                aria-label="Aspect ratio"
-              >
-                <option value="16:9">16:9</option>
-                <option value="21:9">21:9</option>
-                <option value="9:16">9:16</option>
-                <option value="4:3">4:3</option>
-                <option value="3:4">3:4</option>
-              </select>
-              <ChevronDown className="absolute right-3 text-red-500 pointer-events-none" size={18} />
+            <div className="relative w-full rounded-xl py-2 px-3 flex items-center">
+              <RatioDropdown />
             </div>
           </section>
-
-          {/* Media gallery (no extra overflow here; uses the main scroll) */}
-          {/* <section>
-            <NormalMediaSelector />
-          </section> */}
         </div>
 
         {/* Sticky footer */}
@@ -156,7 +142,11 @@ console.log(playlist)
         </div>
       </aside>
 
-      <BaseModal open={modalOpen} onClose={() => setModalOpen(false)} title="Choose Widget ">
+      <BaseModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Choose Widget "
+      >
         <WidgetModels onClose={() => setModalOpen(false)} />
       </BaseModal>
     </>

@@ -6,13 +6,22 @@ import type { NormalPlaylistState } from "./SlideNormalPlaylistSlice";
 import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 import type { SlotWidget } from "../../../Config/GridConfig/DefaultGridConfig";
 
+export type RatioRecord = {
+  id: number;
+  ratio: string; // "16:9"
+  numerator: number; // 16
+  denominator: number; // 9
+  width?: number;
+  height?: number;
+};
+
 export interface PlaylistState {
   id: number;
   name: string;
   type: number; // future-proofing if you add other types later
   slides: NormalPlaylistState[];
   selectedSlideIndex: number | null;
-  selectedRatio: string;
+  selectedRatio: RatioRecord | null;
 }
 
 const initialState: PlaylistState = {
@@ -21,7 +30,7 @@ const initialState: PlaylistState = {
   type: 1,
   slides: [],
   selectedSlideIndex: null,
-  selectedRatio: "16:9",
+  selectedRatio: null,
 };
 
 const playlistSlice = createSlice({
@@ -31,10 +40,9 @@ const playlistSlice = createSlice({
     setPlaylistName: (state, action: PayloadAction<string>) => {
       state.name = action.payload;
     },
-    setPlaylistRatio: (state, action: PayloadAction<string>) => {
+    setPlaylistRatio: (state, action: PayloadAction<RatioRecord>) => {
       state.selectedRatio = action.payload;
     },
-
     setSelectedSlideIndex: (state, action: PayloadAction<number | null>) => {
       state.selectedSlideIndex = action.payload;
     },

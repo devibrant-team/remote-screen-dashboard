@@ -1,11 +1,9 @@
-
-
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
-  useLocation,
+  Outlet,
 } from "react-router-dom";
 import ToolBar from "./layout/Tabbar";
 import MediaContent from "./Screens/MediaContent/MediaContent";
@@ -15,60 +13,78 @@ import LicenseKey from "./../LicenseKey/LicenseKey";
 import Test from "./Screens/Test";
 import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 
-function AppWrapper() {
-  const location = useLocation();
+/* ---------- Auth gate ---------- */
+function RequireAuth() {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return token ? <Outlet /> : <Navigate to="/login" replace />;
+}
 
-  const hideToolbarPaths = ["/login", "/license", "/playlist"];
-  const shouldHideToolbar = hideToolbarPaths.includes(location.pathname);
-
+/* ---------- Layouts ---------- */
+// Shown on authenticated pages that should have the Tabbar
+function AppLayoutWithTabbar() {
   return (
     <div className="flex">
-      {!shouldHideToolbar && <ToolBar />}
+      <ToolBar />
+      {/* LicenseKey only where you need it; move it here if appropriate */}
       <LicenseKey />
-
-      
-        <Routes>
-          {/* Public routes (redirect to mediacontent if already logged in) */}
-          <Route
-            path="/"
-            element={token ? <Navigate to="/mediacontent" replace /> : <LoginScreen />}
-          />
-          <Route
-            path="/login"
-            element={token ? <Navigate to="/mediacontent" replace /> : <LoginScreen />}
-          />
-
-          {/* Protected routes (redirect to login if not logged in) */}
-          <Route
-            path="/mediacontent"
-            element={token ? <MediaContent /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/playlist"
-            element={token ? <PlayList /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/screenmanagement"
-            element={token ? <ScreenManagement /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/test"
-            element={token ? <Test /> : <Navigate to="/login" replace />}
-          />
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to={token ? "/mediacontent" : "/login"} replace />} />
-        </Routes>
-    
+      <div className="flex-1">
+        <Outlet />
+      </div>
     </div>
   );
 }
 
+// Shown on pages (public or protected) that should NOT have the Tabbar
+function PlainLayout() {
+  return (
+    <div className="flex">
+      <div className="flex-1">
+        <Outlet />
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Routes ---------- */
 export default function App() {
   return (
     <Router>
-      <AppWrapper />
+      <Routes>
+        {/* Public routes (no Tabbar) */}
+        <Route element={<PlainLayout />}>
+          <Route path="/login" element={<LoginScreen />} />
+          {/* If you have a license screen that should be public without Tabbar: */}
+          <Route path="/license" element={<LicenseKey />} />
+          {/* Root: if logged in, go to app; else go to login */}
+          <Route path="/" element={<AuthRedirect />} />
+        </Route>
+
+        {/* Protected routes WITHOUT Tabbar */}
+        <Route element={<RequireAuth />}>
+          <Route element={<PlainLayout />}>
+            <Route path="/playlist" element={<PlayList />} />
+         
+          </Route>
+        </Route>
+
+        {/* Protected routes WITH Tabbar */}
+        <Route element={<RequireAuth />}>
+          <Route element={<AppLayoutWithTabbar />}>
+            <Route path="/mediacontent" element={<MediaContent />} />
+            <Route path="/screenmanagement" element={<ScreenManagement />} />
+            <Route path="/test" element={<Test />} />
+          </Route>
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </Router>
   );
+}
+
+/* ---------- Helper ---------- */
+function AuthRedirect() {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return token ? <Navigate to="/mediacontent" replace /> : <Navigate to="/login" replace />;
 }

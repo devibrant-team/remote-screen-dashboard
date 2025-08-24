@@ -3,8 +3,10 @@ export const loginApi = `${http}dashboard/login`
 export const playlisttypeApi = `${http}getplaylistStyle`
 export const PlaylistPostApi = `${http}postNormal`
 export const postplaylistinteractiveApi = `${http}postinteractive`
-export const getmediacontent = `${http}getuser/playlist`
+// export const getmediacontent = `${http}getuser/playlist`
 export const getMediaUserApi = `${http}getuser/media`
 export const addBranchApi = `${http}insertbranch`
 export const getBranchApi = `${http}getbranch`
-
+export const getRatioApi = `${http}getratio`
+export const getNormalplaylistApi = `${http}getuser/playlistnormal`
+export const getInteractiveplaylistApi = `${http}getuser/playlistinteractive`
