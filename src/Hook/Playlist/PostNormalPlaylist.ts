@@ -12,7 +12,10 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
   formData.append("name", playlist.name);
   formData.append("type", playlist.type.toString());
   formData.append("NumberOfSlides", playlist.slides.length.toString());
-  formData.append("ratio", playlist.selectedRatio);
+  const ratioId = playlist.selectedRatio?.id;
+  if (ratioId != null) {
+    formData.append("ratio", String(ratioId));
+  }
   formData.append(
     "total_duration",
     playlist.slides
@@ -129,7 +132,7 @@ export const formatPlaylistPayload = (playlist: PlaylistState) => {
     type: playlist.type,
     NumberOfSlides: playlist.slides.length,
     total_duration: totalDuration,
-    ratio: playlist.selectedRatio,
+    ratio: playlist.selectedRatio?.id,
     slides: playlist.slides.map((slide, index) => {
       const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
       return {
