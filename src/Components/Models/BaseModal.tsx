@@ -16,7 +16,7 @@ const BaseModal: React.FC<BaseModalProps> = ({ open, onClose, title, children })
       <div className="bg-[var(--white)] w-full max-w-md p-6 rounded-xl relative">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-500 hover:text-[var(--black)]"
+          className="absolute right-4 top-4 text-gray-500 hover:text-[var(--black)] cursor-pointer"
         >
           <X size={20} />
         </button>
