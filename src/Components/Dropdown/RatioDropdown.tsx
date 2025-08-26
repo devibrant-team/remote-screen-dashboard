@@ -40,7 +40,7 @@ const RatioDropdown = () => {
         {isError && <option>Failed to load</option>}
         {!isLoading && !isError && ratios?.map(r => (
           <option key={r.id} value={String(r.id)}>
-            {r.ratio}{r.width && r.height ? ` (${r.width}×${r.height})` : ""}
+            <p className="font-bold">{r.ratio}</p>
           </option>
         ))}
       </select>

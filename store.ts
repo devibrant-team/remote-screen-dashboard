@@ -6,6 +6,9 @@ import playlistReducer from "./src/Redux/Playlist/ToolBarFunc/NormalPlaylistSlic
 import playlistInteractiveReducer from "./src/Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 import MediaReducer from "./src/Redux/Media/MediaSlice";
 import mediaPickerReducer from "./src/Redux/Media/MediaSlice";
+import screenFormReducer from "./src/Redux/AddScreen/AddScreenSlice";
+import screenManagementReducer from "./src/Redux/ScreenManagement/ScreenManagementSlice";
+import groupFormReducer from "./src/Redux/AddGroup/AddGroupSlice";
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -15,6 +18,9 @@ export const store = configureStore({
     playlistInteractive: playlistInteractiveReducer,
     media: MediaReducer,
     mediaPicker: mediaPickerReducer,
+    screenForm: screenFormReducer,
+    groupForm: groupFormReducer,
+    screenManagement: screenManagementReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

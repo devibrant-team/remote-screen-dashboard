@@ -1,33 +1,32 @@
 import { ChevronDown } from "lucide-react";
-import { useGetBranches } from "../../ReactQuery/Branch/GetBranch";
-import { setSelectedBranchId } from "../../Redux/ScreenManagement/ScreenManagementSlice";
+import React, { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
-import { useEffect, useMemo } from "react";
-const BranchDropdown = () => {
-  const { data: branches, isLoading, isError } = useGetBranches();
-  const selectedBranchId = useSelector(
-    (s: RootState) => s.screenManagement.selectedBranchId
-  );
-  console.log(selectedBranchId);
+import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
+import { setScreenGroupId } from "../../Redux/AddScreen/AddScreenSlice";
+
+const GroupDropdown: React.FC = () => {
+  const { data: groups = [], isLoading, isError } = useGetGroups();
   const dispatch = useDispatch();
+  const selectedGroupId = useSelector((s: RootState) => s.screenForm.groupId);
+
   // initialize once when groups arrive
   useEffect(() => {
-    if (!selectedBranchId && branches?.length) {
-      dispatch(setSelectedBranchId(String(branches[0].id)));
+    if (!selectedGroupId && groups.length) {
+      dispatch(setScreenGroupId(String(groups[0].id)));
     }
-  }, [selectedBranchId, branches, dispatch]);
+  }, [selectedGroupId, groups, dispatch]);
 
   const value = useMemo(
-    () => (selectedBranchId ? String(selectedBranchId) : ""),
-    [selectedBranchId]
+    () => (selectedGroupId ? String(selectedGroupId) : ""),
+    [selectedGroupId]
   );
 
   const onChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    dispatch(setSelectedBranchId(e.target.value));
+    dispatch(setScreenGroupId(e.target.value));
   };
 
-  const disabled = (isLoading || isError) && branches?.length === 0;
+  const disabled = (isLoading || isError) && groups.length === 0;
 
   return (
     <div className="relative w-full sm:w-auto">
@@ -38,12 +37,11 @@ const BranchDropdown = () => {
         className="w-full appearance-none rounded-lg border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm font-medium text-neutral-800 shadow-sm outline-none transition focus:border-neutral-400 disabled:opacity-50"
       >
         {isLoading && <option>Loading...</option>}
-        {isError && <option>Failed to load</option>}
+        {isError && groups.length === 0 && <option>Failed to load</option>}
         {!isLoading &&
-          !isError &&
-          branches?.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.name}
+          groups.map((g) => (
+            <option key={g.id} value={String(g.id)}>
+              {g.name}
             </option>
           ))}
       </select>
@@ -55,4 +53,4 @@ const BranchDropdown = () => {
   );
 };
 
-export default BranchDropdown;
+export default GroupDropdown;

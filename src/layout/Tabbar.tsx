@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Monitor,
   MonitorPlay,
-  Building,
   CalendarDays,
   User,
   LifeBuoy,
@@ -15,12 +14,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
-  { label: "Branches", icon: Building, path: "/branches" },
   { label: "Schedule", icon: CalendarDays, path: "/schedule" },
   { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
   { label: "Account", icon: User, path: "/account" },
   { label: "Support", icon: LifeBuoy, path: "/support" },
-  { label: "Logout", icon: LifeBuoy, path: "/login" },
 ];
 
 const ToolBar = () => {
@@ -42,7 +39,7 @@ const ToolBar = () => {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen w-70 bg-white border-r shadow-md transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-40 h-screen w-70 bg-white  shadow-md transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}
       >

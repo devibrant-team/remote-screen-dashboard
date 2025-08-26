@@ -14,7 +14,7 @@ import {
 const playlistTypes = [
   {
     id: 1,
-    type: "Normal",
+    type: "Show",
     description: "Standard playlist layout",
   },
   {

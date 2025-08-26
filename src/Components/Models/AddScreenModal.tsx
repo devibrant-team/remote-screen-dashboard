@@ -1,254 +1,201 @@
-// AddScreenModal.tsx
-import React, { useMemo, useState } from "react";
+import React from "react";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../../store";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useAddScreen } from "../../ReactQuery/Screen/useAddScreen";
+import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
+import ScreenRatioDropdown from "../Dropdown/ScreenRatioDropdown";
+import BranchDropdown from "../Dropdown/BranchDropdown";
+import GroupDropdown from "../Dropdown/GroupDropdown";
+import {
+  setScreenName,
+  setScreenCode,
+} from "../../Redux/AddScreen/AddScreenSlice";
 
-const PRESET_RATIOS = ["unassigned", "16:9", "9:16", "4:3"];
-const PRESET_BRANCHES = ["Downtown Branch", "Uptown Branch"];
-const PRESET_GROUPS = ["No Group", "Promo", "Menu"];
+const schema = z.object({
+  name: z.string().trim().min(1, "Screen name is required").max(80, "Too long"),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Code must be exactly 6 digits"),
+});
+type FormValues = z.infer<typeof schema>;
 
 const AddScreenModal: React.FC = () => {
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
+  const dispatch = useDispatch();
+  const selectedRatioid = useSelector(
+    (state: RootState) => state.screenManagement.selectedScreenRatioId
+  );
+  const selectedBranchId = useSelector(
+    (state: RootState) => state.screenManagement.selectedBranchId
+  );
 
-  // ratio mode: preset value OR "custom"
-  const [ratioSelect, setRatioSelect] = useState<string>(PRESET_RATIOS[0]); // or "custom"
-  const [ratioNum, setRatioNum] = useState<string>(""); // numerator
-  const [ratioDen, setRatioDen] = useState<string>(""); // denominator
+  const { mutate: addScreen, isPending } = useAddScreen();
+  // read current selection/state from your AddScreen slice
+  const {
+    name: nameFromStore,
+    code: codeFromStore,
+    groupId,
+  } = useSelector((s: RootState) => s.screenForm);
 
-  // optional exact size
-  const [width, setWidth] = useState<string>("");
-  const [height, setHeight] = useState<string>("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid, isSubmitting },
+    setValue,
+    watch,
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    mode: "onChange",
+    defaultValues: {
+      name: nameFromStore || "",
+      code: codeFromStore || "",
+    },
+  });
 
-  const [branch, setBranch] = useState(PRESET_BRANCHES[0]);
-  const [group, setGroup] = useState(PRESET_GROUPS[0]);
+  // keep the code strictly numeric + max 6 and mirror to Redux
+  const code = watch("code");
+  React.useEffect(() => {
+    if (code == null) return;
+    const sanitized = code.replace(/\D/g, "").slice(0, 6);
+    if (sanitized !== code) {
+      setValue("code", sanitized, { shouldValidate: true });
+      dispatch(setScreenCode(sanitized));
+    }
+  }, [code, setValue, dispatch]);
 
-  const usingCustom = ratioSelect === "custom";
+  const close = () => window.dispatchEvent(new Event("close-add-screen-modal"));
 
-  const ratioError =
-    usingCustom &&
-    ((ratioNum && !ratioDen) || (!ratioNum && ratioDen) || Number(ratioNum) <= 0 || Number(ratioDen) <= 0)
-      ? "Enter positive numbers for both fields, or choose a preset."
-      : null;
-
-  const finalRatio = useMemo(() => {
-    if (!usingCustom) return ratioSelect; // preset like "16:9" or "unassigned"
-    const n = parseInt(ratioNum, 10);
-    const d = parseInt(ratioDen, 10);
-    if (!Number.isFinite(n) || !Number.isFinite(d) || n <= 0 || d <= 0) return "";
-    return `${n}:${d}`;
-  }, [usingCustom, ratioSelect, ratioNum, ratioDen]);
-
-  const sizeProvided =
-    width.trim().length > 0 && height.trim().length > 0 && Number(width) > 0 && Number(height) > 0;
-
-  const canConfirm =
-    name.trim().length > 0 &&
-    branch.trim().length > 0 &&
-    group.trim().length > 0 &&
-    !ratioError &&
-    (finalRatio === "unassigned" || finalRatio.includes(":")); // preset or valid custom
-
-  const handleConfirm = () => {
-    if (!canConfirm) return;
-
-    const payload: {
-      name: string;
-      code?: string;
-      ratio: string; // "unassigned" or "N:D"
-      branch: string;
-      group: string;
-      width?: number;
-      height?: number;
-    } = {
-      name: name.trim(),
-      code: code.trim() || undefined,
-      ratio: finalRatio || "unassigned",
-      branch,
-      group,
+  const onSubmit = (values: FormValues) => {
+    const payload = {
+      name: values.name.trim(),
+      code: values.code,
+      ratio_id: selectedRatioid ?? null,
+      branch_id: selectedBranchId ?? null,
+      group_id: groupId ?? null,
     };
 
-    if (sizeProvided) {
-      payload.width = Number(width);
-      payload.height = Number(height);
-    }
-
-    // TODO: API/Redux save
-    console.log("Create Screen:", payload);
-
-    // reset
-    setName("");
-    setCode("");
-    setRatioSelect(PRESET_RATIOS[0]);
-    setRatioNum("");
-    setRatioDen("");
-    setWidth("");
-    setHeight("");
-    setBranch(PRESET_BRANCHES[0]);
-    setGroup(PRESET_GROUPS[0]);
-
-    // Optionally close parent modal via event:
-    // window.dispatchEvent(new CustomEvent("close-base-modal"));
+    addScreen(payload, {
+      onSuccess: () => {
+        dispatch(resetScreenForm());
+        close();
+      },
+      onError: (err) => {
+        // show inline error or toast
+        console.error("Add screen failed:", err);
+      },
+    });
   };
 
   return (
-    <div className="w-full">
+    <form onSubmit={handleSubmit(onSubmit)} className="w-full">
+      {/* Header */}
+      <div className="mb-4">
+        <p className="mt-1 text-sm text-neutral-600">
+          Name your screen and configure its display ratio, branch, and group.
+        </p>
+      </div>
 
-      <hr className="mb-4 border-neutral-200" />
-
-      <div className="space-y-4">
-        {/* Screen Name */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Screen Name</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Front Window TV"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          />
-        </div>
-
-        {/* Code (optional) */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Code (optional)</label>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Internal code"
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          />
-        </div>
-
-        {/* Ratio: preset or custom */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Screen Ratio</label>
-          <select
-            value={ratioSelect}
-            onChange={(e) => setRatioSelect(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          >
-            {PRESET_RATIOS.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-            <option value="custom">Custom…</option>
-          </select>
-
-          {usingCustom && (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={ratioNum}
-                onChange={(e) => setRatioNum(e.target.value)}
-                placeholder="16"
-                className="w-1/2 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-              />
-              <span className="text-neutral-500">:</span>
-              <input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={ratioDen}
-                onChange={(e) => setRatioDen(e.target.value)}
-                placeholder="9"
-                className="w-1/2 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-              />
-            </div>
-          )}
-
-          {ratioError && <p className="mt-1 text-xs text-red-600">{ratioError}</p>}
-          {!ratioError && finalRatio && finalRatio !== "unassigned" && (
-            <p className="mt-1 text-xs text-neutral-500">Final ratio: {finalRatio}</p>
-          )}
-        </div>
-
-        {/* Exact Size (optional) */}
-        {usingCustom && (
-
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Exact Size (optional)</label>
-          <div className="flex items-center gap-2">
+      {/* Form Card */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {/* Screen Name */}
+          <div className="md:col-span-2">
+            <label
+              htmlFor="screen-name"
+              className="mb-1 block text-sm font-medium text-neutral-700"
+            >
+              Screen Name <span className="text-red-500">*</span>
+            </label>
             <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={width}
-              onChange={(e) => setWidth(e.target.value)}
-              placeholder="Width (px)"
-              className="w-1/2 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
+              id="screen-name"
+              placeholder="e.g., Front Window TV"
+              {...register("name", {
+                onChange: (e) => dispatch(setScreenName(e.target.value)),
+              })}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
             />
-            <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={height}
-              onChange={(e) => setHeight(e.target.value)}
-              placeholder="Height (px)"
-              className="w-1/2 rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-            />
+            {errors.name ? (
+              <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+            ) : (
+              <p className="mt-1 text-xs text-neutral-500">
+                Give this screen a short, recognizable name.
+              </p>
+            )}
           </div>
-          {((width && !height) || (!width && height)) && (
-            <p className="mt-1 text-xs text-red-600">Provide both width and height, or leave both empty.</p>
-          )}
-        </div>
-        )}
 
-        {/* Branch */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Branch</label>
-          <select
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          >
-            {PRESET_BRANCHES.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* Code (6 digits) */}
+          <div>
+            <label
+              htmlFor="screen-code"
+              className="mb-1 block text-sm font-medium text-neutral-700"
+            >
+              Code (6 digits)
+            </label>
+            <input
+              id="screen-code"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="e.g., 102345"
+              {...register("code", {
+                onChange: (e) => {
+                  // mirror to Redux immediately (sanitization handled in effect)
+                  dispatch(setScreenCode(e.target.value));
+                },
+              })}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
+            />
+            {errors.code ? (
+              <p className="mt-1 text-xs text-red-600">{errors.code.message}</p>
+            ) : null}
+          </div>
 
-        {/* Group */}
-        <div>
-          <label className="mb-1 block text-sm font-medium text-neutral-700">Assign to Group</label>
-          <select
-            value={group}
-            onChange={(e) => setGroup(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-400"
-          >
-            {PRESET_GROUPS.map((g) => (
-              <option key={g} value={g}>
-                {g}
-              </option>
-            ))}
-          </select>
+          {/* Ratio */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">
+              Screen Ratio
+            </label>
+            <ScreenRatioDropdown />
+          </div>
+
+          {/* Branch */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">
+              Branch
+            </label>
+            <BranchDropdown />
+          </div>
+
+          {/* Group */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-neutral-700">
+              Group
+            </label>
+            <GroupDropdown />
+          </div>
         </div>
       </div>
 
-      <hr className="my-4 border-neutral-200" />
-
-      <div className="flex justify-end gap-3">
+      {/* Footer */}
+      <div className="mt-4 flex items-center justify-end gap-3">
         <button
           type="button"
-          onClick={() => {
-            // window.dispatchEvent(new CustomEvent("close-base-modal"));
-          }}
+          onClick={close}
           className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
         >
           Cancel
         </button>
         <button
-          type="button"
-          disabled={!canConfirm}
-          onClick={handleConfirm}
+          type="submit"
+          disabled={!isValid || isSubmitting || isPending}
           className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Confirm
+          {isPending ? "Saving..." : "Save"}
         </button>
       </div>
-    </div>
+    </form>
   );
 };
 

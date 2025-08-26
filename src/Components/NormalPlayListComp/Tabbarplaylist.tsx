@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Layers, Grid2X2 } from "lucide-react";
+import { Layers, Grid2X2, ArrowBigLeft } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   setPlaylistName,
   clearPlaylist,
-
 } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import GridSelector from "./GridSelector/GridSelector";
 import { savePlaylistToDatabase } from "../../Hook/Playlist/PostNormalPlaylist";
@@ -25,7 +24,6 @@ const Tabbarplaylist = () => {
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
   console.log(playlist);
-  
 
   const handleSavePlaylist = async () => {
     setSaving(true);
@@ -49,8 +47,6 @@ const Tabbarplaylist = () => {
     navigate("/mediacontent");
   };
 
-
-
   return (
     <>
       {showGridSelector && (
@@ -68,9 +64,16 @@ const Tabbarplaylist = () => {
           flex flex-col overflow-hidden
         "
       >
-        {/* Sticky header */}
-        <div className="p-4 lg:p-6 border-b border-gray-200 sticky top-0 bg-[var(--white)] z-10">
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-red-700">
+        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-[var(--white)] px-4 py-3 lg:px-6 lg:py-4">
+          <button
+            onClick={handleCancel}
+            type="button"
+            className="flex items-center justify-center rounded-full p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+          >
+            <ArrowBigLeft size={30} strokeWidth={2} color="red" />
+          </button>
+
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-red-700">
             Playlist Editor
           </h1>
         </div>
