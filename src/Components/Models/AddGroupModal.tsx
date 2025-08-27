@@ -8,16 +8,23 @@ import type { RootState } from "../../../store";
 import { setGroupName } from "../../Redux/AddGroup/AddGroupSlice";
 import ScreenRatioDropdown from "../Dropdown/ScreenRatioDropdown";
 import BranchDropdown from "../Dropdown/BranchDropdown";
-import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
 import { useAddGroup } from "../../ReactQuery/Group/useAddGroup";
 import type { AddGroupPayload } from "../../ReactQuery/Group/PostGroup";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
+const toNullableNumber = z.preprocess((v) => {
+  if (v === "" || v == null) return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}, z.number().int().positive().nullable());
+
 const schema = z.object({
   name: z.string().trim().min(2, "Group name must be at least 2 characters"),
-  ratioId: z.coerce.number().int().positive("Please select a ratio"),
+  ratioId: toNullableNumber,
   branchId: z.coerce.number().int().positive("Please select a branch"),
-  screenIds: z.array(z.coerce.number().int()).min(2, "Select at least 2 screens"),
+  screenIds: z
+    .array(z.coerce.number().int())
+    .min(2, "Select at least 2 screens"),
 });
 type FormValues = z.infer<typeof schema>;
 
@@ -31,25 +38,21 @@ const AddGroupModal = ({ onClose }: Props) => {
 
   // Show list in chunks of 5
   const [visible, setVisible] = useState(5);
+  const [screensLoading] = useState(false); // if you wire a loader, set this accordingly
 
-  // Filtering: allow "Any" without editing the dropdown component
-  const [anyRatio, setAnyRatio] = useState(false);
-
-  const { data: screens, isLoading: screensLoading } = useGetScreen();
-
-  // From Redux (dropdowns)
+  // Read screens from Redux
+  const screens = useSelector((state: RootState) => state.screens.items);
+  console.log("LALA", screens);
+  // From Redux (dropdowns) — used to populate form values and filter lists
   const selectedRatioId = useSelector(
-    (s: RootState) => s.screenManagement.selectedScreenRatioId
+    (s: RootState) => s.screenManagement.selectedRatioId
+  );
+  const selectedRatioName = useSelector(
+    (s: RootState) => s.screenManagement.selectedRatioName
   );
   const selectedBranchId = useSelector(
     (s: RootState) => s.screenManagement.selectedBranchId
   );
-
-  // Optional: ratio options in store (id → label)
-  const ratioOptions =
-    useSelector((s: RootState) => (s as any).screenManagement?.ratioOptions) as
-      | Array<{ id: number; label?: string; name?: string; value?: string }>
-      | undefined;
 
   const { mutate: addGroup, isPending } = useAddGroup();
 
@@ -69,7 +72,9 @@ const AddGroupModal = ({ onClose }: Props) => {
 
   // Keep form in sync with Redux dropdowns (ratio/branch)
   useEffect(() => {
-    if (selectedRatioId != null) {
+    if (selectedRatioId == null) {
+      setValue("ratioId", null as any, { shouldValidate: true });
+    } else {
       setValue("ratioId", Number(selectedRatioId), { shouldValidate: true });
     }
   }, [selectedRatioId, setValue]);
@@ -80,62 +85,32 @@ const AddGroupModal = ({ onClose }: Props) => {
     }
   }, [selectedBranchId, setValue]);
 
-  // ------- Filtering helpers -------
-  const ratioIdFromForm = watch("ratioId"); // number | undefined
+  // ---- Filtering by selectedRatioName (e.g., "16:9") ----
+  const norm = (s?: string | null) =>
+    (s ?? "").trim().replace(/\s+/g, "").toLowerCase();
 
-  // Prefer the form's ratioId (reflects latest dropdown selection),
-  // unless "Any" is toggled for filtering.
-  const effectiveRatioIdForFilter =
-    anyRatio ? null : (ratioIdFromForm ?? selectedRatioId ?? null);
+  const allScreens = screens ?? [];
+  const shouldFilterByRatio =
+    selectedRatioId != null && !!selectedRatioName?.trim();
 
-  const getRatioLabelById = (id?: number | null): string | null => {
-    if (!id || !ratioOptions) return null;
-    const opt = ratioOptions.find((o) => o.id === id);
-    // try common label keys
-    return (opt?.label ?? (opt as any)?.name ?? (opt as any)?.value ?? null) as
-      | string
-      | null;
-  };
-  const norm = (x?: string | null) => (x ?? "").replace(/\s+/g, "").toLowerCase();
-
-  const filteredScreens = (screens ?? []).filter((sc: any) => {
-    // Any → no filter
-    if (effectiveRatioIdForFilter === null) return true;
-
-    // If screen has numeric ratioId, match by id
-    if (sc.ratioId != null && typeof sc.ratioId !== "undefined") {
-      return Number(sc.ratioId) === Number(effectiveRatioIdForFilter);
-    }
-
-    // Else try to match by text label against sc.ratio (e.g., "16:9")
-    const label = getRatioLabelById(
-      typeof effectiveRatioIdForFilter === "number"
-        ? effectiveRatioIdForFilter
-        : null
-    );
-    if (label) {
-      return norm(sc.ratio) === norm(label);
-    }
-
-    // Fallback: if we can't resolve label, don't filter out
-    return true;
-  });
-
+  const filteredScreens = shouldFilterByRatio
+    ? allScreens.filter((sc) => norm(sc.ratio) === norm(selectedRatioName))
+    : allScreens;
   const totalScreens = filteredScreens.length;
   const visibleScreens = filteredScreens.slice(0, visible);
 
-  // Reset visible chunk when filter changes
+  // Reset visible chunk when data or filter changes
   useEffect(() => {
     setVisible(5);
-  }, [anyRatio, ratioIdFromForm, selectedRatioId, totalScreens]);
+  }, [totalScreens, selectedRatioName, selectedRatioId, shouldFilterByRatio]);
 
   // ------- Submit -------
   const onSubmit = (values: FormValues) => {
     const payload: AddGroupPayload = {
       name: values.name.trim(),
-      ratioId: values.ratioId, // number
-      branchId: values.branchId, // number
-      assignScreens: values.screenIds.map((id) => ({ id })), // [{id}]
+      branchId: values.branchId,
+      assignScreens: values.screenIds.map((id) => ({ screenId: id })),
+      ...(values.ratioId != null ? { ratioId: values.ratioId } : {}),
     };
 
     addGroup(payload, {
@@ -197,48 +172,45 @@ const AddGroupModal = ({ onClose }: Props) => {
             )}
           </div>
 
-          {/* Ratio */}
+          {/* Ratio (kept for form value; also drives filtering by name) */}
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">
               Group Ratio <span className="text-red-500">*</span>
             </label>
             <div className="flex items-center gap-2">
-              <ScreenRatioDropdown />
-              {/* Toggle a local "Any" filter without changing the dropdown itself */}
-              <button
-                type="button"
-                className={`rounded-md border px-2 py-1 text-xs ${
-                  anyRatio
-                    ? "border-neutral-300 bg-neutral-800 text-white"
-                    : "border-neutral-300 text-neutral-700 hover:bg-neutral-50"
-                }`}
-                onClick={() => setAnyRatio((v) => !v)}
-                title="Filter screens by any ratio"
-              >
-                {anyRatio ? "Any (on)" : "Any"}
-              </button>
+              <ScreenRatioDropdown allowNone noneLabel="None" />
             </div>
-            {/* Hidden field to keep RHF value in the form model (ratioId stays a number) */}
-            <input type="hidden" {...register("ratioId", { valueAsNumber: true })} />
+            {/* Hidden field to keep RHF value in the form model */}
+            <input
+              type="hidden"
+              {...register("ratioId", { valueAsNumber: true })}
+            />
             {errors.ratioId && (
-              <p className="mt-1 text-xs text-red-600">{errors.ratioId.message}</p>
+              <p className="mt-1 text-xs text-red-600">
+                {errors.ratioId.message}
+              </p>
             )}
           </div>
 
-          {/* Branch */}
+          {/* Branch (kept for form value; no filtering here) */}
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">
               Branch <span className="text-red-500">*</span>
             </label>
             <BranchDropdown />
             {/* Hidden field mirrors Redux → RHF */}
-            <input type="hidden" {...register("branchId", { valueAsNumber: true })} />
+            <input
+              type="hidden"
+              {...register("branchId", { valueAsNumber: true })}
+            />
             {errors.branchId && (
-              <p className="mt-1 text-xs text-red-600">{errors.branchId.message}</p>
+              <p className="mt-1 text-xs text-red-600">
+                {errors.branchId.message}
+              </p>
             )}
           </div>
 
-          {/* Assign Screens (checkboxes) — 5 by 5 with controls */}
+          {/* Assign Screens (checkboxes) — 5 by 5 with controls (filtered by selectedRatioName) */}
           <div className="md:col-span-2">
             <label className="mb-2 block text-sm font-medium text-neutral-700">
               Assign Screens <span className="text-red-500">*</span>
@@ -255,7 +227,11 @@ const AddGroupModal = ({ onClose }: Props) => {
                   ))}
                 </div>
               ) : totalScreens === 0 ? (
-                <p className="text-sm text-neutral-500">No screens available.</p>
+                <p className="text-sm text-neutral-500">
+                  {shouldFilterByRatio
+                    ? `No screens match the selected ratio (${selectedRatioName}).`
+                    : "No screens available."}
+                </p>
               ) : (
                 <>
                   <ul className="space-y-2">
@@ -264,15 +240,16 @@ const AddGroupModal = ({ onClose }: Props) => {
                         <label className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 hover:bg-neutral-50">
                           <input
                             type="checkbox"
-                            value={sc.id}
+                            value={sc.screenId}
                             {...register("screenIds")}
                             className="h-4 w-4 accent-red-500"
                           />
                           <span className="text-sm text-neutral-800">
-                            {sc.name || `Screen #${sc.id}`}
+                            {sc.name || `Screen #${sc.screenId}`}
                           </span>
                           <span className="ml-auto text-xs text-neutral-500">
-                            {(sc as any).branch ?? "No branch"} • {(sc as any).ratio ?? "—"}
+                            {(sc as any).branch ?? "No branch"} •{" "}
+                            {(sc as any).ratio ?? "—"}
                           </span>
                         </label>
                       </li>
@@ -281,7 +258,8 @@ const AddGroupModal = ({ onClose }: Props) => {
 
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-xs text-neutral-500">
-                      Showing {Math.min(visible, totalScreens)} of {totalScreens}
+                      Showing {Math.min(visible, totalScreens)} of{" "}
+                      {totalScreens}
                     </p>
                     <div className="flex items-center gap-2">
                       {visible > 5 && (
@@ -330,13 +308,6 @@ const AddGroupModal = ({ onClose }: Props) => {
 
       {/* Footer */}
       <div className="mt-4 flex items-center justify-end gap-3">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-        >
-          Cancel
-        </button>
         <button
           type="submit"
           disabled={!isValid || isSubmitting || isPending}

@@ -9,6 +9,7 @@ import mediaPickerReducer from "./src/Redux/Media/MediaSlice";
 import screenFormReducer from "./src/Redux/AddScreen/AddScreenSlice";
 import screenManagementReducer from "./src/Redux/ScreenManagement/ScreenManagementSlice";
 import groupFormReducer from "./src/Redux/AddGroup/AddGroupSlice";
+import screensReducer from "./src/Redux/ScreenManagement/ScreenSlice";
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -21,6 +22,7 @@ export const store = configureStore({
     screenForm: screenFormReducer,
     groupForm: groupFormReducer,
     screenManagement: screenManagementReducer,
+    screens: screensReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

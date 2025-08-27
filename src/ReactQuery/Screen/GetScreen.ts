@@ -5,13 +5,13 @@ import { getScreenApi } from "../../API/API";
 
 export type Screen = {
   id: number;
-  name: string;            
-  branch: string | null;   
-  ratio: string | null;    
-  active: boolean;         
-  lastSeen: string | null; 
+  screenId: number;
+  name: string;
+  branch: string | null;
+  ratio: string | null;
+  active: boolean;
+  lastSeen: string | null;
 };
-
 
 export const SCREEN_OK = ["screens"] as const;
 
@@ -25,12 +25,14 @@ async function fetchScreens(): Promise<Screen[]> {
   });
 
   const raw = res.data?.screens ?? [];
+  console.log("HAHA" ,raw )
   return raw.map((r: any) => ({
     id: r.id,
+    screenId: r.screenId,
     name: r.screenName ?? "",
     branch: r.branchName ?? null,
-    ratio: r.ratio ?? null,           // no more trailing space
-    active: Boolean(r.active),        // 0/1 -> boolean
+    ratio: r.ratio ?? null, // no more trailing space
+    active: Boolean(r.active), // 0/1 -> boolean
     lastSeen: r.lastSeen ?? null,
   }));
 }

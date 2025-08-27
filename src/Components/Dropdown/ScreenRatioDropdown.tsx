@@ -8,10 +8,15 @@ import { useGetRatio } from "../../ReactQuery/Ratio/GetRatio";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { setSelectedRatioId } from "../../Redux/ScreenManagement/ScreenManagementSlice";
+import { setSelectedRatio } from "../../Redux/ScreenManagement/ScreenManagementSlice";
+
+type Props = {
+  allowNone?: boolean;
+  noneLabel?: string;
+};
 
 const CUSTOM = "__custom__";
-
+const NONE = "__none__";
 // zod schema
 const schema = z.object({
   num: z.coerce.number().int().positive(),
@@ -27,13 +32,15 @@ const gcd = (a: number, b: number) => {
   return a || 1;
 };
 
-const ScreenRatioDropdown: React.FC = () => {
+const ScreenRatioDropdown: React.FC<Props> = ({
+  allowNone = false,
+  noneLabel = "None",
+}) => {
   const { data: ratios = [], isLoading, isError } = useGetRatio();
   const dispatch = useDispatch();
 
-  // Grab the selected id from AddScreen slice
   const selectedIdFromStore = useSelector(
-    (s: RootState) => s.screenManagement.selectedScreenRatioId
+    (s: RootState) => s.screenManagement.selectedRatioId
   );
 
   const [mode, setMode] = useState<"preset" | "custom">("preset");
@@ -47,16 +54,16 @@ const ScreenRatioDropdown: React.FC = () => {
 
   // Initialize with first ratio id if nothing selected
   useEffect(() => {
-    if (!selectedIdFromStore && ratios.length) {
-      dispatch(setSelectedRatioId(ratios[0].id));
+    if (!allowNone && !selectedIdFromStore && ratios.length) {
+      dispatch(setSelectedRatio({ id: ratios[0].id, name: ratios[0].ratio }));
     }
-  }, [selectedIdFromStore, ratios, dispatch]);
+  }, [allowNone, selectedIdFromStore, ratios, dispatch]);
 
   const selectedId = useMemo(() => {
-    if (!selectedIdFromStore) return "";
-    return mode === "custom" ? CUSTOM : String(selectedIdFromStore);
-  }, [selectedIdFromStore, mode]);
-
+    if (mode === "custom") return CUSTOM;
+    if (allowNone && selectedIdFromStore == null) return NONE;
+    return selectedIdFromStore ? String(selectedIdFromStore) : "";
+  }, [mode, allowNone, selectedIdFromStore]);
   // Handle preset/custom selection
   const onChangeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const v = e.target.value;
@@ -65,15 +72,25 @@ const ScreenRatioDropdown: React.FC = () => {
       return;
     }
     setMode("preset");
-    dispatch(setSelectedRatioId(v)); // <- only the id
+    if (allowNone && v === NONE) {
+      dispatch(setSelectedRatio({ id: null, name: null }));
+      return;
+    }
+    const selectedOption = ratios.find((r) => String(r.id) === v);
+    dispatch(
+      setSelectedRatio({
+        id: v,
+        name: selectedOption ? selectedOption.ratio : null,
+      })
+    );
   };
-
   // Submit custom ratio
+  // inside onAddCustom
   const onAddCustom = handleSubmit(({ num, den }) => {
     const g = gcd(num, den);
     const ratio = `${num / g}:${den / g}`;
     const customId = `custom-${ratio.replace(":", "x")}`;
-    dispatch(setSelectedRatioId(customId)); // store id in redux
+    dispatch(setSelectedRatio({ id: customId, name: ratio }));
   });
 
   // Preview
@@ -85,7 +102,7 @@ const ScreenRatioDropdown: React.FC = () => {
     Number.isFinite(n) && Number.isFinite(d) && n > 0 && d > 0
       ? `${n / gcd(n, d)}:${d / gcd(n, d)}`
       : "";
- 
+
   return (
     <div className="space-y-2">
       <div className="relative w-full">
@@ -103,6 +120,7 @@ const ScreenRatioDropdown: React.FC = () => {
                 {r.ratio}
               </option>
             ))}
+          {allowNone && <option value={NONE}>{noneLabel}</option>}
           <option value={CUSTOM}>Custom…</option>
         </select>
         <ChevronDown

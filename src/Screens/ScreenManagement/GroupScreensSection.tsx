@@ -1,5 +1,5 @@
 // sections/GroupScreensSection.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Plus,
   Monitor,
@@ -8,6 +8,8 @@ import {
   ArrowDownCircle,
   GitBranch,
   FileStack,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import BaseModal from "../../Components/Models/BaseModal";
 import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
@@ -21,6 +23,9 @@ type Group = {
   branchName?: string | null;
   screenNumber?: number | null;
 };
+
+const CHUNK = 10;
+const MIN_VISIBLE = CHUNK;
 
 const SkeletonRow: React.FC = () => (
   <div className="animate-pulse rounded-lg border border-neutral-200 bg-white p-4 shadow-xs">
@@ -67,6 +72,9 @@ const GroupScreensSection: React.FC = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [openScreensModal, setOpenScreensModal] = useState(false);
 
+  // Show-more state
+  const [visible, setVisible] = useState(CHUNK);
+
   const { data: groups, isLoading, isError, refetch } = useGetGroups();
 
   // Fetch screens for the selected group id
@@ -77,18 +85,12 @@ const GroupScreensSection: React.FC = () => {
     refetch: refetchScreens,
   } = useGetGroupScreens(selectedGroupId);
 
-  // Close modal on global event
+  // Close "create" on global event
   useEffect(() => {
     const handleClose = () => setOpenCreate(false);
-    window.addEventListener(
-      "close-add-screen-modal",
-      handleClose as EventListener
-    );
+    window.addEventListener("close-add-screen-modal", handleClose as EventListener);
     return () =>
-      window.removeEventListener(
-        "close-add-screen-modal",
-        handleClose as EventListener
-      );
+      window.removeEventListener("close-add-screen-modal", handleClose as EventListener);
   }, []);
 
   const handleOpenGroup = (id: number) => {
@@ -96,15 +98,39 @@ const GroupScreensSection: React.FC = () => {
     setOpenScreensModal(true); // hook auto-fetches because enabled = !!id
   };
 
+  const total = groups?.length ?? 0;
+
+  // Keep visible within bounds & reset when list changes
+  useEffect(() => {
+    if (total === 0) setVisible(CHUNK);
+    else setVisible((v) => Math.min(Math.max(MIN_VISIBLE, v), total));
+  }, [total]);
+
+  const visibleGroups = useMemo(() => {
+    if (!groups || groups.length === 0) return [];
+    return groups.slice(0, visible);
+  }, [groups, visible]);
+
+  const canShowMore = visible < total;
+  const canShowLess = visible > MIN_VISIBLE;
+
+  const onShowMore = () => setVisible((v) => Math.min(total, v + CHUNK));
+  const onShowLess = () => setVisible((v) => Math.max(MIN_VISIBLE, v - CHUNK));
+
   return (
     <>
-      <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <header className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileStack size={18} className="text-neutral-600" />
-            <h2 className="text-base font-semibold text-neutral-800">
+      <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm max-w-full overflow-x-hidden">
+        <header className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 flex items-center gap-2">
+            <FileStack size={18} className="text-neutral-600 shrink-0" />
+            <h2 className="truncate text-base font-semibold text-neutral-800">
               Screen Groups
             </h2>
+            {!isLoading && !isError ? (
+              <span className="ml-2 shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-600">
+                {total}
+              </span>
+            ) : null}
           </div>
 
           <button
@@ -128,72 +154,99 @@ const GroupScreensSection: React.FC = () => {
         {isError && <ErrorBlock onRetry={() => refetch()} />}
 
         {/* Empty state */}
-        {!isLoading && !isError && (groups?.length ?? 0) === 0 && (
-          <EmptyState onAdd={() => setOpenCreate(true)} />
-        )}
+        {!isLoading && !isError && total === 0 && <EmptyState onAdd={() => setOpenCreate(true)} />}
 
-        {/* Groups list (each card is a button) */}
-        <div className="flex flex-col gap-3">
-          {!isLoading &&
-            !isError &&
-            groups?.map((g: Group) => (
-              <button
-                key={g.id}
-                type="button"
-                onClick={() => handleOpenGroup(Number(g.id))}
-                className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                aria-label={`Open group ${g.name}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5">
-                    <FileStack size={18} className="text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-neutral-900">
-                      {g.name || "Untitled group"}
-                    </h3>
+        {/* Groups list (fixed-height scroll + show more/less) */}
+        {!isLoading && !isError && total > 0 && (
+          <>
+            <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1">
+              <div className="flex flex-col gap-3">
+                {visibleGroups.map((g: Group) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    onClick={() => handleOpenGroup(Number(g.id))}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    aria-label={`Open group ${g.name}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5">
+                        <FileStack size={18} className="text-red-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-semibold text-neutral-900">
+                          {g.name || "Untitled group"}
+                        </h3>
 
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                      {/* Ratio */}
-                      <span
-                        className={[
-                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5",
-                          g.ratio
-                            ? "bg-neutral-100 text-neutral-700"
-                            : "bg-red-100 text-red-700",
-                        ].join(" ")}
-                        title={
-                          g.ratio ? `Ratio: ${g.ratio}` : "Ratio not assigned"
-                        }
-                      >
-                        {g.ratio || "Unassigned ratio"}
-                      </span>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                          {/* Ratio */}
+                          <span
+                            className={[
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5",
+                              g.ratio
+                                ? "bg-neutral-100 text-neutral-700"
+                                : "bg-red-100 text-red-700",
+                            ].join(" ")}
+                            title={g.ratio ? `Ratio: ${g.ratio}` : "Ratio not assigned"}
+                          >
+                            {g.ratio || "Unassigned ratio"}
+                          </span>
 
-                      {/* Branch */}
-                      <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
-                        <GitBranch size={12} />
-                        {g.branchName ?? "—"}
-                      </span>
+                          {/* Branch */}
+                          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                            <GitBranch size={12} />
+                            {g.branchName ?? "—"}
+                          </span>
 
-                      {/* Screens count */}
-                      <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
-                        <Monitor size={12} />
-                        {g.screenNumber ?? 0}
-                      </span>
+                          {/* Screens count */}
+                          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                            <Monitor size={12} />
+                            {g.screenNumber ?? 0}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </button>
-            ))}
-        </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Controls (outside scroll area) */}
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
+              <p className="text-xs text-neutral-500">
+                Showing {Math.min(visible, total)} of {total}
+              </p>
+              <div className="flex items-center gap-2">
+                {canShowLess && (
+                  <button
+                    type="button"
+                    onClick={onShowLess}
+                    className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                    aria-label="Show less"
+                  >
+                    <ChevronUp size={14} />
+                    Show less
+                  </button>
+                )}
+                {canShowMore && (
+                  <button
+                    type="button"
+                    onClick={onShowMore}
+                    className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-3 py-2 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50"
+                    aria-label="Show more"
+                  >
+                    <ChevronDown size={14} />
+                    Show 10 more
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       {/* Create Group Modal */}
-      <BaseModal
-        open={openCreate}
-        onClose={() => setOpenCreate(false)}
-        title="Add Group"
-      >
+      <BaseModal open={openCreate} onClose={() => setOpenCreate(false)} title="Add Group">
         <AddGroupModal />
       </BaseModal>
 
@@ -201,16 +254,14 @@ const GroupScreensSection: React.FC = () => {
       <BaseModal
         open={openScreensModal}
         onClose={() => setOpenScreensModal(false)}
-        title={`Group Screens`}
+        title="Group Screens"
       >
-        <div className="min-w-[300px]">
+        {/* Prevent tall modal; scroll contents if many screens */}
+        <div className="max-h-[70vh] overflow-y-auto">
           {isScreensLoading && (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-6 w-full animate-pulse rounded bg-neutral-200"
-                />
+                <div key={i} className="h-6 w-full animate-pulse rounded bg-neutral-200" />
               ))}
             </div>
           )}
@@ -227,9 +278,7 @@ const GroupScreensSection: React.FC = () => {
           {!isScreensLoading && !isScreensError && (
             <>
               {(groupScreens?.length ?? 0) === 0 ? (
-                <p className="text-sm text-neutral-600">
-                  No screens in this group.
-                </p>
+                <p className="text-sm text-neutral-600">No screens in this group.</p>
               ) : (
                 <ul className="space-y-2">
                   {groupScreens!.map((sc) => (

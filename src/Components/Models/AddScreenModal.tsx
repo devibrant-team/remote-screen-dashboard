@@ -13,6 +13,7 @@ import {
   setScreenName,
   setScreenCode,
 } from "../../Redux/AddScreen/AddScreenSlice";
+import { useQueryClient } from "@tanstack/react-query";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Screen name is required").max(80, "Too long"),
@@ -25,8 +26,9 @@ type FormValues = z.infer<typeof schema>;
 
 const AddScreenModal: React.FC = () => {
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
   const selectedRatioid = useSelector(
-    (state: RootState) => state.screenManagement.selectedScreenRatioId
+    (state: RootState) => state.screenManagement.selectedRatioId
   );
   const selectedBranchId = useSelector(
     (state: RootState) => state.screenManagement.selectedBranchId
@@ -80,6 +82,7 @@ const AddScreenModal: React.FC = () => {
     addScreen(payload, {
       onSuccess: () => {
         dispatch(resetScreenForm());
+        queryClient.invalidateQueries({ queryKey: ["screens"] });
         close();
       },
       onError: (err) => {

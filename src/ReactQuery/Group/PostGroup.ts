@@ -4,9 +4,9 @@ import { AddGroupApi } from "../../API/API";
 
 export type AddGroupPayload = {
   name: string;
-  ratioId: number;
+  ratioId?: number | null;
   branchId: number;
-  assignScreens: { id: number }[];
+  assignScreens: { screenId: number }[];
 };
 
 export async function AddGroup(payload: AddGroupPayload) {

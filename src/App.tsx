@@ -15,7 +15,8 @@ import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return token ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
@@ -26,7 +27,6 @@ function AppLayoutWithTabbar() {
     <div className="flex">
       <ToolBar />
       {/* LicenseKey only where you need it; move it here if appropriate */}
-      <LicenseKey />
       <div className="flex-1">
         <Outlet />
       </div>
@@ -48,43 +48,50 @@ function PlainLayout() {
 /* ---------- Routes ---------- */
 export default function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes (no Tabbar) */}
-        <Route element={<PlainLayout />}>
-          <Route path="/login" element={<LoginScreen />} />
-          {/* If you have a license screen that should be public without Tabbar: */}
-          <Route path="/license" element={<LicenseKey />} />
-          {/* Root: if logged in, go to app; else go to login */}
-          <Route path="/" element={<AuthRedirect />} />
-        </Route>
-
-        {/* Protected routes WITHOUT Tabbar */}
-        <Route element={<RequireAuth />}>
+    <>
+      <LicenseKey />
+      <Router>
+        <Routes>
+          {/* Public routes (no Tabbar) */}
           <Route element={<PlainLayout />}>
-            <Route path="/playlist" element={<PlayList />} />
-         
+            <Route path="/login" element={<LoginScreen />} />
+            {/* If you have a license screen that should be public without Tabbar: */}
+            <Route path="/license" element={<LicenseKey />} />
+            {/* Root: if logged in, go to app; else go to login */}
+            <Route path="/" element={<AuthRedirect />} />
           </Route>
-        </Route>
 
-        {/* Protected routes WITH Tabbar */}
-        <Route element={<RequireAuth />}>
-          <Route element={<AppLayoutWithTabbar />}>
-            <Route path="/mediacontent" element={<MediaContent />} />
-            <Route path="/screenmanagement" element={<ScreenManagement />} />
-            <Route path="/test" element={<Test />} />
+          {/* Protected routes WITHOUT Tabbar */}
+          <Route element={<RequireAuth />}>
+            <Route element={<PlainLayout />}>
+              <Route path="/playlist" element={<PlayList />} />
+            </Route>
           </Route>
-        </Route>
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
+          {/* Protected routes WITH Tabbar */}
+          <Route element={<RequireAuth />}>
+            <Route element={<AppLayoutWithTabbar />}>
+              <Route path="/mediacontent" element={<MediaContent />} />
+              <Route path="/screenmanagement" element={<ScreenManagement />} />
+              <Route path="/test" element={<Test />} />
+            </Route>
+          </Route>
+
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Router>
+    </>
   );
 }
 
 /* ---------- Helper ---------- */
 function AuthRedirect() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  return token ? <Navigate to="/mediacontent" replace /> : <Navigate to="/login" replace />;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return token ? (
+    <Navigate to="/mediacontent" replace />
+  ) : (
+    <Navigate to="/login" replace />
+  );
 }
