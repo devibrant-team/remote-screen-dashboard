@@ -42,7 +42,7 @@ const AddGroupModal = ({ onClose }: Props) => {
 
   // Read screens from Redux
   const screens = useSelector((state: RootState) => state.screens.items);
-  console.log("LALA", screens);
+
   // From Redux (dropdowns) — used to populate form values and filter lists
   const selectedRatioId = useSelector(
     (s: RootState) => s.screenManagement.selectedRatioId

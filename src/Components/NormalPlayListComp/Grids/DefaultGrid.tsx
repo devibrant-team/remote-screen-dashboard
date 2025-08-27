@@ -48,7 +48,7 @@ const DefaultGrid = () => {
     setPickerOpen(false);
     setPickerSlotIndex(null);
   };
-  console.log("ratioStr", ratioStr);
+
 
 const style = useAspectStyle(ratioStr, {
   containerH: containerH || 540,

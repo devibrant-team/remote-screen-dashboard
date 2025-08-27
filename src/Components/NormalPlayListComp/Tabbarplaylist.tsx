@@ -23,7 +23,7 @@ const Tabbarplaylist = () => {
   const [saving, setSaving] = useState(false);
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
-  console.log(playlist);
+
 
   const handleSavePlaylist = async () => {
     setSaving(true);

@@ -9,7 +9,7 @@ const BranchDropdown = () => {
   const selectedBranchId = useSelector(
     (s: RootState) => s.screenManagement.selectedBranchId
   );
-  console.log(selectedBranchId);
+
   const dispatch = useDispatch();
   // initialize once when groups arrive
   useEffect(() => {
