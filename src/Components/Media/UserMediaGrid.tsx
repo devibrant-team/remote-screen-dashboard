@@ -32,7 +32,7 @@ export default function UserMediaGrid({ className }: Props) {
     page,
     perPage: PER_PAGE,
   });
-
+console.log("loloo",data)
   const media: MediaItem[] = data?.media ?? [];
   const items = useMemo(() => media.slice(0, PER_PAGE), [media]); // hard-cap to 6 just in case
   const pages = Math.max(1, data?.meta?.last_page ?? 1);

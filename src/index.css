@@ -4,13 +4,30 @@
   --mainred: #ef4444;
   --black: #000;
   --white: #fff;
-  --white-200: #f5f5f5; 
+  --white-200: #f5f5f5;
+  --red-500: #ef4444; /* main red */
+  --red-600: #dc2626;
+  --red-700: #b91c1c;
+  --gray-900: #0f172a; /* dark gray (text / header) */
+  --gray-800: #1f2937;
+  --gray-700: #374151;
+  --gray-300: #d1d5db;
+  --gray-200: #e5e7eb;
+  --white: #ffffff;
+
+  --card-radius: 10px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 1px rgba(0, 0, 0, 0.03);
+  --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --ring-red: 0 0 0 2px rgba(239, 68, 68, 0.25);
 }
 .scrollbar-hide {
-  scrollbar-width: none;        
-  -ms-overflow-style: none;     
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;                
+  display: none;
 }
+
+.fc-draggable { cursor: grab; }
+.fc-draggable:active { cursor: grabbing; }

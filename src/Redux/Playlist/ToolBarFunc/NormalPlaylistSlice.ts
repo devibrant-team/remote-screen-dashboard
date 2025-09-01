@@ -26,7 +26,7 @@ export interface PlaylistState {
 
 const initialState: PlaylistState = {
   id: 1,
-  name: "Playlist",
+  name: "",
   type: 1,
   slides: [],
   selectedSlideIndex: null,

@@ -15,6 +15,7 @@ function formatSeconds(total?: number) {
 
 export default function InteractivePlaylist() {
   const { data, isLoading, isError, error } = useGetInteractiveplaylist();
+  console.log("HA" , data)
   const playlists = data ?? [];
   const items = playlists.slice(0, 3); 
 

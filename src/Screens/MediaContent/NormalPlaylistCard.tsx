@@ -17,7 +17,7 @@ export default function NormalPlaylistCard() {
   const { data, isLoading, isError, error } = useGetNormalPlaylist();
   const playlists = data ?? [];
   const items = playlists.slice(0, 3); // <-- only first 3
-
+console.log(data)
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -73,7 +73,7 @@ export default function NormalPlaylistCard() {
             onError={(e) => {
               (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
             }}
-            className="w-full h-48 object-cover"
+            className="w-full h-48 object-fill"
             loading="lazy"
             draggable={false}
           />

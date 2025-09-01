@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
 import RatioDropdown from "../Dropdown/RatioDropdown";
+import { useQueryClient } from "@tanstack/react-query";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -20,12 +21,16 @@ const Tabbarplaylist = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
 
-
   const handleSavePlaylist = async () => {
+    if (!playlist.name || playlist.name.trim() === "") {
+      window.alert("❌ Please enter a playlist name.");
+      return;
+    }
     setSaving(true);
     setSaveMessage("");
     setError("");
@@ -33,6 +38,10 @@ const Tabbarplaylist = () => {
       await savePlaylistToDatabase(playlist);
       setSaveMessage("✅ Playlist saved successfully!");
       window.alert("✅ Playlist saved successfully!");
+      dispatch(setPlaylistName(""));
+      dispatch(clearPlaylist());
+      queryClient.invalidateQueries({ queryKey: ["normalplaylist"] });
+      navigate("/mediacontent");
     } catch (err: any) {
       console.error("❌ Save failed", err);
       setError("❌ Failed to save playlist.");
@@ -64,18 +73,19 @@ const Tabbarplaylist = () => {
           flex flex-col overflow-hidden
         "
       >
-        <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-[var(--white)] px-4 py-3 lg:px-6 lg:py-4">
+        <div className="sticky top-0 z-10 flex justify-between items-center gap-3 border-b border-gray-200 bg-[var(--white)] px-4 py-3 lg:px-6 lg:py-4">
           <button
             onClick={handleCancel}
             type="button"
-            className="flex items-center justify-center rounded-full p-1.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition"
+            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50"
           >
-            <ArrowBigLeft size={30} strokeWidth={2} color="red" />
+            <ArrowBigLeft size={18} />
+            <span>Back</span>
           </button>
 
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-red-700">
+          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700 ring-1 ring-red-200">
             Playlist Editor
-          </h1>
+          </span>
         </div>
 
         {/* Single scrollable content area */}
@@ -84,29 +94,32 @@ const Tabbarplaylist = () => {
           <section className="space-y-2">
             <label
               htmlFor="playlist-name"
-              className="text-sm lg:text-base font-semibold"
+              className="text-sm text-gray-500 lg:text-base font-semibold"
             >
-              Playlist Name
+              Name
             </label>
             <input
               id="playlist-name"
               onChange={(e) => dispatch(setPlaylistName(e.target.value))}
               type="text"
+              required
               placeholder="Enter playlist name"
-              className="w-full p-2 rounded-md text-black border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
+              className="w-full mt-3 p-2 rounded-md text-gray-600 font-semibold border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
             />
           </section>
 
           {/* Media Controls */}
           <section className="space-y-3">
-            <h4 className="text-sm lg:text-base font-semibold">Media</h4>
+            <h4 className="text-sm text-gray-500 lg:text-base font-semibold">
+              Media
+            </h4>
 
             <button
               onClick={() => setShowGridSelector(true)}
               className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
             >
               <Grid2X2 size={18} />
-              Choose Collage
+              <span>Apply Collage</span>
             </button>
 
             <button
@@ -120,7 +133,9 @@ const Tabbarplaylist = () => {
 
           {/* Ratio */}
           <section className="space-y-2 w-full">
-            <h4 className="text-sm lg:text-base font-semibold">Ratio</h4>
+            <h4 className="text-sm text-gray-500 lg:text-base font-semibold">
+              Ratio
+            </h4>
             <div className="relative w-full rounded-xl py-2 px-3 flex items-center">
               <RatioDropdown />
             </div>

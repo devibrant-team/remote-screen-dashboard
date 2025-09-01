@@ -8,6 +8,8 @@ import {
   selectSelectedMedia,
   removeSelectedMediaById,
 } from "../../Redux/Media/MediaSlice";
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 const MAX_SLIDES = 5;
 
@@ -17,7 +19,8 @@ export default function CreateInteractivePlaylist({
   onCloseAll: () => void;
 }) {
   const dispatch = useDispatch();
-
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [playlistName, setPlaylistName] = useState("");
   const [images, setImages] = useState<ImagePreview[]>([]);
 
@@ -136,6 +139,8 @@ export default function CreateInteractivePlaylist({
   }, []);
 
   const handleSave = () => {
+     queryClient.invalidateQueries({ queryKey: ["interactiveplaylist"] });
+     navigate('/mediacontent')
     if (!layoutId) {
       alert("❌ Please select a layout before saving.");
       return;

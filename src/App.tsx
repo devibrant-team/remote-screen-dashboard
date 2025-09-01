@@ -1,5 +1,5 @@
 import {
-  BrowserRouter as Router,
+  HashRouter as Router,
   Routes,
   Route,
   Navigate,
@@ -12,6 +12,7 @@ import LoginScreen from "./Screens/AuthScreens/LoginScreen";
 import LicenseKey from "./../LicenseKey/LicenseKey";
 import Test from "./Screens/Test";
 import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
+import Schedule from "./Screens/Schedule/Schedule";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
@@ -65,6 +66,7 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route element={<PlainLayout />}>
               <Route path="/playlist" element={<PlayList />} />
+              <Route path="/schedule" element={<Schedule />} />
             </Route>
           </Route>
 

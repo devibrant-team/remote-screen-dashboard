@@ -10,6 +10,7 @@ import screenFormReducer from "./src/Redux/AddScreen/AddScreenSlice";
 import screenManagementReducer from "./src/Redux/ScreenManagement/ScreenManagementSlice";
 import groupFormReducer from "./src/Redux/AddGroup/AddGroupSlice";
 import screensReducer from "./src/Redux/ScreenManagement/ScreenSlice";
+import scheduleReducer from "./src/Redux/Schedule/SheduleSlice";
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -23,6 +24,7 @@ export const store = configureStore({
     groupForm: groupFormReducer,
     screenManagement: screenManagementReducer,
     screens: screensReducer,
+    schedule: scheduleReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
