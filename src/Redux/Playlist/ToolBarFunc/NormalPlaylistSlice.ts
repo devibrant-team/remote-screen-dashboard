@@ -23,16 +23,20 @@ export interface PlaylistState {
   selectedSlideIndex: number | null;
   selectedRatio: RatioRecord | null;
   selectedId: number | null;
+  isEdit: boolean;
+  selectedCity: string;
 }
 
 const initialState: PlaylistState = {
   id: 1,
   name: "",
+  isEdit: false,
   type: 1,
   slides: [],
   selectedSlideIndex: null,
   selectedRatio: null,
   selectedId: null,
+  selectedCity: "",
 };
 
 const playlistSlice = createSlice({
@@ -41,6 +45,12 @@ const playlistSlice = createSlice({
   reducers: {
     setPlaylistName: (state, action: PayloadAction<string>) => {
       state.name = action.payload;
+    },
+    setIsEdit: (state, action: PayloadAction<boolean>) => {
+      state.isEdit = action.payload;
+    },
+    setSelectedCity: (state, action: PayloadAction<string>) => {
+      state.selectedCity = action.payload;
     },
     setSelectedId: (state, action: PayloadAction<number | null>) => {
       state.selectedId = action.payload;
@@ -86,40 +96,28 @@ const playlistSlice = createSlice({
       state.slides[index].selectedGrid = selectedGrid;
       state.slides[index].grid_style = grid_style;
     },
-    updateSlotInSlide: (
-      state,
-      action: PayloadAction<{
-        slideIndex: number;
-        slotIndex: number;
-        media: string;
-        mediaId?: number | null;
-        ImageFile?: File | null; // ✅ optional in payload
-        mediaType: "image" | "video";
-        scale?: GridSlotConfig["scale"];
-      }>
-    ) => {
+    // NormalPlaylistSlice.ts
+    updateSlotInSlide: (state, action) => {
       const { slideIndex, slotIndex } = action.payload;
       const slide = state.slides[slideIndex];
       const slot = slide?.slots.find((s) => s.index === slotIndex);
       if (!slot) return;
 
-      // always set URL + type
       slot.media = action.payload.media;
       slot.mediaType = action.payload.mediaType;
 
-      // set ImageFile only if provided (keeps null/unchanged otherwise)
       if (Object.prototype.hasOwnProperty.call(action.payload, "ImageFile")) {
-        slot.ImageFile = action.payload.ImageFile ?? null;
+        slot.ImageFile = action.payload.ImageFile ?? null; // ✅ allow null
       }
-
-      // ✅ set mediaId only if provided (allows setting an id, or clearing it with null)
       if (Object.prototype.hasOwnProperty.call(action.payload, "mediaId")) {
         slot.mediaId = action.payload.mediaId ?? null;
       }
-
-      // optional scale
-      if (action.payload.scale) slot.scale = action.payload.scale;
+      // ✅ set even if empty string/“fit”; don’t rely on truthiness
+      if (Object.prototype.hasOwnProperty.call(action.payload, "scale")) {
+        slot.scale = action.payload.scale;
+      }
     },
+
     // add this action next to updateSlotInSlide etc.
     updateSlotWidgetInSlide: (
       state,
@@ -201,8 +199,10 @@ export const {
   updateSlotInSlide,
   updateSlideGrid,
   setPlaylistRatio,
+  setSelectedCity,
   reorderSlide,
   setSelectedId,
+  setIsEdit,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;

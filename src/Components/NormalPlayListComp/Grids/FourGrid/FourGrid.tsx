@@ -79,16 +79,14 @@ const FourGrid = () => {
     const slot = slide.slots.find((s) => s.index === slotIndex);
     if (!slot || !slot.media || !slot.mediaType) return;
 
-    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
-
     dispatch(
       updateSlotInSlide({
         slideIndex: selectedSlideIndex,
         slotIndex,
         media: slot.media,
-        ImageFile: slot.ImageFile,
         mediaType: slot.mediaType,
-        scale,
+        ImageFile: slot.ImageFile ?? null, // ✅ allow null
+        scale, // ✅ the thing we change
       })
     );
   };

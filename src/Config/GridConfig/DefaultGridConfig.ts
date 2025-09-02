@@ -16,7 +16,7 @@ export type WeatherWidgetConfig = {
 export type ClockWidgetConfig = {
   type: "clock";
   timezone?: string; // default: "Asia/Riyadh" (Jeddah)
-  label?: string; // default: "Jeddah"
+  city: string; // default: "Jeddah"
   showSeconds?: boolean; // default: true
   twentyFourHour?: boolean; // default: true
   position: WidgetPosition;

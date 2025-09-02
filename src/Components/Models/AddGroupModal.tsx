@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { RootState } from "../../../store";
 import { setGroupName } from "../../Redux/AddGroup/AddGroupSlice";
 import ScreenRatioDropdown from "../Dropdown/ScreenRatioDropdown";
-import BranchDropdown from "../Dropdown/BranchDropdown";
 import { useAddGroup } from "../../ReactQuery/Group/useAddGroup";
 import type { AddGroupPayload } from "../../ReactQuery/Group/PostGroup";
 import { ChevronDown, ChevronUp } from "lucide-react";
@@ -188,24 +187,6 @@ const AddGroupModal = ({ onClose }: Props) => {
             {errors.ratioId && (
               <p className="mt-1 text-xs text-red-600">
                 {errors.ratioId.message}
-              </p>
-            )}
-          </div>
-
-          {/* Branch (kept for form value; no filtering here) */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">
-              Branch <span className="text-red-500">*</span>
-            </label>
-            <BranchDropdown />
-            {/* Hidden field mirrors Redux → RHF */}
-            <input
-              type="hidden"
-              {...register("branchId", { valueAsNumber: true })}
-            />
-            {errors.branchId && (
-              <p className="mt-1 text-xs text-red-600">
-                {errors.branchId.message}
               </p>
             )}
           </div>

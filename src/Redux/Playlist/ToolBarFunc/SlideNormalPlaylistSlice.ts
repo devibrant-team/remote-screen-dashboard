@@ -4,6 +4,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { GridSlotConfig } from "../../../Config/GridConfig/DefaultGridConfig";
 export interface NormalPlaylistState {
+  id: string; 
   duration: number;
   slots: GridSlotConfig[];
   selectedGrid: string;
@@ -11,6 +12,7 @@ export interface NormalPlaylistState {
 }
 
 const initialState: NormalPlaylistState = {
+  id:"",
   duration: 10,
   slots: [],
   selectedGrid: "default",

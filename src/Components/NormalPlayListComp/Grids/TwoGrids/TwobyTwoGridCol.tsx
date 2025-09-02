@@ -70,26 +70,27 @@ const TwobyTwoGridCol = () => {
 
   const slots = slide?.slots || [];
 
+
   const handleScaleChange = (
-    slotIndex: number,
-    scale: "fit" | "fill" | "blur" | "original"
-  ) => {
-    if (selectedSlideIndex === null || !slide) return;
+  slotIndex: number,
+  scale: "fit" | "fill" | "blur" | "original"
+) => {
+  if (selectedSlideIndex === null || !slide) return;
 
-    const slot = slide.slots.find((s) => s.index === slotIndex);
-    if (!slot || !slot.media || !slot.mediaType || !slot.ImageFile) return;
+  const slot = slide.slots.find((s) => s.index === slotIndex);
+  if (!slot || !slot.media || !slot.mediaType) return;
 
-    dispatch(
-      updateSlotInSlide({
-        slideIndex: selectedSlideIndex,
-        slotIndex,
-        media: slot.media,
-        ImageFile: slot.ImageFile,
-        mediaType: slot.mediaType,
-        scale,
-      })
-    );
-  };
+  dispatch(
+    updateSlotInSlide({
+      slideIndex: selectedSlideIndex,
+      slotIndex,
+      media: slot.media,
+      mediaType: slot.mediaType,
+      ImageFile: slot.ImageFile ?? null,   // ✅ allow null
+      scale,                                // ✅ the thing we change
+    })
+  );
+};
 
   return (
     <div

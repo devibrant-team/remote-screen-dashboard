@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { OneImageGridConfig } from "../../Config/GridConfig/DefaultGridConfig";
 import {
   addSlide,
+  setIsEdit,
   setSelectedSlideIndex,
 } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
@@ -42,6 +43,7 @@ const PlaylistTypeModal = () => {
   const navigate = useNavigate();
   const [firstSlideCreated, setFirstSlideCreated] = useState(false);
   const handleCreateAndNavigate = () => {
+    dispatch(setIsEdit(false));
     if (!firstSlideCreated) {
       const defaultSlide = {
         id: crypto.randomUUID(),

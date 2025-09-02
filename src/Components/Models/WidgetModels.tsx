@@ -16,7 +16,7 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({ onClose }) => {
   const slide = useSelector((state: RootState) =>
     selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
   );
-
+const city = useSelector((s:RootState)=>s.playlist.selectedCity)
   const ensureSlotMedia = (slotIndex: number) => {
     const slot = slide?.slots[slotIndex];
     if (!slot?.media) {
@@ -51,7 +51,7 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({ onClose }) => {
     setSlotWidget(slotIndex, {
       type: "clock",
       timezone: "Asia/Riyadh", // fixed to Jeddah
-      label: "Jeddah",
+      city: city,
       showSeconds: true,
       twentyFourHour: true,
       position: "center",
@@ -62,7 +62,7 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({ onClose }) => {
     const slotIndex = 0;
     setSlotWidget(slotIndex, {
       type: "weather",
-      city: "Riyadh", // fixed for now (or "Jeddah" if you prefer)
+       city: city, // fixed for now (or "Jeddah" if you prefer)
       position: "center",
     });
   };

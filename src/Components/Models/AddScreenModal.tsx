@@ -7,7 +7,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useAddScreen } from "../../ReactQuery/Screen/useAddScreen";
 import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
 import ScreenRatioDropdown from "../Dropdown/ScreenRatioDropdown";
-import BranchDropdown from "../Dropdown/BranchDropdown";
 import GroupDropdown from "../Dropdown/GroupDropdown";
 import {
   setScreenName,
@@ -161,14 +160,6 @@ const AddScreenModal: React.FC = () => {
               Screen Ratio
             </label>
             <ScreenRatioDropdown />
-          </div>
-
-          {/* Branch */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">
-              Branch
-            </label>
-            <BranchDropdown />
           </div>
 
           {/* Group */}

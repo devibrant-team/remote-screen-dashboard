@@ -1,6 +1,6 @@
 // RatioDropdown.tsx
 import { ChevronDown } from "lucide-react";
-import { useEffect} from "react";
+import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import { useGetRatio } from "../../ReactQuery/Ratio/GetRatio";
@@ -24,7 +24,7 @@ const RatioDropdown = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = Number(e.target.value);
-    const rec = ratios?.find(r => r.id === id);
+    const rec = ratios?.find((r) => r.id === id);
     if (rec) dispatch(setPlaylistRatio(rec as RatioRecord));
   };
 
@@ -38,13 +38,18 @@ const RatioDropdown = () => {
       >
         {isLoading && <option>Loading...</option>}
         {isError && <option>Failed to load</option>}
-        {!isLoading && !isError && ratios?.map(r => (
-          <option key={r.id} value={String(r.id)}>
-            <p className="font-bold">{r.ratio}</p>
-          </option>
-        ))}
+        {!isLoading &&
+          !isError &&
+          ratios?.map((r) => (
+            <option key={r.id} value={String(r.id)}>
+              {r.ratio}
+            </option>
+          ))}
       </select>
-      <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+      <ChevronDown
+        size={16}
+        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500"
+      />
     </div>
   );
 };

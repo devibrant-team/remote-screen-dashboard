@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "../../../../store";
 
 const OclockWidget = () => {
   const [now, setNow] = useState(new Date());
@@ -7,13 +9,13 @@ const OclockWidget = () => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
-
+  const city = useSelector((state: RootState) => state.playlist.selectedCity);
   const time = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Riyadh",
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    hour12: false, // 24h for signage clarity
+    hour12: false,
   }).format(now);
 
   const date = new Intl.DateTimeFormat("en-GB", {
@@ -49,7 +51,7 @@ const OclockWidget = () => {
       <div className="mt-2 opacity-80 text-sm md:text-base">{date}</div>
 
       <div className="mt-1 text-xs uppercase tracking-widest opacity-70">
-        Jeddah • Asia/Riyadh
+        {city}
       </div>
     </div>
   );

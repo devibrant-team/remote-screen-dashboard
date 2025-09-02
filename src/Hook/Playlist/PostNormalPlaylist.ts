@@ -80,7 +80,7 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
           const c = slot.widget as {
             type: "clock";
             timezone?: string;
-            label?: string;
+            city: string;
             showSeconds?: boolean;
             twentyFourHour?: boolean;
           };
@@ -89,10 +89,10 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
               `slides[${slideIndex}][slots][${slotIndex}][widget][timezone]`,
               c.timezone
             );
-          if (c.label)
+          if (c.city)
             formData.append(
-              `slides[${slideIndex}][slots][${slotIndex}][widget][label]`,
-              c.label
+              `slides[${slideIndex}][slots][${slotIndex}][widget][city]`,
+              c.city
             );
           if (typeof c.showSeconds === "boolean")
             formData.append(

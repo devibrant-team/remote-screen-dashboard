@@ -9,11 +9,14 @@ import GridSelector from "./GridSelector/GridSelector";
 import { savePlaylistToDatabase } from "../../Hook/Playlist/PostNormalPlaylist";
 import type { RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
-
+import type { WidgetPosition } from "../../Config/GridConfig/DefaultGridConfig";
+import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
 import RatioDropdown from "../Dropdown/RatioDropdown";
 import { useQueryClient } from "@tanstack/react-query";
+import type { Root } from "react-dom/client";
+import SaudiCityDropdown from "../Dropdown/CitiesDropdown";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -25,7 +28,8 @@ const Tabbarplaylist = () => {
   const [saving, setSaving] = useState(false);
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
-
+  const isEdit = useSelector((s: RootState) => s.playlist.isEdit);
+  console.log("EDIT", isEdit);
   const handleSavePlaylist = async () => {
     if (!playlist.name || playlist.name.trim() === "") {
       window.alert("❌ Please enter a playlist name.");
@@ -54,6 +58,39 @@ const Tabbarplaylist = () => {
   const handleCancel = () => {
     dispatch(clearPlaylist());
     navigate("/mediacontent");
+  };
+  // which slide is active
+  const selectedSlideIndex = useSelector(
+    (state: RootState) => state.playlist.selectedSlideIndex
+  );
+  const selectedSlide =
+    selectedSlideIndex !== null ? playlist.slides[selectedSlideIndex] : null;
+
+  // find first slot that has a widget
+  const firstWidgetSlotIndex =
+    selectedSlide?.slots.findIndex((s) => !!s.widget) ?? -1;
+
+  const currentWidget =
+    firstWidgetSlotIndex >= 0
+      ? selectedSlide!.slots[firstWidgetSlotIndex].widget
+      : null;
+
+  const handleWidgetPositionChange = (pos: WidgetPosition) => {
+    if (
+      selectedSlideIndex === null ||
+      firstWidgetSlotIndex < 0 ||
+      !currentWidget
+    )
+      return;
+
+    // write back the widget with updated position
+    dispatch(
+      updateSlotWidgetInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex: firstWidgetSlotIndex,
+        widget: { ...currentWidget, position: pos },
+      })
+    );
   };
 
   return (
@@ -140,6 +177,45 @@ const Tabbarplaylist = () => {
               <RatioDropdown />
             </div>
           </section>
+
+          <section className="space-y-2 w-full">
+            <SaudiCityDropdown />
+          </section>
+          {/* Widget position */}
+          <section className="space-y-2 w-full">
+            <h4 className="text-sm text-gray-500 lg:text-base font-semibold">
+              Widget position
+            </h4>
+
+            <select
+              className="w-full mt-3 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mainred)]"
+              value={(currentWidget?.position ?? "center") as WidgetPosition}
+              onChange={(e) =>
+                handleWidgetPositionChange(e.target.value as WidgetPosition)
+              }
+              disabled={!currentWidget}
+            >
+              {(
+                [
+                  "center",
+                  "top-left",
+                  "top-right",
+                  "bottom-left",
+                  "bottom-right",
+                ] as WidgetPosition[]
+              ).map((pos) => (
+                <option key={pos} value={pos}>
+                  {pos.replace("-", " ")}
+                </option>
+              ))}
+            </select>
+
+            {!currentWidget && (
+              <p className="text-xs text-gray-500">
+                Add a widget to a slot to enable this.
+              </p>
+            )}
+          </section>
         </div>
 
         {/* Sticky footer */}
@@ -150,13 +226,23 @@ const Tabbarplaylist = () => {
           >
             Cancel
           </button>
-          <button
-            onClick={handleSavePlaylist}
-            disabled={saving}
-            className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
-          >
-            {saving ? "Saving..." : "Save Playlist"}
-          </button>
+          {!isEdit ? (
+            <button
+              onClick={handleSavePlaylist}
+              disabled={saving}
+              className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Save Playlist"}
+            </button>
+          ) : (
+            <button
+              onClick={handleSavePlaylist}
+              disabled={saving}
+              className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
+            >
+              {saving ? "Saving..." : "Apply Changes"}
+            </button>
+          )}
         </div>
       </aside>
 
