@@ -14,18 +14,36 @@ import type {
 } from "@fullcalendar/core";
 import ScheduleModel from "../../Components/Models/ScheduleModel";
 
+/** ---------- Types ---------- */
 type Block = EventInput & {
   id: string;
   title: string;
   start: string;
   end: string;
+  StartDate: string;
+  StartTime: string;
+  EndDate: string;
+  EndTime: string;
+
   confirmed?: boolean;
   playlistId?: string | number;
   ratio?: string;
 };
 
+/** ---------- Utils ---------- */
 const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
   aStart < bEnd && bStart < aEnd;
+
+const TZ = "Asia/Beirut";
+
+const toUIParts = (iso: string) => {
+  const [datePart, timeWithMs] = iso.split("T");
+  const timePart = timeWithMs.split(".")[0];
+  return {
+    dateStr: datePart,
+    timeStr: timePart,
+  };
+};
 
 export default function Calender() {
   const calRef = useRef<FullCalendar | null>(null);
@@ -34,17 +52,14 @@ export default function Calender() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  // step controls
+  console.log(blocks);
   const [stepMinutes, setStepMinutes] = useState<number>(10);
   const [customStep, setCustomStep] = useState<string>("");
-
   const stepMs = stepMinutes * 60_000;
   const floorToStep = (d: Date) =>
     new Date(Math.floor(d.getTime() / stepMs) * stepMs);
   const ceilToStep = (d: Date) =>
     new Date(Math.ceil(d.getTime() / stepMs) * stepMs);
-
   const stepHMS = useMemo(() => {
     const m = Math.max(1, Math.floor(stepMinutes));
     const hh = String(Math.floor(m / 60)).padStart(2, "0");
@@ -52,7 +67,6 @@ export default function Calender() {
     return `${hh}:${mm}:00`;
   }, [stepMinutes]);
 
-  // add block (supports playlistId/title)
   const addBlock = (
     startISO: string,
     endISO: string,
@@ -63,6 +77,9 @@ export default function Calender() {
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : String(Math.random());
+    const { dateStr: StartDate, timeStr: StartTime } = toUIParts(startISO);
+    const { dateStr: EndDate, timeStr: EndTime } = toUIParts(endISO);
+
     setBlocks((prev) => [
       ...prev,
       {
@@ -70,7 +87,10 @@ export default function Calender() {
         title: extra.title ?? "Unnamed",
         start: startISO,
         end: endISO,
-        ratio: "16:9",
+        StartDate,
+        StartTime,
+        EndDate,
+        EndTime,
         confirmed,
         playlistId: extra.playlistId,
       },
@@ -78,9 +98,22 @@ export default function Calender() {
   };
 
   const updateBlockTime = (id: string, startISO: string, endISO: string) => {
+    const { dateStr: StartDate, timeStr: StartTime } = toUIParts(startISO);
+    const { dateStr: EndDate, timeStr: EndTime } = toUIParts(endISO);
+
     setBlocks((prev) =>
       prev.map((b) =>
-        b.id === id ? { ...b, start: startISO, end: endISO } : b
+        b.id === id
+          ? {
+              ...b,
+              start: startISO,
+              end: endISO,
+              StartDate,
+              StartTime,
+              EndDate,
+              EndTime,
+            }
+          : b
       )
     );
   };
@@ -97,34 +130,25 @@ export default function Calender() {
       return overlaps(start, end, bs, be);
     });
 
+  /** ---------- Modal handlers ---------- */
   const onEventClick = (info: EventClickArg) => {
     setEditingId(info.event.id);
     setIsOpen(true);
   };
-
   const closeModal = () => {
     setIsOpen(false);
     setEditingId(null);
-  };
-
-  const saveName = (newName: string) => {
-    if (!editingId) return;
-    setBlocks((prev) =>
-      prev.map((b) => (b.id === editingId ? { ...b, title: newName } : b))
-    );
-    closeModal();
   };
 
   const editingBlock = editingId
     ? blocks.find((b) => b.id === editingId)
     : undefined;
 
-  // Make the sidebar list draggable for FullCalendar
+  /** ---------- Make external lists draggable ---------- */
   useEffect(() => {
     const make = (listId: string, fallbackTitle: string) => {
       const el = document.getElementById(listId);
       if (!el) return null;
-
       return new Draggable(el, {
         itemSelector: "li[data-playlist-id]",
         eventData: (liEl) => {
@@ -145,7 +169,6 @@ export default function Calender() {
 
     const d1 = make("normal-playlist-list", "Playlist");
     const d2 = make("interactive-playlist-list", "Interactive Playlist");
-
     return () => {
       d1?.destroy();
       d2?.destroy();
@@ -204,12 +227,12 @@ export default function Calender() {
         ref={calRef as any}
         plugins={[timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
-        timeZone="Asia/Beirut"
+        timeZone={TZ}
         allDaySlot={false}
         nowIndicator
         expandRows
-        eventColor="#ef4444" 
-        eventTextColor="#ffffff" 
+        eventColor="#ef4444"
+        eventTextColor="#ffffff"
         height="100%"
         contentHeight="auto"
         slotDuration={stepHMS}
@@ -225,12 +248,19 @@ export default function Calender() {
           center: "title",
           right: "timeGridDay,timeGridWeek",
         }}
-        /* ✅ Only create via dragging from sidebar */
-        droppable={true}
-        /* ✅ Allow moving/resizing existing events, forbid overlaps */
+        validRange={{
+          start: new Date().toISOString().split("T")[0],
+        }}
+        droppable
         editable
         eventOverlap={false}
         eventAllow={(dropInfo, draggedEvent) => {
+          // Block if the start is before today
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          if (dropInfo.start < today) return false;
+
+          // Keep your overlap check
           const hit = findOverlap(
             dropInfo.start,
             dropInfo.end,
@@ -238,18 +268,22 @@ export default function Calender() {
           );
           return !hit;
         }}
-        /* ✅ Receive external drops and persist to state */
         eventReceive={(info: EventReceiveArg) => {
           const ev = info.event;
-
-          // align to grid
           const start = floorToStep(ev.start!);
           const durationSec = Number(ev.extendedProps?.durationSec || 0);
-          const durMs =
-            (durationSec > 0 ? durationSec : stepMinutes * 60) * 1000;
-          const end = ceilToStep(new Date(start.getTime() + durMs));
+          let end: Date;
 
-          // 🔒 de-dupe guard (prevents the "dropped twice" race)
+          if (durationSec > 0) {
+            // exact playlist duration in seconds → don’t round
+            end = new Date(start.getTime() + durationSec * 1000);
+          } else {
+            // fallback: round to step
+            end = ceilToStep(
+              new Date(start.getTime() + stepMinutes * 60 * 1000)
+            );
+          }
+
           const key = `${start.toISOString()}|${end.toISOString()}`;
           if (dropLock.current.has(key)) {
             ev.remove();
@@ -257,7 +291,13 @@ export default function Calender() {
           }
           dropLock.current.add(key);
 
-          // ✅ atomic add: prevents overlaps/dupes even if React state hasn't flushed yet
+          const { dateStr: StartDate, timeStr: StartTime } = toUIParts(
+            start.toISOString()
+          );
+          const { dateStr: EndDate, timeStr: EndTime } = toUIParts(
+            end.toISOString()
+          );
+
           setBlocks((prev) => {
             const hasConflict = prev.some((b) =>
               overlaps(
@@ -281,6 +321,10 @@ export default function Calender() {
                 title: ev.title || "Playlist",
                 start: start.toISOString(),
                 end: end.toISOString(),
+                StartDate,
+                StartTime,
+                EndDate,
+                EndTime,
                 ratio: "16:9",
                 confirmed: true,
                 playlistId: ev.extendedProps?.playlistId as
@@ -291,13 +335,9 @@ export default function Calender() {
             ];
           });
 
-          // remove FC's temp event
           ev.remove();
-
-          // release lock next tick
           setTimeout(() => dropLock.current.delete(key), 0);
         }}
-        /* ✅ Edit existing bookings */
         eventDrop={(info: EventDropArg) =>
           updateBlockTime(
             info.event.id,
@@ -312,7 +352,6 @@ export default function Calender() {
             info.event.endStr!
           )
         }
-        /* UI for each event card */
         eventClick={onEventClick}
         eventContent={(arg) => {
           const { id } = arg.event;
@@ -379,14 +418,17 @@ export default function Calender() {
           card.style.setProperty("--ev-fs", `${fs}px`);
           card.style.setProperty("--ev-lines", `${lines}`);
         }}
-        /* Data */
         events={blocks}
       />
 
       <ScheduleModel
         open={isOpen}
         initialName={editingBlock?.title ?? "Unnamed Block"}
-        onSave={saveName}
+        onSave={(name) =>
+          setBlocks((prev) =>
+            prev.map((b) => (b.id === editingId ? { ...b, title: name } : b))
+          )
+        }
         onClose={closeModal}
       />
     </div>
