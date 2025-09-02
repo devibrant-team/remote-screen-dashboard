@@ -1,4 +1,6 @@
+import { useDispatch } from "react-redux";
 import { useGetNormalPlaylist } from "../../ReactQuery/GetPlaylists/GetNormalPlaylist";
+import { setSelectedId } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 const FALLBACK_IMG =
   "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
@@ -16,25 +18,30 @@ function formatSeconds(total?: number) {
 export default function NormalPlaylistCard() {
   const { data, isLoading, isError, error } = useGetNormalPlaylist();
   const playlists = data ?? [];
-  const items = playlists.slice(0, 3); // <-- only first 3
-console.log(data)
+  const dispatch = useDispatch();
+  const items = playlists.slice(0, 3);
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-        {Array.from({ length: 3 }).map((_, i) => ( // <-- 3 skeletons
-          <div
-            key={i}
-            className="rounded-xl border border-gray-200 overflow-hidden shadow"
-          >
-            <div className="w-full h-48 bg-gray-200 animate-pulse" />
-            <div className="p-4 space-y-2">
-              <div className="h-5 bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 bg-gray-200 rounded animate-pulse" />
-              <div className="h-4 bg-gray-200 rounded animate-pulse" />
+        {Array.from({ length: 3 }).map(
+          (
+            _,
+            i 
+          ) => (
+            <div
+              key={i}
+              className="rounded-xl border border-gray-200 overflow-hidden shadow"
+            >
+              <div className="w-full h-48 bg-gray-200 animate-pulse" />
+              <div className="p-4 space-y-2">
+                <div className="h-5 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse" />
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        )}
       </div>
     );
   }
@@ -63,9 +70,10 @@ console.log(data)
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
       {items.map((p) => (
-        <div
+        <button
+          onClick={() => dispatch(setSelectedId(p.id))}
           key={p.id}
-          className="bg-[var(--white)] border border-gray-200 rounded-xl shadow hover:shadow-md transition overflow-hidden flex flex-col"
+          className="bg-[var(--white)] cursor-pointer border border-gray-200 rounded-xl shadow hover:shadow-md transition overflow-hidden flex flex-col :"
         >
           <img
             src={p.media}
@@ -93,7 +101,7 @@ console.log(data)
               <span>{formatSeconds(p.duration)}</span>
             </div>
           </div>
-        </div>
+        </button>
       ))}
     </div>
   );

@@ -22,6 +22,7 @@ export interface PlaylistState {
   slides: NormalPlaylistState[];
   selectedSlideIndex: number | null;
   selectedRatio: RatioRecord | null;
+  selectedId: number | null;
 }
 
 const initialState: PlaylistState = {
@@ -31,6 +32,7 @@ const initialState: PlaylistState = {
   slides: [],
   selectedSlideIndex: null,
   selectedRatio: null,
+  selectedId: null,
 };
 
 const playlistSlice = createSlice({
@@ -39,6 +41,9 @@ const playlistSlice = createSlice({
   reducers: {
     setPlaylistName: (state, action: PayloadAction<string>) => {
       state.name = action.payload;
+    },
+    setSelectedId: (state, action: PayloadAction<number | null>) => {
+      state.selectedId = action.payload;
     },
     setPlaylistRatio: (state, action: PayloadAction<RatioRecord>) => {
       state.selectedRatio = action.payload;
@@ -197,6 +202,7 @@ export const {
   updateSlideGrid,
   setPlaylistRatio,
   reorderSlide,
+  setSelectedId,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;
