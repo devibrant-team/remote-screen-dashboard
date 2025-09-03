@@ -1,3 +1,4 @@
+// AddScreenModal.tsx
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
@@ -34,7 +35,6 @@ const AddScreenModal: React.FC = () => {
   );
 
   const { mutate: addScreen, isPending } = useAddScreen();
-  // read current selection/state from your AddScreen slice
   const {
     name: nameFromStore,
     code: codeFromStore,
@@ -56,7 +56,6 @@ const AddScreenModal: React.FC = () => {
     },
   });
 
-  // keep the code strictly numeric + max 6 and mirror to Redux
   const code = watch("code");
   React.useEffect(() => {
     if (code == null) return;
@@ -85,7 +84,6 @@ const AddScreenModal: React.FC = () => {
         close();
       },
       onError: (err) => {
-        // show inline error or toast
         console.error("Add screen failed:", err);
       },
     });
@@ -101,10 +99,11 @@ const AddScreenModal: React.FC = () => {
       </div>
 
       {/* Form Card */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm space-y-4">
+        {/* Row 1: Name + Code */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Screen Name */}
-          <div className="md:col-span-2">
+          <div>
             <label
               htmlFor="screen-name"
               className="mb-1 block text-sm font-medium text-neutral-700"
@@ -128,7 +127,7 @@ const AddScreenModal: React.FC = () => {
             )}
           </div>
 
-          {/* Code (6 digits) */}
+          {/* Code */}
           <div>
             <label
               htmlFor="screen-code"
@@ -142,19 +141,18 @@ const AddScreenModal: React.FC = () => {
               maxLength={6}
               placeholder="e.g., 102345"
               {...register("code", {
-                onChange: (e) => {
-                  // mirror to Redux immediately (sanitization handled in effect)
-                  dispatch(setScreenCode(e.target.value));
-                },
+                onChange: (e) => dispatch(setScreenCode(e.target.value)),
               })}
               className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
             />
-            {errors.code ? (
+            {errors.code && (
               <p className="mt-1 text-xs text-red-600">{errors.code.message}</p>
-            ) : null}
+            )}
           </div>
+        </div>
 
-          {/* Ratio */}
+        {/* Row 2: Ratio + Group */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">
               Screen Ratio
@@ -162,7 +160,6 @@ const AddScreenModal: React.FC = () => {
             <ScreenRatioDropdown />
           </div>
 
-          {/* Group */}
           <div>
             <label className="mb-1 block text-sm font-medium text-neutral-700">
               Group

@@ -13,6 +13,7 @@ import LicenseKey from "./../LicenseKey/LicenseKey";
 import Test from "./Screens/Test";
 import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 import Schedule from "./Screens/Schedule/Schedule";
+import Media from "./Screens/UploadMedia/Media";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
@@ -75,7 +76,7 @@ export default function App() {
             <Route element={<AppLayoutWithTabbar />}>
               <Route path="/mediacontent" element={<MediaContent />} />
               <Route path="/screenmanagement" element={<ScreenManagement />} />
-              <Route path="/test" element={<Test />} />
+              <Route path="/mediaupload" element={<Media />} />
             </Route>
           </Route>
 

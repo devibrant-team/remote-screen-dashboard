@@ -16,8 +16,8 @@ type Props = { className?: string };
 const PER_PAGE = 6;
 const CARD_SIZE = 110;
 
-const ARROW_DIAM = 40; // ⌀ of the circular arrow button
-const ARROW_GAP = 12; // extra gap between arrow and first/last card
+const ARROW_DIAM = 40; 
+const ARROW_GAP = 12; 
 
 const cx = (...a: Array<string | false | null | undefined>) =>
   a.filter(Boolean).join(" ");

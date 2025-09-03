@@ -4,9 +4,13 @@ import { useGetNormalPlaylist } from "../../../ReactQuery/GetPlaylists/GetNormal
 import { useDispatch } from "react-redux";
 import { loadPlaylistForEdit } from "../../../Redux/Playlist/EditPlaylist/EditNormalPlaylistSlice";
 import { useNavigate } from "react-router-dom";
-import { setIsEdit, setPlaylistName } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import {
+  setIsEdit,
+  setPlaylistName,
+} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { AppDispatch } from "../../../../store";
-
+import { useDeleteNormalPlaylist } from "../../../ReactQuery/GetPlaylists/DeletePlaylist";
+import { X } from "lucide-react";
 const FALLBACK_IMG =
   "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
 
@@ -33,7 +37,7 @@ export default function NormalMoreModal({ open, onClose }: Props) {
     isFetchingNextPage,
     refetch,
   } = useGetNormalPlaylist();
-
+  const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
@@ -57,7 +61,10 @@ export default function NormalMoreModal({ open, onClose }: Props) {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {Array.from({ length: 15 }).map((_, i) => (
-              <div key={i} className="rounded-lg border border-gray-200 overflow-hidden shadow">
+              <div
+                key={i}
+                className="rounded-lg border border-gray-200 overflow-hidden shadow"
+              >
                 <div className="w-full h-24 bg-gray-200 animate-pulse" />
                 <div className="p-2 space-y-1">
                   <div className="h-4 bg-gray-200 rounded animate-pulse" />
@@ -68,7 +75,8 @@ export default function NormalMoreModal({ open, onClose }: Props) {
           </div>
         ) : isError ? (
           <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
-            Failed to load playlists{error && `: ${(error as any)?.message ?? ""}`}
+            Failed to load playlists
+            {error && `: ${(error as any)?.message ?? ""}`}
           </div>
         ) : !data.length ? (
           <div className="p-6 text-center rounded-xl border border-gray-200 bg-white">
@@ -78,7 +86,7 @@ export default function NormalMoreModal({ open, onClose }: Props) {
           <div className="relative max-h-[70vh] overflow-auto pr-1">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {data.map((p) => (
-                <button
+                <div
                   key={p.id}
                   onClick={() => {
                     dispatch(loadPlaylistForEdit(p.id));
@@ -86,8 +94,33 @@ export default function NormalMoreModal({ open, onClose }: Props) {
                     dispatch(setIsEdit(true));
                     dispatch(setPlaylistName(p.name));
                   }}
-                  className="bg-[var(--white)] cursor-pointer border border-gray-200 rounded-xl shadow hover:shadow-md transition overflow-hidden flex flex-col"
+                  className="relative bg-[var(--white)] cursor-pointer border border-gray-200 rounded-xl shadow hover:shadow-md transition overflow-hidden flex flex-col"
+                  role="button"
+                  tabIndex={0}
                 >
+                  {/* Delete button (shown on each card) */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation(); // prevent opening editor
+                      // optional confirm; remove if you don't want confirmation
+                      if (
+                        confirm(`Delete "${p.name || `Playlist #${p.id}`}"?`)
+                      ) {
+                        deletePlaylist(p.id);
+                      }
+                    }}
+                    className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90
+               text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 shadow-sm"
+                    aria-label={`Delete ${p.name || "playlist"}`}
+                  >
+                    {deletingId === p.id ? (
+                      <span className="h-3 w-3 animate-ping rounded-full bg-red-500" />
+                    ) : (
+                      <X size={16} />
+                    )}
+                  </button>
+
                   <img
                     src={p.media}
                     alt={p.name || `Playlist #${p.id}`}
@@ -98,6 +131,7 @@ export default function NormalMoreModal({ open, onClose }: Props) {
                     loading="lazy"
                     draggable={false}
                   />
+
                   <div className="p-4 space-y-2 flex-1">
                     <h3 className="text-base sm:text-lg font-semibold text-[var(--black)] truncate">
                       {p.name || `Playlist #${p.id}`}
@@ -111,7 +145,7 @@ export default function NormalMoreModal({ open, onClose }: Props) {
                       <span>{formatSeconds(p.duration)}</span>
                     </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
 
@@ -127,7 +161,9 @@ export default function NormalMoreModal({ open, onClose }: Props) {
                     {isFetchingNextPage ? "Loading..." : "See more"}
                   </button>
                 ) : (
-                  <span className="text-xs text-gray-500">You’ve reached the end</span>
+                  <span className="text-xs text-gray-500">
+                    You’ve reached the end
+                  </span>
                 )}
               </div>
             </div>

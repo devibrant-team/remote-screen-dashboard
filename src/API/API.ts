@@ -17,3 +17,5 @@ export const AddGroupApi = `${http}insertgroup`
 export const getScreensGroupApi = `${http}getscreensgroup`
 export const getSpecificPlaylistApi = `${http}playlistdetails`
 export const editNormalPlaylistApi = `${http}updatenormal`
+export const insertRatioApi = `${http}insertratio`
+export const deletePlaylistApi = `${http}deleteplaylist`

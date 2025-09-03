@@ -8,12 +8,14 @@ import {
   LifeBuoy,
   Menu,
   X,
+  UploadCloudIcon
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
+  { label: "Media", icon: UploadCloudIcon, path: "/mediaupload" },
   { label: "Schedule", icon: CalendarDays, path: "/schedule" },
   { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
   { label: "Account", icon: User, path: "/account" },

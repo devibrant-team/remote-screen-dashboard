@@ -125,39 +125,41 @@ const Tabbarplaylist = () => {
         <GridSelector onClose={() => setShowGridSelector(false)} />
       )}
 
-      {/* Sidebar: full height on all screens; width changes at lg */}
+      {/* Responsive shell: sidebar becomes a sleek panel with better spacing */}
       <aside
         className="
-          w-full lg:w-80
-          lg:h-[100svh]                 /* modern mobile browsers */
-          h-dvh                                     /* fallback */
-          bg-[var(--white)] text-[var(--black)]
-          border-r border-gray-200 shadow-sm
-          flex flex-col overflow-hidden
-        "
+        w-full lg:w-[340px]
+        lg:h-[100svh] h-dvh
+        bg-white text-[var(--black)]
+        border-r border-gray-200/80 shadow-sm
+        flex flex-col overflow-hidden
+      "
       >
-        <div className="sticky top-0 z-10 flex justify-between items-center gap-3 border-b border-gray-200 bg-[var(--white)] px-4 py-3 lg:px-6 lg:py-4">
-          <button
-            onClick={handleCancel}
-            type="button"
-            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 shadow-xs hover:bg-neutral-50"
-          >
-            <ArrowBigLeft size={18} />
-            <span>Back</span>
-          </button>
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-gray-200">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 lg:px-5 lg:py-4">
+            <button
+              onClick={handleCancel}
+              type="button"
+              className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-xs hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mainred)]"
+            >
+              <ArrowBigLeft size={18} />
+              <span>Back</span>
+            </button>
 
-          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-red-700 ring-1 ring-red-200">
-            Playlist Editor
-          </span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-rose-100/80 px-3 py-1 text-[11px] lg:text-xs font-semibold uppercase tracking-wide text-rose-700 ring-1 ring-rose-200">
+              Playlist Editor
+            </span>
+          </div>
         </div>
 
-        {/* Single scrollable content area */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
-          {/* Playlist name */}
-          <section className="space-y-2">
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4 lg:px-5 lg:pt-5 space-y-6">
+          {/* Card: Name */}
+          <section className="rounded-xl border border-gray-200 bg-white shadow-xs p-4">
             <label
               htmlFor="playlist-name"
-              className="text-sm text-gray-500 lg:text-base font-semibold"
+              className="block text-[13px] font-semibold text-gray-600"
             >
               Name
             </label>
@@ -168,19 +170,26 @@ const Tabbarplaylist = () => {
               type="text"
               required
               placeholder="Enter playlist name"
-              className="w-full mt-3 p-2 rounded-md text-gray-600 font-semibold border border-gray-300 focus:ring-2 focus:ring-[var(--mainred)] focus:outline-none"
+              className="
+              mt-2 w-full rounded-lg border border-gray-300 bg-white/90 px-3 py-2
+              text-sm font-medium text-gray-800 placeholder:text-gray-400
+              focus:outline-none focus:ring-2 focus:ring-[var(--mainred)]
+            "
             />
           </section>
 
-          {/* Media Controls */}
-          <section className="space-y-3">
-            <h4 className="text-sm text-gray-500 lg:text-base font-semibold">
-              Media
-            </h4>
+          {/* Card: Media controls */}
+          <section className="rounded-xl border border-gray-200 bg-white shadow-xs p-4 space-y-3">
+            <h4 className="text-[13px] font-semibold text-gray-600">Media</h4>
 
             <button
               onClick={() => setShowGridSelector(true)}
-              className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
+              className="
+              flex items-center justify-center gap-2 w-full rounded-lg
+              bg-[var(--mainred)] px-4 py-2.5 text-sm font-semibold text-white
+              shadow-sm hover:bg-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mainred)]
+              active:scale-[0.99] transition
+            "
             >
               <Grid2X2 size={18} />
               <span>Apply Collage</span>
@@ -190,46 +199,68 @@ const Tabbarplaylist = () => {
               onClick={() => setModalOpen(true)}
               disabled={!playlist.selectedCity?.trim()}
               className={`
-      flex items-center justify-center gap-2 w-full font-semibold py-2 px-4 rounded-md transition
-      ${
-        !playlist.selectedCity?.trim()
-          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-          : "bg-[var(--mainred)] text-white hover:bg-red-600"
-      }
-    `}
+              group flex items-center justify-center gap-2 w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mainred)]
+              ${
+                !playlist.selectedCity?.trim()
+                  ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+                  : "bg-[var(--mainred)] text-white shadow-sm hover:bg-red-600 active:scale-[0.99]"
+              }
+            `}
             >
-              <Layers size={18} />
+              <Layers
+                size={18}
+                className={!playlist.selectedCity?.trim() ? "opacity-60" : ""}
+              />
               <span>Add Widget</span>
             </button>
 
             {!playlist.selectedCity?.trim() && (
-              <p className="text-xs text-gray-500 text-center">
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
                 Select a city first to enable widgets.
-              </p>
+              </div>
             )}
           </section>
 
-          {/* Ratio */}
-          <section className="space-y-2 w-full">
-            <h4 className="text-sm text-gray-500 lg:text-base font-semibold">
-              Ratio
-            </h4>
-            <div className="relative w-full rounded-xl py-2 px-3 flex items-center">
+          {/* Card: Ratio */}
+          <section className="rounded-xl border border-gray-200 bg-white shadow-xs p-4">
+            <h4 className="text-[13px] font-semibold text-gray-600">Ratio</h4>
+            <div className="mt-2">
               <RatioDropdown />
             </div>
           </section>
 
-          <section className="space-y-2 w-full">
-            <SaudiCityDropdown />
+          {/* Card: City (kept separate for clarity) */}
+          <section className="rounded-xl border border-gray-200 bg-white shadow-xs p-4">
+            <h4 className="text-[13px] font-semibold text-gray-600">City</h4>
+            <div className="mt-2">
+              <SaudiCityDropdown />
+            </div>
           </section>
-          {/* Widget position */}
-          <section className="space-y-2 w-full">
-            <h4 className="text-sm text-gray-500 lg:text-base font-semibold">
-              Widget position
-            </h4>
+
+          {/* Card: Widget position */}
+          <section className="rounded-xl border border-gray-200 bg-white shadow-xs p-4">
+            <div className="flex items-center justify-between">
+              <h4 className="text-[13px] font-semibold text-gray-600">
+                Widget Position
+              </h4>
+              {currentWidget ? (
+                <span className="text-[11px] rounded-full bg-gray-100 px-2 py-0.5 text-gray-700">
+                  {currentWidget?.type ?? "widget"}
+                </span>
+              ) : (
+                <span className="text-[11px] rounded-full bg-gray-50 px-2 py-0.5 text-gray-400">
+                  none
+                </span>
+              )}
+            </div>
 
             <select
-              className="w-full mt-3 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mainred)]"
+              className="
+              mt-2 w-full rounded-lg border border-gray-300 bg-white/90 px-3 py-2
+              text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)]
+              disabled:opacity-60 disabled:cursor-not-allowed
+            "
               value={(currentWidget?.position ?? "center") as WidgetPosition}
               onChange={(e) =>
                 handleWidgetPositionChange(e.target.value as WidgetPosition)
@@ -252,26 +283,30 @@ const Tabbarplaylist = () => {
             </select>
 
             {!currentWidget && (
-              <p className="text-xs text-gray-500">
-                Add a widget to a slot to enable this.
+              <p className="mt-2 text-[12px] text-gray-500">
+                Add a widget to a slot to enable this control.
               </p>
             )}
           </section>
         </div>
 
-        {/* Sticky footer */}
-        <div className="border-t border-gray-200 bg-white p-4 space-y-2 sticky bottom-0">
+        {/* Footer */}
+        <div className="sticky bottom-0 border-t border-gray-200 bg-white/95 backdrop-blur px-4 py-3 space-y-2">
           <button
             onClick={handleCancel}
-            className="w-full bg-white text-black font-semibold py-2 px-4 rounded-md border border-gray-300 hover:bg-gray-100 transition"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50 transition"
           >
             Cancel
           </button>
+
           {!isEdit ? (
             <button
               onClick={handleSavePlaylist}
               disabled={saving}
-              className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
+              className="
+              w-full rounded-lg bg-[var(--mainred)] px-4 py-2.5 text-sm font-semibold text-white
+              hover:bg-red-600 disabled:opacity-60 transition
+            "
             >
               {saving ? "Saving..." : "Save Playlist"}
             </button>
@@ -279,7 +314,10 @@ const Tabbarplaylist = () => {
             <button
               onClick={handleSavePlaylist}
               disabled={saving}
-              className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
+              className="
+              w-full rounded-lg bg-[var(--mainred)] px-4 py-2.5 text-sm font-semibold text-white
+              hover:bg-red-600 disabled:opacity-60 transition
+            "
             >
               {saving ? "Applying..." : "Apply Changes"}
             </button>
@@ -287,10 +325,11 @@ const Tabbarplaylist = () => {
         </div>
       </aside>
 
+      {/* Modal */}
       <BaseModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        title="Choose Widget "
+        title="Choose Widget"
       >
         <WidgetModels
           onClose={() => setModalOpen(false)}
