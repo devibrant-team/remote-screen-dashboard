@@ -15,8 +15,8 @@ export type WeatherWidgetConfig = {
 // Clock
 export type ClockWidgetConfig = {
   type: "clock";
-  timezone?: string; // default: "Asia/Riyadh" (Jeddah)
-  city: string; // default: "Jeddah"
+  timezone?: string; // default: "Asia/Riyadh" 
+  city: string; // default: ""
   showSeconds?: boolean; // default: true
   twentyFourHour?: boolean; // default: true
   position: WidgetPosition;
@@ -26,6 +26,7 @@ export type ClockWidgetConfig = {
 export type SlotWidget = WeatherWidgetConfig | ClockWidgetConfig;
 
 export type GridSlotConfig = {
+  id: string;
   mediaType?: "image" | "video";
   media?: string | null;
   mediaId?: number | null;
@@ -49,6 +50,7 @@ export const OneImageGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
+      id: "",
       mediaType: "image",
       media: null,
       mediaId: null,
@@ -67,6 +69,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -76,6 +79,7 @@ export const TwoByTwoConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -94,6 +98,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
+      id: "",
       mediaType: "image",
       media: null,
       mediaId: null,
@@ -103,6 +108,7 @@ export const TwoByTwoColConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -120,6 +126,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -129,6 +136,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -138,6 +146,7 @@ export const ThreeColGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       mediaId: null,
@@ -154,6 +163,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -164,6 +174,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -173,6 +184,7 @@ export const ThreeRowGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -190,6 +202,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
   duration: 5,
   slots: [
     {
+      id: "",
       mediaType: "image",
       media: null,
       scale: "fit",
@@ -199,6 +212,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -208,6 +222,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,
@@ -217,6 +232,7 @@ export const FourImageGridConfig: GridLayoutConfig = {
       widget: null,
     },
     {
+      id: "",
       mediaType: "image",
       media: null,
       ImageFile: null,

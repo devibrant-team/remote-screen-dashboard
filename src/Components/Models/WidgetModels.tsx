@@ -6,17 +6,22 @@ import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPla
 import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { SlotWidget } from "../../Config/GridConfig/DefaultGridConfig";
 
-type WidgetModelsProps = { onClose: () => void };
+type WidgetModelsProps = { onClose: () => void; selectedCity?: string };
 
-const WidgetModels: React.FC<WidgetModelsProps> = ({ onClose }) => {
+const WidgetModels: React.FC<WidgetModelsProps> = ({
+  onClose,
+  selectedCity,
+}) => {
   const dispatch = useDispatch();
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
   const slide = useSelector((state: RootState) =>
-    selectedSlideIndex !== null ? state.playlist.slides[selectedSlideIndex] : null
+    selectedSlideIndex !== null
+      ? state.playlist.slides[selectedSlideIndex]
+      : null
   );
-const city = useSelector((s:RootState)=>s.playlist.selectedCity)
+  const city = useSelector((s: RootState) => s.playlist.selectedCity);
   const ensureSlotMedia = (slotIndex: number) => {
     const slot = slide?.slots[slotIndex];
     if (!slot?.media) {
@@ -47,10 +52,14 @@ const city = useSelector((s:RootState)=>s.playlist.selectedCity)
   };
 
   const handleAddClockWidget = () => {
-    const slotIndex = 0; // choose target slot; make dynamic if needed
+    if (!selectedCity || !selectedCity.trim()) {
+      window.alert("Please choose a city first.");
+      return; 
+    }
+    const slotIndex = 0;
     setSlotWidget(slotIndex, {
       type: "clock",
-      timezone: "Asia/Riyadh", // fixed to Jeddah
+      timezone: "Asia/Riyadh", 
       city: city,
       showSeconds: true,
       twentyFourHour: true,
@@ -59,10 +68,14 @@ const city = useSelector((s:RootState)=>s.playlist.selectedCity)
   };
 
   const handleAddWeatherWidget = () => {
+    if (!selectedCity || !selectedCity.trim()) {
+      window.alert("Please choose a city first.");
+      return; 
+    }
     const slotIndex = 0;
     setSlotWidget(slotIndex, {
       type: "weather",
-       city: city, // fixed for now (or "Jeddah" if you prefer)
+      city: city, 
       position: "center",
     });
   };

@@ -1,9 +1,9 @@
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useGetNormalPlaylist } from "../../ReactQuery/GetPlaylists/GetNormalPlaylist";
-import type { AppDispatch } from "../../../store";
+import type { AppDispatch, RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
 import { loadPlaylistForEdit } from "../../Redux/Playlist/EditPlaylist/EditNormalPlaylistSlice";
-import { setIsEdit } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import { setIsEdit, setPlaylistName } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 const FALLBACK_IMG =
   "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
@@ -21,9 +21,12 @@ function formatSeconds(total?: number) {
 export default function NormalPlaylistCard() {
   const { data, isLoading, isError, error } = useGetNormalPlaylist();
   const playlists = data ?? [];
+  const E = useSelector((s:RootState)=>s.playlist.id)
+  console.log(E)
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const items = playlists.slice(0, 3);
+  console.log("HAHA",items)
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -75,6 +78,7 @@ export default function NormalPlaylistCard() {
             dispatch(loadPlaylistForEdit(p.id));
             navigate(`/playlist`);
             dispatch(setIsEdit(true))
+            dispatch(setPlaylistName(p.name))
           }}
           className="bg-[var(--white)] cursor-pointer border border-gray-200 rounded-xl shadow hover:shadow-md transition overflow-hidden flex flex-col :"
         >

@@ -5,13 +5,13 @@ import axios from "axios";
 import type { NormalPlaylistState } from "../ToolBarFunc/SlideNormalPlaylistSlice";
 import { getSpecificPlaylistApi } from "../../../API/API";
 import {
-  clearPlaylist,
   addSlide,
   setPlaylistName,
   setPlaylistRatio,
   setSelectedId,
   setSelectedSlideIndex,
 } from "../ToolBarFunc/NormalPlaylistSlice";
+import { setSelectedCity } from "../ToolBarFunc/NormalPlaylistSlice";
 
 /** -------------------------------------------------------
  * Helpers
@@ -53,7 +53,7 @@ function normalizeSlide(apiSlide: any): NormalPlaylistState {
   }
 
   return {
-    id: String(slideId),               // use server id as the key
+    id: String(slideId), // use server id as the key
     duration: Number(apiSlide?.duration ?? 0),
     selectedGrid: mapGridIdToKey(apiSlide?.grid_style),
     grid_style: Number(apiSlide?.grid_style ?? 0),
@@ -62,15 +62,36 @@ function normalizeSlide(apiSlide: any): NormalPlaylistState {
           .map((s: any) => ({
             index: Number(s?.index ?? 0),
             media: s?.media?.url ?? s?.ImageFile ?? null,
+            id: s?.id ?? "",
             mediaId: s?.mediaId ?? s?.media?.id ?? null,
-            mediaType: (s?.mediaType ?? s?.media?.type ?? "image") as "image" | "video",
+            mediaType: (s?.mediaType ?? s?.media?.type ?? "image") as
+              | "image"
+              | "video",
             ImageFile: null,
-            scale: (s?.scale ?? "fit") as "fit" | "fill" | "blur" | "original" | "stretch",
+            scale: (s?.scale ?? "fit") as
+              | "fit"
+              | "fill"
+              | "blur"
+              | "original"
+              | "stretch",
             widget: s?.widget ?? null,
           }))
           .sort((a: any, b: any) => a.index - b.index)
       : [],
   };
+}
+
+function firstWidgetCity(playlist: any): string | undefined {
+  if (!Array.isArray(playlist?.slides)) return;
+  for (const sl of playlist.slides) {
+    if (!Array.isArray(sl?.slots)) continue;
+    for (const s of sl.slots) {
+      const w = s?.widget;
+      if (w && typeof w === "object" && "city" in w && w.city) {
+        return String(w.city);
+      }
+    }
+  }
 }
 
 /** -------------------------------------------------------
@@ -90,16 +111,20 @@ export const loadPlaylistForEdit = createAsyncThunk(
 
     // API may return { success, playlist } or the playlist directly
     const playlist = data?.playlist ?? data;
-    console.log(playlist)
+    console.log("[THUNK] API payload:", playlist);
+    console.log("[THUNK] API playlist.id:", playlist?.id);
     if (!playlist) throw new Error("Invalid playlist payload");
 
     // Reset current editor state
-    dispatch(clearPlaylist());
+    // dispatch(clearPlaylist());
 
     // Set basic metadata
-    if (playlist.id) dispatch(setSelectedId(playlist.id));
-    if (playlist.name) dispatch(setPlaylistName(playlist.name));
-    if (playlist.ratio) dispatch(setPlaylistRatio(playlist.ratio));
+    dispatch(setSelectedId(playlist.id));
+    dispatch(setPlaylistName(playlist.name));
+    dispatch(setPlaylistRatio(playlist.ratio));
+    const city =
+      playlist.city || playlist.selectedCity || firstWidgetCity(playlist) || "";
+    if (city) dispatch(setSelectedCity(city));
 
     // Load slides
     if (Array.isArray(playlist.slides)) {
@@ -113,7 +138,7 @@ export const loadPlaylistForEdit = createAsyncThunk(
         dispatch(setSelectedSlideIndex(0));
       }
     }
-
+    console.log("FFF", playlist);
     return playlist; // optional for callers
   }
 );

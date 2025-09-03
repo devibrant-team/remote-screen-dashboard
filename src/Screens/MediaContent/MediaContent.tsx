@@ -6,12 +6,18 @@ import NormalPlaylistCard from "./NormalPlaylistCard";
 import InteractivePlaylist from "./InteractivePlaylistCard";
 import NormalMoreModal from "../../Components/Models/PlaylistsModals/NormalMoreModal";
 import InteractiveMoreModal from "../../Components/Models/PlaylistsModals/InteractiveMoreModal";
-
+import { useDispatch } from "react-redux";
+import { setIsEdit } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 type ModalKind = "none" | "add" | "normalMore" | "interactiveMore";
 
 const MediaContent = () => {
   const [openModal, setOpenModal] = useState<ModalKind>("none");
+  const dispatch = useDispatch();
+  const handleAddClick = () => {
+    setOpenModal("add");
+    dispatch(setIsEdit(false));
+  };
 
   return (
     <div className="px-3 sm:px-4 lg:px-6 py-4 bg-[var(--white-200)] min-h-screen space-y-8">
@@ -21,7 +27,7 @@ const MediaContent = () => {
           Media Content
         </h1>
         <button
-          onClick={() => setOpenModal("add")}
+          onClick={handleAddClick}
           className="bg-[var(--mainred)] text-white px-3 py-1.5 rounded-lg flex items-center gap-2 shadow hover:bg-red-600 transition text-sm"
         >
           <Plus size={16} />

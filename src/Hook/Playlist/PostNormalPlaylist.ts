@@ -1,14 +1,21 @@
 import axios from "axios";
 import { type PlaylistState } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
-import { PlaylistPostApi } from "../../API/API";
+import { editNormalPlaylistApi, PlaylistPostApi } from "../../API/API";
 
 // Format and send playlist to backend
-export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
+export const savePlaylistToDatabase = async (
+  playlist: PlaylistState,
+  isEdit: boolean
+) => {
+  const endpoint = isEdit
+    ? `${editNormalPlaylistApi}/${playlist.id}`
+    : PlaylistPostApi;
+
   const formData = new FormData();
   const token = localStorage.getItem("token");
   // Playlist metadata
-  formData.append("id", playlist.id.toString());
+  formData.append("id", playlist.id);
   formData.append("name", playlist.name);
   formData.append("type", playlist.type.toString());
   formData.append("NumberOfSlides", playlist.slides.length.toString());
@@ -110,7 +117,7 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
   });
 
   // Send request
-  const response = await axios.post(PlaylistPostApi, formData, {
+  const response = await axios.post(endpoint, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
       Authorization: `Bearer ${token}`,
@@ -120,26 +127,26 @@ export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
   return response.data;
 };
 
-// Format the payload structure
-export const formatPlaylistPayload = (playlist: PlaylistState) => {
-  const totalDuration = playlist.slides.reduce(
-    (sum, slide) => sum + (slide.duration || 0),
-    0
-  );
-  return {
-    id: playlist.id,
-    name: playlist.name,
-    type: playlist.type,
-    NumberOfSlides: playlist.slides.length,
-    total_duration: totalDuration,
-    ratio: playlist.selectedRatio?.id,
-    slides: playlist.slides.map((slide, index) => {
-      const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
-      return {
-        ...slideWithoutSelectedGrid,
-        index,
-        grid_style: slide.grid_style,
-      };
-    }),
-  };
-};
+// // Format the payload structure
+// export const formatPlaylistPayload = (playlist: PlaylistState) => {
+//   const totalDuration = playlist.slides.reduce(
+//     (sum, slide) => sum + (slide.duration || 0),
+//     0
+//   );
+//   return {
+//     id: playlist.id,
+//     name: playlist.name,
+//     type: playlist.type,
+//     NumberOfSlides: playlist.slides.length,
+//     total_duration: totalDuration,
+//     ratio: playlist.selectedRatio?.id,
+//     slides: playlist.slides.map((slide, index) => {
+//       const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
+//       return {
+//         ...slideWithoutSelectedGrid,
+//         index,
+//         grid_style: slide.grid_style,
+//       };
+//     }),
+//   };
+// };

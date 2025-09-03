@@ -16,3 +16,4 @@ export const AddScreenApi = `${http}adduser/screen`
 export const AddGroupApi = `${http}insertgroup`
 export const getScreensGroupApi = `${http}getscreensgroup`
 export const getSpecificPlaylistApi = `${http}playlistdetails`
+export const editNormalPlaylistApi = `${http}updatenormal`

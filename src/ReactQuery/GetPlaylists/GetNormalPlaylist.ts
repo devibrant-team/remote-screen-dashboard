@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+// useGetNormalPlaylist.ts
+import { useInfiniteQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { z } from "zod";
 import { getNormalplaylistApi } from "../../API/API";
@@ -11,61 +12,91 @@ const NormalPlaylistSchema = z.object({
   duration: z.coerce.number(),
   slide_number: z.coerce.number(),
   grid: z.string(),
-  // .url() fails if there are spaces; keep it plain or encode later
-  media: z.string(),
+  media: z.string(), // keep plain; encode before rendering
 });
-const NormalPlaylistArraySchema = z.array(NormalPlaylistSchema);
+
+const PaginationSchema = z.object({
+  current_page: z.coerce.number(),
+  per_page: z.coerce.number(),
+  total: z.coerce.number(),
+  last_page: z.coerce.number(),
+  next_page_url: z.string().nullable().optional(),
+  prev_page_url: z.string().nullable().optional(),
+  first_page_url: z.string().nullable().optional(),
+  last_page_url: z.string().nullable().optional(),
+});
 
 const ApiResponseSchema = z.object({
   success: z.boolean(),
-  // Note the capital L: playLists
-  playLists: NormalPlaylistArraySchema,
+  playLists: z.array(NormalPlaylistSchema),
+  pagination: PaginationSchema,
 });
 
 type NormalPlaylistRaw = z.infer<typeof NormalPlaylistSchema>;
 
+/* 2) Public type (camelCase) */
 export type NormalPlaylist = {
   id: number;
   name: string;
   duration: number;
   slideNumber: number;
-  media: string; // you can encode with encodeURI when rendering if needed
+  media: string;
 };
 
-/* 2) Fetcher */
-const fetchNormalPlaylists = async (signal?: AbortSignal): Promise<NormalPlaylistRaw[]> => {
-  const token = localStorage.getItem("token");
+/* 3) One-page fetcher */
+type PageResult = {
+  items: NormalPlaylistRaw[];
+  pagination: z.infer<typeof PaginationSchema>;
+};
 
-  const res = await axios.get(getNormalplaylistApi, {
+async function fetchNormalPlaylistsPage(page: number, signal?: AbortSignal): Promise<PageResult> {
+  const token = localStorage.getItem("token");
+  const join = getNormalplaylistApi.includes("?") ? "&" : "?";
+  const url = `${getNormalplaylistApi}${join}page=${page}`;
+
+  const res = await axios.get(url, {
     signal,
     timeout: 12_000,
     headers: { Authorization: token ? `Bearer ${token}` : "" },
   });
 
   const parsed = ApiResponseSchema.parse(res.data);
-  // optional: ensure media is safe to use in <img src>
-  const rows = parsed.playLists.map((r) => ({
+
+  const items = parsed.playLists.map((r) => ({
     ...r,
-    media: encodeURI(r.media), // handles spaces like "Omar Yassin"
+    media: encodeURI(r.media), // handle spaces safely for <img src>
   }));
 
-  return rows;
-};
+  return { items, pagination: parsed.pagination };
+}
 
-/* 3) Hook */
-export const useGetNormalPlaylist = () =>
-  useQuery({
+/* 4) Infinite hook */
+export function useGetNormalPlaylist() {
+  return useInfiniteQuery<PageResult, Error, NormalPlaylist[], ["normalplaylist"], number>({
     queryKey: ["normalplaylist"],
-    queryFn: ({ signal }) => fetchNormalPlaylists(signal),
+    initialPageParam: 1,
+    queryFn: ({ pageParam, signal }) => fetchNormalPlaylistsPage(pageParam, signal),
+    getNextPageParam: (lastPage) => {
+      const { current_page, last_page } = lastPage.pagination;
+      return current_page < last_page ? current_page + 1 : undefined;
+    },
+    getPreviousPageParam: (firstPage) => {
+      const { current_page } = firstPage.pagination;
+      return current_page > 1 ? current_page - 1 : undefined;
+    },
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 0, // disable while debugging
-    select: (rows): NormalPlaylist[] =>
-      rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        duration: r.duration,
-        slideNumber: r.slide_number,
-        media: r.media,
-      })),
+    retry: 0,
+    // Flatten + map to your camelCase type
+    select: (data) =>
+      data.pages.flatMap((p) =>
+        p.items.map<NormalPlaylist>((r) => ({
+          id: r.id,
+          name: r.name,
+          duration: r.duration,
+          slideNumber: r.slide_number,
+          media: r.media,
+        }))
+      ),
   });
+}

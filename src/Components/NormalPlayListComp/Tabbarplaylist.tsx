@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Layers, Grid2X2, ArrowBigLeft } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -15,12 +15,13 @@ import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
 import RatioDropdown from "../Dropdown/RatioDropdown";
 import { useQueryClient } from "@tanstack/react-query";
-import type { Root } from "react-dom/client";
 import SaudiCityDropdown from "../Dropdown/CitiesDropdown";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+
+  const playlistName = useSelector((state: RootState) => state.playlist.name);
   const [modalOpen, setModalOpen] = useState(false);
   const [showGridSelector, setShowGridSelector] = useState(false);
   const playlist = useSelector((state: RootState) => state.playlist);
@@ -29,7 +30,8 @@ const Tabbarplaylist = () => {
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
   const isEdit = useSelector((s: RootState) => s.playlist.isEdit);
-  console.log("EDIT", isEdit);
+  const playlistId = useSelector((s: RootState) => s.playlist.id);
+  console.log("ID", playlistId);
   const handleSavePlaylist = async () => {
     if (!playlist.name || playlist.name.trim() === "") {
       window.alert("❌ Please enter a playlist name.");
@@ -39,7 +41,7 @@ const Tabbarplaylist = () => {
     setSaveMessage("");
     setError("");
     try {
-      await savePlaylistToDatabase(playlist);
+      await savePlaylistToDatabase(playlist, isEdit);
       setSaveMessage("✅ Playlist saved successfully!");
       window.alert("✅ Playlist saved successfully!");
       dispatch(setPlaylistName(""));
@@ -59,6 +61,7 @@ const Tabbarplaylist = () => {
     dispatch(clearPlaylist());
     navigate("/mediacontent");
   };
+
   // which slide is active
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
@@ -92,6 +95,29 @@ const Tabbarplaylist = () => {
       })
     );
   };
+
+  useEffect(() => {
+    if (
+      selectedSlideIndex === null ||
+      firstWidgetSlotIndex < 0 ||
+      !currentWidget ||
+      !("city" in currentWidget)
+    ) {
+      return;
+    }
+
+    const desiredCity = playlist.selectedCity || "";
+    if (currentWidget.city === desiredCity) return;
+
+    dispatch(
+      updateSlotWidgetInSlide({
+        slideIndex: selectedSlideIndex,
+        slotIndex: firstWidgetSlotIndex,
+        widget: { ...currentWidget, city: desiredCity },
+      })
+    );
+    // Keep deps *minimal* to avoid re-running for new widget object identities.
+  }, [playlist.selectedCity, selectedSlideIndex]);
 
   return (
     <>
@@ -137,6 +163,7 @@ const Tabbarplaylist = () => {
             </label>
             <input
               id="playlist-name"
+              defaultValue={playlistName}
               onChange={(e) => dispatch(setPlaylistName(e.target.value))}
               type="text"
               required
@@ -161,11 +188,25 @@ const Tabbarplaylist = () => {
 
             <button
               onClick={() => setModalOpen(true)}
-              className="flex items-center justify-center gap-2 w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition"
+              disabled={!playlist.selectedCity?.trim()}
+              className={`
+      flex items-center justify-center gap-2 w-full font-semibold py-2 px-4 rounded-md transition
+      ${
+        !playlist.selectedCity?.trim()
+          ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+          : "bg-[var(--mainred)] text-white hover:bg-red-600"
+      }
+    `}
             >
               <Layers size={18} />
-              Add Widget
+              <span>Add Widget</span>
             </button>
+
+            {!playlist.selectedCity?.trim() && (
+              <p className="text-xs text-gray-500 text-center">
+                Select a city first to enable widgets.
+              </p>
+            )}
           </section>
 
           {/* Ratio */}
@@ -240,7 +281,7 @@ const Tabbarplaylist = () => {
               disabled={saving}
               className="w-full bg-[var(--mainred)] text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600 transition disabled:opacity-60"
             >
-              {saving ? "Saving..." : "Apply Changes"}
+              {saving ? "Applying..." : "Apply Changes"}
             </button>
           )}
         </div>
@@ -251,7 +292,10 @@ const Tabbarplaylist = () => {
         onClose={() => setModalOpen(false)}
         title="Choose Widget "
       >
-        <WidgetModels onClose={() => setModalOpen(false)} />
+        <WidgetModels
+          onClose={() => setModalOpen(false)}
+          selectedCity={playlist.selectedCity}
+        />
       </BaseModal>
     </>
   );
