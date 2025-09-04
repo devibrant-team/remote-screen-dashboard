@@ -9,9 +9,7 @@ import {
 } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { useDeleteNormalPlaylist } from "../../ReactQuery/GetPlaylists/DeletePlaylist";
 import { X } from "lucide-react";
-
-const FALLBACK_IMG =
-  "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
+import MediaPreview from "../../Components/Media/MediaPreview";
 
 function formatSeconds(total?: number) {
   const s = Number(total || 0);
@@ -21,6 +19,11 @@ function formatSeconds(total?: number) {
   return h > 0
     ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
     : `${m}:${String(sec).padStart(2, "0")}`;
+}
+function guessTypeFromUrl(url: string): "video" | "image" {
+  const ext = url.split(".").pop()?.toLowerCase() || "";
+  if (["mp4", "mov", "avi", "mkv", "webm"].includes(ext)) return "video";
+  return "image";
 }
 
 export default function NormalPlaylistCard() {
@@ -110,16 +113,12 @@ export default function NormalPlaylistCard() {
           </button>
           {/* Media */}
           <div className="relative aspect-[16/9] w-full overflow-hidden ">
-            <img
-              src={p.media}
-              alt={p.name || `Playlist #${p.id}`}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
-              }}
-              loading="lazy"
-              draggable={false}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            />
+         <MediaPreview
+  src={p.media}
+  type={guessTypeFromUrl(p.media)}
+  alt={p.name || `Playlist #${p.id}`}
+  className="h-full w-full transition-transform duration-300 group-hover:scale-[1.03]"
+/>
 
             {/* Top badges */}
             <div className="pointer-events-none absolute left-3 top-3 flex gap-2">

@@ -2,7 +2,7 @@ import React from "react";
 import { CSS } from "@dnd-kit/utilities";
 import { useSortable } from "@dnd-kit/sortable";
 import { Clock, Move, Trash2 } from "lucide-react";
-
+import MediaPreview from "../Media/MediaPreview";
 type SlideType = any; // replace with your NormalPlaylistState
 
 type Props = {
@@ -24,13 +24,8 @@ const SortableSlide: React.FC<Props> = ({
   onDurationChange,
   onRemove,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useSortable({ id });
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -64,36 +59,25 @@ const SortableSlide: React.FC<Props> = ({
              rounded-full p-1 border border-gray-200 bg-white shadow
              hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-300"
         onClick={(e) => {
-          e.stopPropagation(); 
+          e.stopPropagation();
           e.preventDefault();
           onRemove?.();
         }}
         onPointerDown={(e) => {
-    
           e.stopPropagation();
         }}
       >
-        <Trash2 size={16} className="hover:text-white"/>
+        <Trash2 size={16} className="hover:text-white" />
       </button>
       {/* Preview */}
       <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">
         {slide?.slots?.[0]?.media ? (
-          slide.slots[0].mediaType === "video" ? (
-            <div className="flex items-center justify-center bg-red-400 w-full h-full text-xs font-medium">
-              <span className="inline-flex items-center gap-1 rounded-md bg-gray-900/80 px-2 py-1 text-white">
-                🎥 Video
-              </span>
-            </div>
-          ) : (
-            <img
-              src={slide.slots[0].media as string}
-              alt={`Slide ${index + 1}`}
-              loading="lazy"
-              decoding="async"
-              fetchPriority="low"
-              className="object-contain w-full h-full"
-            />
-          )
+          <MediaPreview
+            src={slide.slots[0].media as string}
+            type={slide.slots[0].mediaType}
+            alt={`Slide ${index + 1}`}
+            className="w-full h-full"
+          />
         ) : (
           <div className="flex items-center justify-center h-full text-gray-400 text-sm">
             No media

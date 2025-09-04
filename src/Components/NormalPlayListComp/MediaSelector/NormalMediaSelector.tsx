@@ -9,6 +9,10 @@ import {
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { store } from "../../../../store";
 import BaseModal from "../../Models/BaseModal";
+import {
+  ACCEPT_ATTR,
+  filterDisallowed,
+} from "../../../Hook/Playlist/AllowedUploadExt";
 
 type Props = {
   open: boolean;
@@ -35,13 +39,14 @@ const NormalMediaSelector: React.FC<Props> = ({
   slotIndex,
 }) => {
   const dispatch = useDispatch();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // NEW: local paging (optional)
   const [page, setPage] = useState(1);
   const perPage = 6;
 
   const {
-    data,              // <-- PaginatedMedia | undefined
+    data, // <-- PaginatedMedia | undefined
     isLoading,
     isError,
     error,
@@ -130,7 +135,9 @@ const NormalMediaSelector: React.FC<Props> = ({
           ...store.getState().playlist.slides[slideIndex],
           duration: 10,
         };
-        dispatch(updateSlideAtIndex({ index: slideIndex, updatedSlide: latest }));
+        dispatch(
+          updateSlideAtIndex({ index: slideIndex, updatedSlide: latest })
+        );
         onClose();
       }
     } finally {
@@ -150,21 +157,39 @@ const NormalMediaSelector: React.FC<Props> = ({
               Upload
               <input
                 type="file"
-                accept="image/*,video/*"
+                accept={ACCEPT_ATTR} 
                 className="hidden"
-                onChange={(e) =>
-                  e.target.files?.[0] && handleUpload(e.target.files[0])
-                }
+                onChange={(e) => {
+                  const all = Array.from(e.target.files || []);
+                  if (!all.length) return;
+                  const [file] = all;
+                  const { good, bad } = filterDisallowed([file]);
+
+                  if (bad.length) {
+                    setErrorMsg(
+                      "Only images/videos are allowed (jpeg,png,jpg,gif,webp,mp4,mov,avi)."
+                    );
+                    e.currentTarget.value = "";
+                    return;
+                  }
+
+                  setErrorMsg(null);
+                  handleUpload(good[0]); // your existing helper
+                  e.currentTarget.value = ""; // allow re-selecting same file later
+                }}
                 disabled={uploading}
               />
             </label>
+
             <button
               onClick={() => refetch()}
               disabled={isFetching || uploading}
               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-60"
               title="Refresh"
             >
-              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
               Refresh
             </button>
           </div>
@@ -235,7 +260,11 @@ const NormalMediaSelector: React.FC<Props> = ({
                       </div>
 
                       <div className="pointer-events-none absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                        {isVideo ? <Film className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}
+                        {isVideo ? (
+                          <Film className="h-3 w-3" />
+                        ) : (
+                          <ImageIcon className="h-3 w-3" />
+                        )}
                         <span>{isVideo ? "Video" : "Image"}</span>
                       </div>
                     </button>
@@ -258,7 +287,11 @@ const NormalMediaSelector: React.FC<Props> = ({
                   </span>
                   <button
                     className="rounded-md border px-2 py-1 hover:bg-gray-50 disabled:opacity-50"
-                    onClick={() => setPage((p) => (meta ? Math.min(meta.last_page, p + 1) : p + 1))}
+                    onClick={() =>
+                      setPage((p) =>
+                        meta ? Math.min(meta.last_page, p + 1) : p + 1
+                      )
+                    }
                     disabled={meta.current_page >= meta.last_page || isFetching}
                   >
                     Next

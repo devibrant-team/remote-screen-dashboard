@@ -7,8 +7,9 @@ export type AllowedType = "image" | "video";
 
 export interface MediaItem {
   id: number;
-  type: AllowedType | string; // backend might return other strings; we'll normalize in UI
-  media: string; // absolute URL
+  type: AllowedType | string; 
+  media: string; 
+  storage:number;
 }
 
 export interface GetMediaResponse {

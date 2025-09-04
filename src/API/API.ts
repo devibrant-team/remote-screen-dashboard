@@ -19,3 +19,5 @@ export const getSpecificPlaylistApi = `${http}playlistdetails`
 export const editNormalPlaylistApi = `${http}updatenormal`
 export const insertRatioApi = `${http}insertratio`
 export const deletePlaylistApi = `${http}deleteplaylist`
+export const PostmediaApi = `${http}postmedia`
+export const DeletemediaApi = `${http}deletemedia`
