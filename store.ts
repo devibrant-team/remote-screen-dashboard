@@ -14,6 +14,7 @@ import scheduleReducer from "./src/Redux/Schedule/SheduleSlice";
 import playlistEditorReducer from "./src/Redux/Playlist/EditPlaylist/EditNormalPlaylistSlice";
 import mediaLibraryReducer from "./src/Redux/Media/MediaLibrarySlice";
 import interactiveReducer from "./src/Redux/Playlist/interactivePlaylist/interactiveSlice";
+import groupReducer from "./src/Redux/ScreenManagement/GroupSlice";
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -31,7 +32,7 @@ export const store = configureStore({
     playlistEditor: playlistEditorReducer,
     mediaLibrary: mediaLibraryReducer,
     interactive: interactiveReducer,
-    
+     groups: groupReducer,
 
   },
   middleware: (getDefaultMiddleware) =>
