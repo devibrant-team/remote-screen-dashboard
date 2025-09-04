@@ -1,148 +1,80 @@
-// src/Screens/Schedule/Calender.tsx
 import { useRef, useState, useMemo, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin, { Draggable } from "@fullcalendar/interaction";
 import type {
+  EventInput,
+  EventClickArg,
+  EventDropArg,
+} from "@fullcalendar/core";
+import type {
   EventResizeDoneArg,
   EventReceiveArg,
 } from "@fullcalendar/interaction";
-import type {
-  EventDropArg,
-  EventInput,
-  EventClickArg,
-} from "@fullcalendar/core";
+
+import {
+  addBlockFromISO,
+  updateBlockFromISO,
+  removeBlock,
+  selectCalendarEvents,
+  selectBlocks,
+} from "../../Redux/Schedule/SheduleSlice";
+import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import ScheduleModel from "../../Components/Models/ScheduleModel";
-
-/** ---------- Types ---------- */
-type Block = EventInput & {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  StartDate: string;
-  StartTime: string;
-  EndDate: string;
-  EndTime: string;
-
-  confirmed?: boolean;
-  playlistId?: string | number;
-  ratio?: string;
-};
 
 /** ---------- Utils ---------- */
 const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
   aStart < bEnd && bStart < aEnd;
 
-const TZ = "Asia/Beirut";
-
-const toUIParts = (iso: string) => {
-  const [datePart, timeWithMs] = iso.split("T");
-  const timePart = timeWithMs.split(".")[0];
-  return {
-    dateStr: datePart,
-    timeStr: timePart,
-  };
-};
+function hasOverlap(
+  events: EventInput[],
+  start: Date,
+  end: Date,
+  exceptEventId?: string | null
+) {
+  return events.some((ev) => {
+    if (!ev.start || !ev.end) return false;
+    if (exceptEventId && ev.id === exceptEventId) return false;
+    const s = new Date(ev.start as string);
+    const e = new Date(ev.end as string);
+    return overlaps(start, end, s, e);
+  });
+}
 
 export default function Calender() {
+  const dispatch = useDispatch();
   const calRef = useRef<FullCalendar | null>(null);
-  const dropLock = useRef<Set<string>>(new Set());
+  const events = useSelector(selectCalendarEvents); // memoized, no warning
 
-  const [blocks, setBlocks] = useState<Block[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  console.log(blocks);
+  const savedBlocks = useSelector(selectBlocks, shallowEqual);
+  // ⬇️ modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clickedEvent, setClickedEvent] = useState<{
+    id: string;
+    title: string;
+    blockId?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    console.log("[schedule.blocks]", savedBlocks);
+  }, [savedBlocks]);
+
+  // grid step UI (local to component)
   const [stepMinutes, setStepMinutes] = useState<number>(10);
   const [customStep, setCustomStep] = useState<string>("");
+
   const stepMs = stepMinutes * 60_000;
   const floorToStep = (d: Date) =>
     new Date(Math.floor(d.getTime() / stepMs) * stepMs);
   const ceilToStep = (d: Date) =>
     new Date(Math.ceil(d.getTime() / stepMs) * stepMs);
+
   const stepHMS = useMemo(() => {
     const m = Math.max(1, Math.floor(stepMinutes));
     const hh = String(Math.floor(m / 60)).padStart(2, "0");
     const mm = String(m % 60).padStart(2, "0");
     return `${hh}:${mm}:00`;
   }, [stepMinutes]);
-
-  const addBlock = (
-    startISO: string,
-    endISO: string,
-    confirmed = true,
-    extra: Partial<Block> = {}
-  ) => {
-    const id =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : String(Math.random());
-    const { dateStr: StartDate, timeStr: StartTime } = toUIParts(startISO);
-    const { dateStr: EndDate, timeStr: EndTime } = toUIParts(endISO);
-
-    setBlocks((prev) => [
-      ...prev,
-      {
-        id,
-        title: extra.title ?? "Unnamed",
-        start: startISO,
-        end: endISO,
-        StartDate,
-        StartTime,
-        EndDate,
-        EndTime,
-        confirmed,
-        playlistId: extra.playlistId,
-      },
-    ]);
-  };
-
-  const updateBlockTime = (id: string, startISO: string, endISO: string) => {
-    const { dateStr: StartDate, timeStr: StartTime } = toUIParts(startISO);
-    const { dateStr: EndDate, timeStr: EndTime } = toUIParts(endISO);
-
-    setBlocks((prev) =>
-      prev.map((b) =>
-        b.id === id
-          ? {
-              ...b,
-              start: startISO,
-              end: endISO,
-              StartDate,
-              StartTime,
-              EndDate,
-              EndTime,
-            }
-          : b
-      )
-    );
-  };
-
-  const removeBlock = (id: string) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
-  };
-
-  const findOverlap = (start: Date, end: Date, exceptId?: string) =>
-    blocks.find((b) => {
-      if (b.id === exceptId) return false;
-      const bs = new Date(b.start as string);
-      const be = new Date(b.end as string);
-      return overlaps(start, end, bs, be);
-    });
-
-  /** ---------- Modal handlers ---------- */
-  const onEventClick = (info: EventClickArg) => {
-    setEditingId(info.event.id);
-    setIsOpen(true);
-  };
-  const closeModal = () => {
-    setIsOpen(false);
-    setEditingId(null);
-  };
-
-  const editingBlock = editingId
-    ? blocks.find((b) => b.id === editingId)
-    : undefined;
 
   /** ---------- Make external lists draggable ---------- */
   useEffect(() => {
@@ -227,7 +159,7 @@ export default function Calender() {
         ref={calRef as any}
         plugins={[timeGridPlugin, interactionPlugin]}
         initialView="timeGridWeek"
-        timeZone={TZ}
+        timeZone="local"
         allDaySlot={false}
         nowIndicator
         expandRows
@@ -242,7 +174,12 @@ export default function Calender() {
         slotMinTime="08:00:00"
         slotMaxTime="23:00:00"
         scrollTime="08:00:00"
-        eventTimeFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+        eventTimeFormat={{
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }}
         headerToolbar={{
           left: "prev,next today",
           center: "title",
@@ -254,124 +191,131 @@ export default function Calender() {
         droppable
         editable
         eventOverlap={false}
+        // Prevent overlaps against current rendered events
         eventAllow={(dropInfo, draggedEvent) => {
-          // Block if the start is before today
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          if (dropInfo.start < today) return false;
-
-          // Keep your overlap check
-          const hit = findOverlap(
-            dropInfo.start,
-            dropInfo.end,
-            draggedEvent?.id as string | undefined
-          );
-          return !hit;
+          const start = dropInfo.start;
+          const end = dropInfo.end;
+          const exceptId = draggedEvent?.id ?? null;
+          return !hasOverlap(events, start, end, exceptId);
         }}
+        // External item dropped onto calendar
         eventReceive={(info: EventReceiveArg) => {
           const ev = info.event;
           const start = floorToStep(ev.start!);
           const durationSec = Number(ev.extendedProps?.durationSec || 0);
-          let end: Date;
+          const end =
+            durationSec > 0
+              ? new Date(start.getTime() + durationSec * 1000)
+              : ceilToStep(new Date(start.getTime() + stepMinutes * 60 * 1000));
 
-          if (durationSec > 0) {
-            // exact playlist duration in seconds → don’t round
-            end = new Date(start.getTime() + durationSec * 1000);
-          } else {
-            // fallback: round to step
-            end = ceilToStep(
-              new Date(start.getTime() + stepMinutes * 60 * 1000)
-            );
-          }
-
-          const key = `${start.toISOString()}|${end.toISOString()}`;
-          if (dropLock.current.has(key)) {
+          // guard overlaps
+          if (hasOverlap(events, start, end, null)) {
             ev.remove();
             return;
           }
-          dropLock.current.add(key);
 
-          const { dateStr: StartDate, timeStr: StartTime } = toUIParts(
-            start.toISOString()
+          dispatch(
+            addBlockFromISO({
+              title: ev.title || "Playlist",
+              startISO: start.toISOString(),
+              endISO: end.toISOString(),
+              playlistId: ev.extendedProps?.playlistId as
+                | string
+                | number
+                | undefined,
+            })
           );
-          const { dateStr: EndDate, timeStr: EndTime } = toUIParts(
-            end.toISOString()
-          );
 
-          setBlocks((prev) => {
-            const hasConflict = prev.some((b) =>
-              overlaps(
-                start,
-                end,
-                new Date(b.start as string),
-                new Date(b.end as string)
-              )
-            );
-            if (hasConflict) return prev;
-
-            const id =
-              typeof crypto !== "undefined" && "randomUUID" in crypto
-                ? crypto.randomUUID()
-                : String(Math.random());
-
-            return [
-              ...prev,
-              {
-                id,
-                title: ev.title || "Playlist",
-                start: start.toISOString(),
-                end: end.toISOString(),
-                StartDate,
-                StartTime,
-                EndDate,
-                EndTime,
-                ratio: "16:9",
-                confirmed: true,
-                playlistId: ev.extendedProps?.playlistId as
-                  | string
-                  | number
-                  | undefined,
-              },
-            ];
-          });
-
+          // prevent “ghost” temp event
           ev.remove();
-          setTimeout(() => dropLock.current.delete(key), 0);
         }}
-        eventDrop={(info: EventDropArg) =>
-          updateBlockTime(
-            info.event.id,
-            info.event.startStr!,
-            info.event.endStr!
-          )
-        }
-        eventResize={(info: EventResizeDoneArg) =>
-          updateBlockTime(
-            info.event.id,
-            info.event.startStr!,
-            info.event.endStr!
-          )
-        }
-        eventClick={onEventClick}
-        eventContent={(arg) => {
-          const { id } = arg.event;
-          const confirmed =
-            (arg.event.extendedProps?.confirmed as boolean) ?? true;
-          const ratio = arg.event.extendedProps?.ratio as string | undefined;
+        // Drag existing event
+        eventDrop={(info: EventDropArg) => {
+          const blockId = info.event.extendedProps?.blockId as
+            | string
+            | undefined;
+          if (!blockId) {
+            info.revert();
+            return;
+          }
 
+          const start = info.event.start!;
+          const end = info.event.end!;
+          // prevent overlaps
+          if (hasOverlap(events, start, end, info.event.id)) {
+            info.revert();
+            return;
+          }
+
+          dispatch(
+            updateBlockFromISO({
+              id: blockId,
+              startISO: start.toISOString(),
+              endISO: end.toISOString(),
+              // zone omitted => "local"
+            })
+          );
+        }}
+        // Resize existing event
+        eventResize={(info: EventResizeDoneArg) => {
+          const blockId = info.event.extendedProps?.blockId as
+            | string
+            | undefined;
+          if (!blockId) {
+            info.revert();
+            return;
+          }
+
+          const start = info.event.start!;
+          const end = info.event.end!;
+          if (hasOverlap(events, start, end, info.event.id)) {
+            info.revert();
+            return;
+          }
+
+          dispatch(
+            updateBlockFromISO({
+              id: blockId,
+              startISO: start.toISOString(),
+              endISO: end.toISOString(),
+            })
+          );
+        }}
+        // ⬇️ Open the modal when a block is clicked
+        eventClick={(info: EventClickArg) => {
+          const blockId = info.event.extendedProps?.blockId as
+            | string
+            | undefined;
+          setClickedEvent({
+            id: info.event.id,
+            title: info.event.title || "",
+            blockId,
+          });
+          setIsModalOpen(true);
+        }}
+        // Render + inline delete button
+        eventContent={(arg) => {
+          const blockId = arg.event.extendedProps?.blockId as
+            | string
+            | undefined;
+          const screensCount = Array.isArray(arg.event.extendedProps?.screens)
+            ? arg.event.extendedProps.screens.length
+            : 0;
+
+          // if you store a single primitive groupId (number|string)
+          const groupCount =
+            arg.event.extendedProps?.groupId !== undefined &&
+            arg.event.extendedProps?.groupId !== null
+              ? 1
+              : 0;
           return (
-            <div
-              className="ev-wrap relative h-full w-full px-1 py-0.5"
-              title={`${arg.timeText ?? ""} — ${arg.event.title}${
-                ratio ? ` • ${ratio}` : ""
-              }`}
-            >
+            <div className="ev-wrap relative h-full w-full px-1 py-0.5">
               <button
                 className="ev-x-btn"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  removeBlock(id);
+                  if (blockId) dispatch(removeBlock({ id: blockId }));
                 }}
                 aria-label="Remove block"
                 title="Remove block"
@@ -379,18 +323,18 @@ export default function Calender() {
                 ×
               </button>
 
-              <div
-                className={`ev-card ${
-                  confirmed ? "ev-confirmed" : "ev-pending"
-                }`}
-              >
+              <div className="ev-card ev-confirmed">
                 {arg.timeText && <div className="ev-time">{arg.timeText}</div>}
                 <div className="ev-title">{arg.event.title}</div>
-                {ratio && <div className="ev-meta">Ratio {ratio}</div>}
+                <div className="ev-meta font-bold">
+                  Groups: {groupCount} ,Screens:{" "}
+                  {screensCount}
+                </div>
               </div>
             </div>
           );
         }}
+        // Tweak font sizing based on available height (unchanged)
         eventDidMount={(info) => {
           const wrap = info.el.querySelector(".ev-wrap") as HTMLElement | null;
           const card = info.el.querySelector(".ev-card") as HTMLElement | null;
@@ -418,19 +362,41 @@ export default function Calender() {
           card.style.setProperty("--ev-fs", `${fs}px`);
           card.style.setProperty("--ev-lines", `${lines}`);
         }}
-        events={blocks}
+        // ← Render Redux-derived events
+        events={events}
       />
 
-      <ScheduleModel
-        open={isOpen}
-        initialName={editingBlock?.title ?? "Unnamed Block"}
-        onSave={(name) =>
-          setBlocks((prev) =>
-            prev.map((b) => (b.id === editingId ? { ...b, title: name } : b))
-          )
-        }
-        onClose={closeModal}
-      />
+      {/* Simple modal for ScheduleModel */}
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setIsModalOpen(false)}
+          />
+          <div className="relative z-10 w-full max-w-5xl rounded-2xl bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="text-lg font-semibold">
+                {clickedEvent?.title || "Schedule"}
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-md border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <ScheduleModel
+              blockId={clickedEvent?.blockId}
+              onClose={() => setIsModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

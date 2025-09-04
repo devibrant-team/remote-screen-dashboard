@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { useGetNormalPlaylist } from "../../ReactQuery/GetPlaylists/GetNormalPlaylist";
-
-const FALLBACK_IMG =
-  "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
+import MediaPreview from "../../Components/Media/MediaPreview";
 
 function formatSeconds(total?: number) {
   const s = Number(total || 0);
@@ -13,6 +11,12 @@ function formatSeconds(total?: number) {
   return h > 0
     ? `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
     : `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+// Infer type from URL if backend doesn't provide it
+function guessTypeFromUrl(url: string): "video" | "image" {
+  const ext = url.split("?")[0].split("#")[0].split(".").pop()?.toLowerCase() || "";
+  return ["mp4", "mov", "avi", "mkv", "webm"].includes(ext) ? "video" : "image";
 }
 
 export default function NormalContent() {
@@ -47,7 +51,7 @@ export default function NormalContent() {
         const durationSec = Number(liEl.getAttribute("data-duration") || 0);
         return {
           title,
-          duration: { seconds: durationSec }, // temp event duration
+          duration: { seconds: durationSec },
           extendedProps: { playlistId: pid, durationSec },
         };
       },
@@ -101,20 +105,17 @@ export default function NormalContent() {
             key={p.id}
             data-playlist-id={p.id}
             data-title={p.name || `Playlist #${p.id}`}
-            data-duration={Number(p.duration || 0)} // seconds
+            data-duration={Number(p.duration || 0)}
             className="fc-draggable group relative flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-2 hover:border-red-500 hover:shadow-sm transition cursor-grab"
             title={p.name || `Playlist #${p.id}`}
           >
-            <img
+            <MediaPreview
               src={p.media}
+              type={guessTypeFromUrl(p.media)}
               alt={p.name || `Playlist #${p.id}`}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
-              }}
               className="h-10 w-16 rounded-md object-cover ring-1 ring-neutral-200 select-none"
-              loading="lazy"
-              draggable={false}
             />
+
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-gray-900">
                 {p.name || `Playlist #${p.id}`}

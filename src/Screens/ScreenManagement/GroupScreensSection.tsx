@@ -76,7 +76,7 @@ const GroupScreensSection: React.FC = () => {
   const [visible, setVisible] = useState(CHUNK);
 
   const { data: groups, isLoading, isError, refetch } = useGetGroups();
-
+console.log(groups)
   // Fetch screens for the selected group id
   const {
     data: groupScreens,
@@ -84,7 +84,7 @@ const GroupScreensSection: React.FC = () => {
     isError: isScreensError,
     refetch: refetchScreens,
   } = useGetGroupScreens(selectedGroupId);
-
+console.log(groupScreens)
   // Close "create" on global event
   useEffect(() => {
     const handleClose = () => setOpenCreate(false);

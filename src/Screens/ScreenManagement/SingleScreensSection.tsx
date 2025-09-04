@@ -15,7 +15,7 @@ const SingleScreensSection: React.FC = () => {
   const [visible, setVisible] = useState(CHUNK);
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
-
+console.log(screens)
   // Fill Redux with screens
   useEffect(() => {
     if (!isLoading && !isError && Array.isArray(screens)) {

@@ -10,10 +10,10 @@ import MediaContent from "./Screens/MediaContent/MediaContent";
 import PlayList from "./Screens/Playlist/Normal/PlayList";
 import LoginScreen from "./Screens/AuthScreens/LoginScreen";
 import LicenseKey from "./../LicenseKey/LicenseKey";
-import Test from "./Screens/Test";
 import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 import Schedule from "./Screens/Schedule/Schedule";
 import Media from "./Screens/UploadMedia/Media";
+
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {

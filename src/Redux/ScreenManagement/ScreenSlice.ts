@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import type { RootState } from "../../../store";
 export type Screen = {
   id: number | string;
   name?: string | null;
@@ -46,7 +47,7 @@ const screenSlice = createSlice({
     },
   },
 });
-
+export const selectScreens = (state: RootState) => state.screens.items;
 export const { setScreens, upsertScreen, removeScreen, clearScreens } =
   screenSlice.actions;
 export default screenSlice.reducer;
