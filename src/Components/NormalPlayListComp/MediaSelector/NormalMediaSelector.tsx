@@ -1,14 +1,13 @@
 // Components/.../MediaSelector/NormalMediaSelector.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { RefreshCw, Upload, Film, Image as ImageIcon } from "lucide-react";
+import { RefreshCw, Upload, Film, Image as ImageIcon, X } from "lucide-react";
 import { useGetMedia } from "../../../ReactQuery/Media/useGetMedia";
 import {
   updateSlideAtIndex,
   updateSlotInSlide,
 } from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import { store } from "../../../../store";
-import BaseModal from "../../Models/BaseModal";
 import {
   ACCEPT_ATTR,
   filterDisallowed,
@@ -41,24 +40,26 @@ const NormalMediaSelector: React.FC<Props> = ({
   const dispatch = useDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // NEW: local paging (optional)
   const [page, setPage] = useState(1);
   const perPage = 6;
 
-  const {
-    data, // <-- PaginatedMedia | undefined
-    isLoading,
-    isError,
-    error,
-    refetch,
-    isFetching,
-  } = useGetMedia({ page, perPage });
+  const { data, isLoading, isError, error, refetch, isFetching } =
+    useGetMedia({ page, perPage });
 
-  // Safely access items/meta from paginated response
   const items = data?.media ?? [];
   const meta = data?.meta;
 
   const [uploading, setUploading] = useState(false);
+
+  // close on ESC
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   const applyVideo = (
     mediaUrl: string,
@@ -69,7 +70,7 @@ const NormalMediaSelector: React.FC<Props> = ({
     video.preload = "metadata";
     video.src = mediaUrl;
     video.onloadedmetadata = () => {
-      const duration = Math.round(video.duration);
+      const duration = Math.round(video.duration || 0);
       dispatch(
         updateSlotInSlide({
           slideIndex,
@@ -82,7 +83,7 @@ const NormalMediaSelector: React.FC<Props> = ({
       );
       const latest = {
         ...store.getState().playlist.slides[slideIndex],
-        duration,
+        duration: duration > 0 ? duration : 10
       };
       dispatch(updateSlideAtIndex({ index: slideIndex, updatedSlide: latest }));
       onClose();
@@ -135,9 +136,7 @@ const NormalMediaSelector: React.FC<Props> = ({
           ...store.getState().playlist.slides[slideIndex],
           duration: 10,
         };
-        dispatch(
-          updateSlideAtIndex({ index: slideIndex, updatedSlide: latest })
-        );
+        dispatch(updateSlideAtIndex({ index: slideIndex, updatedSlide: latest }));
         onClose();
       }
     } finally {
@@ -145,19 +144,39 @@ const NormalMediaSelector: React.FC<Props> = ({
     }
   };
 
+  if (!open) return null;
+
   return (
-    <BaseModal open={open} onClose={onClose} title="Choose media">
-      <div className="w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between px-1 pb-3">
-          <div className="text-sm font-semibold text-gray-800">My Media</div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      aria-modal="true"
+      role="dialog"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* Panel (width-responsive) */}
+      <div
+        className="relative z-10 w-[min(1200px,96vw)] max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header bar */}
+        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
+          <h2 id="media-modal-title" className="text-base font-semibold text-gray-900">
+            Choose media
+          </h2>
+
           <div className="flex items-center gap-2">
             <label className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs cursor-pointer hover:bg-gray-50">
               <Upload className="h-4 w-4" />
               Upload
               <input
                 type="file"
-                accept={ACCEPT_ATTR} 
+                accept={ACCEPT_ATTR}
                 className="hidden"
                 onChange={(e) => {
                   const all = Array.from(e.target.files || []);
@@ -174,8 +193,8 @@ const NormalMediaSelector: React.FC<Props> = ({
                   }
 
                   setErrorMsg(null);
-                  handleUpload(good[0]); // your existing helper
-                  e.currentTarget.value = ""; // allow re-selecting same file later
+                  handleUpload(good[0]);
+                  e.currentTarget.value = "";
                 }}
                 disabled={uploading}
               />
@@ -187,18 +206,31 @@ const NormalMediaSelector: React.FC<Props> = ({
               className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2 py-1 text-xs hover:bg-gray-50 disabled:opacity-60"
               title="Refresh"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
               Refresh
+            </button>
+
+            <button
+              onClick={onClose}
+              className="ml-2 inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-gray-100"
+              aria-label="Close"
+              title="Close"
+            >
+              <X className="h-5 w-5 text-gray-600" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="pb-1">
+        {/* Body (scrolls vertically if needed; grid is width-responsive) */}
+        <div className="max-h-[calc(90vh-56px)] overflow-auto p-4">
+          {errorMsg && (
+            <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+              {errorMsg}
+            </div>
+          )}
+
           {isLoading && (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
               {Array.from({ length: 8 }).map((_, i) => (
                 <SkeletonCard key={i} />
               ))}
@@ -228,7 +260,7 @@ const NormalMediaSelector: React.FC<Props> = ({
 
           {!isLoading && !isError && items.length > 0 && (
             <>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid gap-3 grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
                 {items.map((item: MediaItem) => {
                   const isVideo =
                     item.type === "video" || item.type?.startsWith("video");
@@ -272,7 +304,6 @@ const NormalMediaSelector: React.FC<Props> = ({
                 })}
               </div>
 
-              {/* Optional: simple pagination */}
               {meta && (
                 <div className="mt-3 flex items-center justify-between text-xs text-gray-600">
                   <button
@@ -302,7 +333,7 @@ const NormalMediaSelector: React.FC<Props> = ({
           )}
         </div>
       </div>
-    </BaseModal>
+    </div>
   );
 };
 
