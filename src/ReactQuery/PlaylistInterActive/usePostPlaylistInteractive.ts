@@ -9,12 +9,12 @@ interface PlaylistResponse {
 }
 
 export const usePostPlaylistInteractive = () => {
-//   const token = localStorage.getItem('token');
+  const token = localStorage.getItem('token');
 
   const postPlaylist = async (payload: FormData): Promise<PlaylistResponse> => {
     const response = await axios.post(postplaylistinteractiveApi, payload, {
       headers: {
-        // Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         'Content-Type': 'multipart/form-data',
       },
     });

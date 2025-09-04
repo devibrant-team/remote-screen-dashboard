@@ -1,4 +1,3 @@
-// src/components/UserMediaGrid.tsx
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -10,21 +9,44 @@ import {
   toggleMediaSelection,
   selectSelectedMediaIds,
 } from "../../Redux/Media/MediaSlice";
+import type { RootState } from "../../../store";
 
-type Props = { className?: string };
+type Props = {
+  className?: string;
+  /** 👇 total slides already in the slider (uploads + library in slides state) */
+  currentSlidesCount?: number;
+  /** 👇 unified cap coming from useSharedSlides (Number.POSITIVE_INFINITY if undefined) */
+  maxSelectable?: number;
+};
 
 const PER_PAGE = 6;
 const CARD_SIZE = 110;
+const ARROW_DIAM = 40;
+const ARROW_GAP = 12;
 
-const ARROW_DIAM = 40; 
-const ARROW_GAP = 12; 
+// Keep in sync with your slice caps (2 -> 5, 3 -> 2; others = no cap)
+const LAYOUT_CAPS: Record<number, number> = { 2: 5, 3: 2 };
+const getCapForLayout = (layoutId?: number): number | undefined =>
+  typeof layoutId === "number" && layoutId in LAYOUT_CAPS
+    ? LAYOUT_CAPS[layoutId]
+    : undefined;
 
 const cx = (...a: Array<string | false | null | undefined>) =>
   a.filter(Boolean).join(" ");
 
-export default function UserMediaGrid({ className }: Props) {
+export default function UserMediaGrid({ className, currentSlidesCount, maxSelectable }: Props) {
   const dispatch = useDispatch();
   const selectedIds = useSelector(selectSelectedMediaIds);
+
+  // ✅ Read layoutId directly from the correct reducer key
+  const layoutId = useSelector(
+    (s: RootState) => s.playlistInteractive.playlistData?.layoutId
+  );
+  const sliceCap = getCapForLayout(layoutId);
+
+  // 👉 Use the passed max if provided; otherwise fall back to local cap (keeps backward compatibility)
+  const cap = typeof maxSelectable === "number" ? maxSelectable : sliceCap ?? Number.POSITIVE_INFINITY;
+  const layoutMissing = layoutId == null;
 
   // ---- pagination
   const [page, setPage] = useState(1);
@@ -32,11 +54,17 @@ export default function UserMediaGrid({ className }: Props) {
     page,
     perPage: PER_PAGE,
   });
-console.log("loloo",data)
-  const media: MediaItem[] = data?.media ?? [];
-  const items = useMemo(() => media.slice(0, PER_PAGE), [media]); // hard-cap to 6 just in case
-  const pages = Math.max(1, data?.meta?.last_page ?? 1);
 
+  const media: MediaItem[] = data?.media ?? [];
+  const items = useMemo(
+    () =>
+      media
+        .slice(0, PER_PAGE)
+        .filter((m) => m.type === "image" || !m.type),
+    [media]
+  );
+
+  const pages = Math.max(1, data?.meta?.last_page ?? 1);
   useEffect(() => {
     setPage((p) => Math.min(p, pages));
   }, [pages]);
@@ -57,35 +85,65 @@ console.log("loloo",data)
     []
   );
 
-  // show skeleton while initial load OR switching pages
   const showSkeleton = isPending || isFetching;
 
   const normalizeType = (t?: string): AllowedType | undefined =>
     t === "image" ? "image" : t === "video" ? "video" : undefined;
 
   const onToggle = (id: number, url: string, type?: AllowedType) => {
-    // Only allow images for the interactive slider
     if (type && type !== "image") {
-      alert("Only images can be added (videos are not supported yet).");
+      alert("Only images can be added (videos are not supported).");
       return;
     }
+
+    const isSelected = selectedIds.includes(id);
+
+    // Block adding if no layout chosen; allow deselect anytime
+    if (!isSelected) {
+      if (layoutMissing) {
+        alert("Please select a layout before adding media.");
+        return;
+      }
+
+      // 👇 Unified cap: consider current total slides already in slider
+      const totalNow = currentSlidesCount ?? 0; // uploads + library in slides state
+      if (Number.isFinite(cap) && totalNow >= cap) {
+        alert(`You can select up to ${cap} items for this layout.`);
+        return;
+      }
+    }
+
     dispatch(toggleMediaSelection({ id, url, type }));
   };
 
+  const totalDisplay = Number.isFinite(cap) ? cap : "∞";
+  const totalNow = currentSlidesCount ?? 0;
+
   return (
     <div className={cx("flex flex-col gap-2", className)}>
-      <div className="text-sm font-medium text-slate-700">Media</div>
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-medium text-slate-700">Media</div>
+        <div className="text-xs text-slate-600">
+          Slides {totalNow} / {totalDisplay}
+        </div>
+      </div>
+
+      {layoutMissing && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-800 px-3 py-2 text-xs mb-2">
+          Select a layout to enable adding media.
+        </div>
+      )}
 
       <div className="relative">
         <div
           className={cx(
             "flex gap-3 overflow-x-auto scroll-smooth whitespace-nowrap",
             "rounded-xl border border-slate-200/70 bg-white/70 py-2",
-            "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
+            layoutMissing && "pointer-events-none opacity-50"
           )}
           style={{
             height: CARD_SIZE + 16,
-            // reserve space so arrows don't overlap cards
             paddingLeft: ARROW_DIAM + ARROW_GAP,
             paddingRight: ARROW_DIAM + ARROW_GAP,
           }}
@@ -116,7 +174,13 @@ console.log("loloo",data)
             !showSkeleton &&
             items.map((m) => {
               const selected = selectedIds.includes(m.id);
-              const safeType = normalizeType(m.type);
+              const safeType = normalizeType(m.type); // should be "image" here
+
+              // Disable add if we’re at cap; allow deselect
+              const disableAdd =
+                !selected &&
+                (layoutMissing ||
+                  (Number.isFinite(cap) && (currentSlidesCount ?? 0) >= cap));
 
               return (
                 <button
@@ -128,38 +192,24 @@ console.log("loloo",data)
                     "relative flex-none overflow-hidden transition-all duration-200 rounded-xl",
                     "ring-1 ring-slate-200 hover:ring-slate-300 hover:shadow-md active:scale-[0.99]",
                     selected &&
-                      "ring-2 ring-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+                      "ring-2 ring-red-500 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]",
+                    disableAdd && "opacity-60 cursor-not-allowed"
                   )}
                   style={{ width: CARD_SIZE, height: CARD_SIZE }}
                   title={safeType}
+                  disabled={disableAdd}
                 >
-                  {safeType === "video" ? (
-                    <div className="flex h-full w-full items-center justify-center bg-black text-white">
-                      <div className="flex items-center gap-2 text-xs opacity-90">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 24 24"
-                          className="h-4 w-4"
-                          fill="currentColor"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                        Video
-                      </div>
-                    </div>
-                  ) : (
-                    <img
-                      src={m.media}
-                      alt={`media-${m.id}`}
-                      loading="lazy"
-                      draggable={false}
-                      className="h-full w-full object-cover transform transition-transform duration-300 will-change-transform hover:scale-[1.02]"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src =
-                          "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='12'>No preview</text></svg>";
-                      }}
-                    />
-                  )}
+                  <img
+                    src={m.media}
+                    alt={`media-${m.id}`}
+                    loading="lazy"
+                    draggable={false}
+                    className="h-full w-full object-cover transform transition-transform duration-300 will-change-transform hover:scale-[1.02]"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src =
+                        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'><rect width='100%' height='100%' fill='%23e2e8f0'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-size='12'>No preview</text></svg>";
+                    }}
+                  />
 
                   {selected && (
                     <>
@@ -196,19 +246,12 @@ console.log("loloo",data)
                 "absolute left-2 top-1/2 -translate-y-1/2 z-20",
                 "rounded-full bg-white/90 shadow ring-1 ring-slate-200",
                 "hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed",
-                "flex items-center justify-center" // center the icon inside
+                "flex items-center justify-center"
               )}
               style={{ width: ARROW_DIAM, height: ARROW_DIAM }}
               aria-label="Previous"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
@@ -226,14 +269,7 @@ console.log("loloo",data)
               style={{ width: ARROW_DIAM, height: ARROW_DIAM }}
               aria-label="Next"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>

@@ -4,6 +4,7 @@ export const loginApi = `${http}dashboard/login`
 export const playlisttypeApi = `${http}getplaylistStyle`
 export const PlaylistPostApi = `${http}postNormal`
 export const postplaylistinteractiveApi = `${http}postinteractive`
+export const editplaylistinteractiveApi = `${http}updateinteravtive`
 export const getMediaUserApi = `${http}getuser/media`
 export const addBranchApi = `${http}insertbranch`
 export const getBranchApi = `${http}getbranch`

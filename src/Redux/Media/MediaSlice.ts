@@ -1,3 +1,4 @@
+// src/Redux/Media/MediaSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 export type SelectedMedia = {
@@ -10,28 +11,10 @@ interface MediaState {
   selectedMedia: SelectedMedia[];
 }
 
-const safeGet = (k: string) =>
-  typeof window !== "undefined" ? localStorage.getItem(k) : null;
-
-const persistedNew = safeGet("selectedMedia");
-const persistedOldIds = safeGet("selectedMediaIds"); // migrate old shape if present
-
+// No localStorage: keep it purely in Redux memory
 const initialState: MediaState = {
-  selectedMedia: persistedNew
-    ? JSON.parse(persistedNew)
-    : persistedOldIds
-    ? // migrate: ids only -> objects with empty url
-      (JSON.parse(persistedOldIds) as number[]).map((id) => ({ id, url: "" }))
-    : [],
+  selectedMedia: [],
 };
-
-function persist(state: MediaState) {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("selectedMedia", JSON.stringify(state.selectedMedia));
-    // clean old key if you like:
-    localStorage.removeItem("selectedMediaIds");
-  }
-}
 
 const mediaSlice = createSlice({
   name: "media",
@@ -46,7 +29,6 @@ const mediaSlice = createSlice({
       } else {
         state.selectedMedia.push({ id, url, type });
       }
-      persist(state);
     },
 
     // Replace all (deduped by id; last wins)
@@ -54,19 +36,14 @@ const mediaSlice = createSlice({
       const map = new Map<number, SelectedMedia>();
       for (const m of action.payload) map.set(m.id, m);
       state.selectedMedia = Array.from(map.values());
-      persist(state);
     },
 
     removeSelectedMediaById(state, action: PayloadAction<number>) {
       state.selectedMedia = state.selectedMedia.filter((m) => m.id !== action.payload);
-      persist(state);
     },
 
     clearSelectedMedia(state) {
       state.selectedMedia = [];
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("selectedMedia");
-      }
     },
   },
 });
@@ -77,6 +54,7 @@ export const {
   removeSelectedMediaById,
   clearSelectedMedia,
 } = mediaSlice.actions;
+
 export default mediaSlice.reducer;
 
 // Selectors

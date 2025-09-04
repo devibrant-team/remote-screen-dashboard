@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useDispatch } from "react-redux";
 import { saveLayoutId } from "../../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 import BaseModal from "../../Models/BaseModal";
-import CreateInteractivePlaylist from "../InteractivePlaylist";
+import CreateInteractivePlaylist from "../InteractivePlaylist/InteractivePlaylist";
 import { X } from "lucide-react";
 
 type InteractiveLayoutDemosProps = {
@@ -20,7 +20,7 @@ export default function InteractiveLayoutDemos({
     setSelectedLayout(layout);
 
     // Dispatch layout ID
-    const layoutId = layout === "tree" ? 2 : layout === "continuous" ? 4 : null;
+    const layoutId = layout === "tree" ? 2 : layout === "continuous" ? 3 : null;
     if (layoutId) {
       dispatch(saveLayoutId(layoutId));
       setModalOpen(true); // Open CreateInteractivePlaylist modal
