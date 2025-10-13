@@ -9,6 +9,7 @@ import {
   addSlide,
   setSelectedSlideIndex,
 } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
+import WebsiteModal from "./PlaylistsModals/WebsiteModal";
 
 // Static playlist styles treeslider id 2 and continus slider is 4
 const playlistTypes = [
@@ -38,6 +39,7 @@ const iconMap: Record<string, any> = {
 
 const PlaylistTypeModal = () => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [websiteOpen, setWebsiteOpen] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [firstSlideCreated, setFirstSlideCreated] = useState(false);
@@ -69,7 +71,7 @@ const PlaylistTypeModal = () => {
     if (type === "Interactive") {
       setModalOpen(true);
     } else if (type === "Website") {
-      console.log("Website type selected");
+      setWebsiteOpen(true); // ✅ open Website modal
     } else {
       handleCreateAndNavigate();
     }
@@ -108,6 +110,7 @@ const PlaylistTypeModal = () => {
       >
         <InteractiveLayoutDemos onClose={() => setModalOpen(false)} />
       </BaseModal>
+      <WebsiteModal open={websiteOpen} onClose={() => setWebsiteOpen(false)} />
     </>
   );
 };

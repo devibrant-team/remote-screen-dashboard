@@ -9,6 +9,7 @@ export type Screen = {
   name: string;
   branch: string | null;
   ratio: string | null;
+  ratioId: number | null;
   active: boolean;
   lastSeen: string | null;
 };
@@ -31,7 +32,8 @@ async function fetchScreens(): Promise<Screen[]> {
     screenId: r.screenId,
     name: r.screenName ?? "",
     branch: r.branchName ?? null,
-    ratio: r.ratio ?? null, // no more trailing space
+    ratio: r.ratio ?? null,
+    ratioId: r.ratioId,
     active: Boolean(r.active), // 0/1 -> boolean
     lastSeen: r.lastSeen ?? null,
   }));

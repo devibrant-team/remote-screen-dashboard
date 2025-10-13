@@ -1,11 +1,20 @@
 // sections/SingleScreensSection.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { Plus, Monitor, Pencil, Trash2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Monitor,
+  Pencil,
+  Trash2,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import BaseModal from "../../Components/Models/BaseModal";
 import AddScreenModal from "../../Components/Models/AddScreenModal";
 import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
 import { setScreens } from "../../Redux/ScreenManagement/ScreenSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState } from "../../../store";
 
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
@@ -15,7 +24,7 @@ const SingleScreensSection: React.FC = () => {
   const [visible, setVisible] = useState(CHUNK);
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
-console.log(screens)
+
   // Fill Redux with screens
   useEffect(() => {
     if (!isLoading && !isError && Array.isArray(screens)) {
@@ -26,8 +35,15 @@ console.log(screens)
   // Modal close event
   useEffect(() => {
     const handleClose = () => setOpen(false);
-    window.addEventListener("close-add-screen-modal", handleClose as EventListener);
-    return () => window.removeEventListener("close-add-screen-modal", handleClose as EventListener);
+    window.addEventListener(
+      "close-add-screen-modal",
+      handleClose as EventListener
+    );
+    return () =>
+      window.removeEventListener(
+        "close-add-screen-modal",
+        handleClose as EventListener
+      );
   }, []);
 
   const total = screens?.length ?? 0;
@@ -106,7 +122,9 @@ console.log(screens)
             className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
           >
             <div className="font-semibold">Failed to load screens.</div>
-            {error?.message ? <div className="mt-1">{error.message}</div> : null}
+            {error?.message ? (
+              <div className="mt-1">{error.message}</div>
+            ) : null}
             <button
               onClick={() => refetch()}
               className="mt-2 inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100"
@@ -124,8 +142,12 @@ console.log(screens)
                 <div className="mx-auto mb-2 w-fit rounded-full bg-neutral-100 p-2">
                   <Monitor size={18} className="text-neutral-600" />
                 </div>
-                <h3 className="text-sm font-semibold text-neutral-800">No screens yet</h3>
-                <p className="mt-1 text-xs text-neutral-500">Add your first screen to see it here.</p>
+                <h3 className="text-sm font-semibold text-neutral-800">
+                  No screens yet
+                </h3>
+                <p className="mt-1 text-xs text-neutral-500">
+                  Add your first screen to see it here.
+                </p>
                 <button
                   onClick={() => setOpen(true)}
                   className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
@@ -147,7 +169,11 @@ console.log(screens)
                           <div className="mt-0.5 shrink-0">
                             <Monitor
                               size={18}
-                              className={sc.active ? "text-green-600" : "text-neutral-400"}
+                              className={
+                                sc.active
+                                  ? "text-green-600"
+                                  : "text-neutral-400"
+                              }
                               aria-label={sc.active ? "Online" : "Offline"}
                             />
                           </div>
