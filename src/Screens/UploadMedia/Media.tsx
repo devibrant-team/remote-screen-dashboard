@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Upload, ImagePlus, RefreshCw } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetMedia } from "../../ReactQuery/Media/useGetMedia";
@@ -12,15 +12,24 @@ import {
   openLightbox,
 } from "../../Redux/Media/MediaLibrarySlice";
 import type { RootState } from "../../../store";
-import { useRef, useState } from "react";
 import { useUploadMedia } from "../../ReactQuery/Media/PostMedia";
-// imports (add these)
+
+// accept + filter with pdf enabled
 import {
   ACCEPT_ATTR,
   filterDisallowed,
 } from "../../Hook/Playlist/AllowedUploadExt";
 
-// --- Skeleton and EmptyState from your snippet stay the same ---
+// ---- pdf.js (Vite-friendly worker setup) ----
+import {
+  GlobalWorkerOptions,
+  getDocument,
+  type PDFDocumentProxy,
+} from "pdfjs-dist";
+import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
+GlobalWorkerOptions.workerSrc = workerSrc;
+
+// ---------- Small UI bits ----------
 const SkeletonCard: React.FC = () => (
   <div className="relative aspect-square w-full rounded-2xl border border-gray-200 bg-white p-2">
     <div className="h-full w-full animate-pulse rounded-xl bg-gray-200" />
@@ -48,55 +57,71 @@ const EmptyState: React.FC<{ onUpload?: () => void }> = ({ onUpload }) => (
   </div>
 );
 
+// ---------- Helpers ----------
+/**
+ * Render all pages of a PDF file to image Files (webp by default).
+ * dpi ~144 gives crisp results without being huge. Tweak if needed.
+ */
+async function pdfToImages(
+  pdfFile: File,
+  opts?: {
+    dpi?: number;
+    format?: "image/webp" | "image/jpeg";
+    quality?: number;
+    onPage?: (i: number, n: number) => void;
+  }
+): Promise<File[]> {
+  const { dpi = 144, format = "image/webp", quality = 0.92, onPage } = opts ?? {};
+  const buf = await pdfFile.arrayBuffer();
+  const pdf = (await getDocument({ data: buf }).promise) as PDFDocumentProxy;
+
+  const out: File[] = [];
+  const scale = dpi / 72;
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    onPage?.(pageNum, pdf.numPages);
+
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+
+    if (!ctx) throw new Error("2D context not available");
+
+    // pdf.js v4 types want 'canvas' included
+    const renderTask = page.render({
+      canvasContext: ctx,
+      viewport,
+      canvas,
+    });
+    await renderTask.promise;
+
+    const blob: Blob = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b as Blob), format, quality)
+    );
+
+    const ext = format === "image/jpeg" ? "jpg" : "webp";
+    const nameBase = pdfFile.name.replace(/\.pdf$/i, "");
+    const fileName = `${nameBase}-page-${String(pageNum).padStart(2, "0")}.${ext}`;
+    out.push(new File([blob], fileName, { type: format }));
+
+    // cleanup
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+  return out;
+}
+
 const MediaPage: React.FC = () => {
   const dispatch = useDispatch();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [progress, setProgress] = useState<number | null>(null);
+
+  const [progress, setProgress] = useState<number | null>(null); // upload %
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handlePick = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const all = Array.from(e.target.files || []);
-    if (!all.length) return;
-
-    const { good, bad } = filterDisallowed(all);
-
-    // Client-side block / message
-    if (bad.length) {
-      const firstFew = bad
-        .slice(0, 3)
-        .map((f) => f.name)
-        .join(", ");
-      setErrorMsg(
-        `Only images/videos are allowed (jpeg,png,jpg,gif,webp,mp4,mov,avi). Blocked: ${firstFew}${
-          bad.length > 3 ? `, +${bad.length - 3} more` : ""
-        }`
-      );
-    } else {
-      setErrorMsg(null);
-    }
-
-    if (!good.length) {
-      // reset so selecting same files re-triggers onChange
-      e.currentTarget.value = "";
-      return;
-    }
-
-    setProgress(0);
-    upload.mutate(
-      { files: good, onProgress: (p) => setProgress(p) },
-      {
-        onError: (err: any) => {
-          const msg =
-            err?.response?.data?.message ?? "Upload failed. Please try again.";
-          setErrorMsg(msg);
-        },
-        onSettled: () => {
-          setProgress(null);
-          if (fileInputRef.current) fileInputRef.current.value = "";
-        },
-      }
-    );
-  };
+  const [renderStatus, setRenderStatus] = useState<string | null>(null); // PDF render status
 
   const upload = useUploadMedia();
 
@@ -117,7 +142,6 @@ const MediaPage: React.FC = () => {
   // push API payload into Redux
   useEffect(() => {
     if (!data) return;
-    // Your API shape uses { media: [], meta: { last_page, total } }
     dispatch(setItems(data.media ?? []));
     dispatch(
       setMeta({
@@ -129,8 +153,84 @@ const MediaPage: React.FC = () => {
 
   const onUpload = () => fileInputRef.current?.click();
 
+  const handlePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const all = Array.from(e.target.files || []);
+    if (!all.length) return;
+
+    const { good, bad } = filterDisallowed(all);
+
+    if (bad.length) {
+      const firstFew = bad.slice(0, 3).map((f) => f.name).join(", ");
+      setErrorMsg(
+        `Only images/videos/PDFs are allowed. Blocked: ${firstFew}${
+          bad.length > 3 ? `, +${bad.length - 3} more` : ""
+        }`
+      );
+    } else {
+      setErrorMsg(null);
+    }
+
+    if (!good.length) {
+      // reset so selecting same files re-triggers onChange
+      e.currentTarget.value = "";
+      return;
+    }
+
+    try {
+      // Expand PDFs → page images
+      const expanded: File[] = [];
+      for (const f of good) {
+        if (f.type === "application/pdf") {
+          setRenderStatus(`Rendering ${f.name} (preparing pages)…`);
+          const imgs = await pdfToImages(f, {
+            dpi: 144,
+            format: "image/webp",
+            quality: 0.92,
+            onPage: (i, n) =>
+              setRenderStatus(`Rendering ${f.name}: page ${i}/${n}…`),
+          });
+          expanded.push(...imgs);
+        } else {
+          expanded.push(f);
+        }
+      }
+
+      // If a PDF had zero pages (unlikely) or nothing valid, guard:
+      if (!expanded.length) {
+        setErrorMsg("No renderable pages/files found.");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        setRenderStatus(null);
+        return;
+      }
+
+      // Kick off upload for the union set
+      setRenderStatus(null);
+      setProgress(0);
+      upload.mutate(
+        { files: expanded, onProgress: (p: number) => setProgress(p) },
+        {
+          onError: (err: any) => {
+            const msg =
+              err?.response?.data?.message ??
+              "Upload failed. Please try again.";
+            setErrorMsg(msg);
+          },
+          onSettled: () => {
+            setProgress(null);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+          },
+        }
+      );
+    } catch (err: any) {
+      setRenderStatus(null);
+      setProgress(null);
+      setErrorMsg(err?.message ?? "Failed to process PDF.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-10 max-w-7xl px-4 py-6">
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -172,6 +272,26 @@ const MediaPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Status banners */}
+      {renderStatus && (
+        <div
+          className="mb-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800"
+          role="status"
+          aria-live="polite"
+        >
+          {renderStatus}
+        </div>
+      )}
+      {errorMsg && (
+        <div
+          className="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+          role="status"
+          aria-live="polite"
+        >
+          {errorMsg}
+        </div>
+      )}
+
       {/* Content */}
       {isError ? (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">
@@ -187,7 +307,7 @@ const MediaPage: React.FC = () => {
         <EmptyState onUpload={onUpload} />
       ) : (
         <>
-          <div className="grid  grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {items.map((m, idx) => (
               <MediaCard
                 key={m.id}
@@ -195,28 +315,18 @@ const MediaPage: React.FC = () => {
                 storage={m.storage}
                 url={m.media}
                 type={m.type}
-                onClick={() => {
-                  dispatch(openLightbox(idx));
-                }}
+                onClick={() => dispatch(openLightbox(idx))}
               />
             ))}
           </div>
-          {errorMsg && (
-            <div
-              className="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800"
-              role="status"
-              aria-live="polite"
-            >
-              {errorMsg}
-            </div>
-          )}
-          {/* Pager now reads from Redux internally (no props) */}
           <Pager />
         </>
       )}
 
       {/* Lightbox is global (no props) */}
       <Lightbox />
+
+      {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
