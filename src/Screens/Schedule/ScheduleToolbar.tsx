@@ -3,11 +3,12 @@ import { useState } from "react";
 import NormalContent from "./NormalContent";
 import InteractiveContent from "./InteractiveContent";
 import { useNavigate } from "react-router-dom";
-
+import { useStep } from "../../Hook/Schedule/StepContext";
+import StepControl from "./StepControl";
 const ScheduleToolbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-
+  const { stepMinutes } = useStep();
   const handleCancel = () => {
     navigate("/mediacontent");
   };
@@ -55,42 +56,48 @@ const ScheduleToolbar = () => {
 
         {/* Scroll area */}
         <div className="flex h-[calc(100vh-52px)] flex-col gap-4 overflow-y-auto p-4 md:h-auto md:max-h-[calc(100vh-80px)]">
-          {/* Block: Normal Playlists */}
+          {/* ✅ Moved Step control here */}
+          <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+              <h2 className="text-sm font-semibold tracking-wide text-neutral-800">
+                Time Grid Step
+              </h2>
+              <span className="text-xs text-neutral-500">
+                Current: {stepMinutes}m
+              </span>
+            </div>
+            <div className="p-3">
+              <StepControl />
+            </div>
+          </div>
+
+          {/* Existing blocks */}
           <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
               <h1 className="text-sm font-semibold tracking-wide text-neutral-800">
                 Show Playlists
               </h1>
-              <div
-                className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(252,165,165,0.35)]
-"
-              />
+              <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(252,165,165,0.35)]" />
             </div>
             <div className="p-3">
               <NormalContent />
             </div>
           </div>
 
-          {/* Block: Interactive Playlists */}
           <div className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
               <h1 className="text-sm font-semibold tracking-wide text-neutral-800">
                 Interactive Playlists
               </h1>
-              <div
-                className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(252,165,165,0.35)]
-
-"
-              />
+              <div className="h-2 w-2 rounded-full bg-red-500 shadow-[0_0_0_3px_rgba(252,165,165,0.35)]" />
             </div>
             <div className="p-3">
               <InteractiveContent />
             </div>
           </div>
 
-          {/* Subtle footer */}
           <div className="mt-2 rounded-xl border border-dashed border-neutral-200 bg-neutral-50/60 p-3 text-center text-xs text-neutral-500">
-            Tip: Drag your desire playlist directly to the schedule.
+            Tip: Drag your desired playlist directly to the schedule.
           </div>
         </div>
       </nav>

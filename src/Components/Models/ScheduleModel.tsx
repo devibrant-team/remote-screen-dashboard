@@ -1,124 +1,136 @@
 // src/Components/Models/ScheduleModel.tsx
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import React, { useMemo } from "react";
+import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
-import { updateBlockParts } from "../../Redux/Schedule/SheduleSlice";
-
+import { selectSelectedBlockId } from "../../Redux/Schedule/SheduleSlice";
 import ScreenSchedule from "../../Screens/Schedule/ScreenSchedule";
-import GroupSchedule from "../../Screens/Schedule/GroupSchedule";
+import { useSaveScheduleBlock } from "../../ReactQuery/Schedule/SaveBlock";
+import { useGetScheduleDetails } from "../../ReactQuery/Schedule/ScheduleDetails";
 
-type Props = {
-  blockId?: string;
-  onClose?: () => void;
+/** ---------- helpers ---------- */
+
+// "18-10-2025" -> "2025-10-18" (zero-padded, ISO-sortable)
+const toYMD = (df: string) => {
+  const [d, m, y] = df.split("-").map((s) => s.trim());
+  const dd = String(d).padStart(2, "0");
+  const mm = String(m).padStart(2, "0");
+  return `${y}-${mm}-${dd}`;
 };
 
+// "08:00:00" -> seconds
+const tToSec = (t: string) => {
+  const [h = "0", m = "0", s = "0"] = t.split(":");
+  return Number(h) * 3600 + Number(m) * 60 + Number(s);
+};
+
+// Inclusive date-range overlap (per-day expansion semantics)
+const dateOverlap = (
+  aStartYMD: string,
+  aEndYMD: string,
+  bStartYMD: string,
+  bEndYMD: string
+) => {
+  const startMax = aStartYMD > bStartYMD ? aStartYMD : bStartYMD;
+  const endMin = aEndYMD < bEndYMD ? aEndYMD : bEndYMD;
+  return startMax <= endMin;
+};
+
+// Strict time overlap (touching edges NO conflict)
+const timeOverlap = (
+  aStart: string,
+  aEnd: string,
+  bStart: string,
+  bEnd: string
+) => tToSec(aStart) < tToSec(bEnd) && tToSec(bStart) < tToSec(aEnd);
+
+type Props = { blockId?: string; onClose?: () => void };
+
 const ScheduleModel: React.FC<Props> = ({ blockId, onClose }) => {
-  const dispatch = useDispatch();
+  // Prefer explicit prop; fallback to Redux-selected block id
+  const selectedBlockId = useSelector(selectSelectedBlockId);
+  const effectiveBlockId = blockId ?? selectedBlockId ?? undefined;
 
-  // read block to hydrate defaults
+  // Current block from Redux (the one being edited)
   const block = useSelector((s: RootState) =>
-    s.schedule.blocks.find((b) => b.id === blockId)
+    s.schedule.blocks.find((b) => b.id === effectiveBlockId)
   );
 
-  // controlled selections in parent
-  const [tab, setTab] = useState<"screens" | "groups">("screens");
-  const [screensSel, setScreensSel] = useState<Array<{ id: number | string }>>(
-    []
-  );
-  const [groupSel, setGroupSel] = useState<number | string | null>(null);
+  // Server schedules mapped to ScheduleBlock-like rows
+  const { data: serverBlocks = [] } = useGetScheduleDetails();
 
-  // hydrate once when block changes
-  useEffect(() => {
-    if (!block) {
-      setScreensSel([]);
-      setGroupSel(null);
-      return;
+  // Screens that conflict with the *current* block
+  const conflictedScreenIds = useMemo(() => {
+    const set = new Set<number | string>();
+    if (!block) return set;
+
+    const aStartYMD = toYMD(block.startDate);
+    const aEndYMD = toYMD(block.endDate);
+    const aStartT = block.startTime;
+    const aEndT = block.endTime;
+
+    for (const sb of serverBlocks) {
+      // If the server returns the same id as the local one, skip self
+      if (String(sb.id) === String(block.id)) continue;
+
+      const bStartYMD = toYMD(sb.startDate);
+      const bEndYMD = toYMD(sb.endDate);
+
+      // ✅ No conflict if dates don't overlap (same time but different dates is OK)
+      if (!dateOverlap(aStartYMD, aEndYMD, bStartYMD, bEndYMD)) continue;
+
+      // ✅ Time windows must also overlap
+      if (!timeOverlap(aStartT, aEndT, sb.startTime, sb.endTime)) continue;
+
+      for (const scr of sb.screens ?? []) {
+        if (scr?.screenId != null) set.add(scr.screenId);
+      }
     }
-    setScreensSel(
-      Array.isArray(block.screens)
-        ? block.screens.map((s) => ({ id: s.screenId }))
-        : []
-    );
-    setGroupSel(
-      typeof (block as any).groupId !== "undefined" &&
-      (block as any).groupId !== null
-        ? (block as any).groupId
-        : null
-    );
-  }, [block]);
+    return set;
+  }, [
+    block?.id,
+    block?.startDate,
+    block?.endDate,
+    block?.startTime,
+    block?.endTime,
+    serverBlocks,
+  ]);
 
-  const tabBtn = (active: boolean) =>
-    [
-      "px-3 py-1.5 text-sm rounded-md transition",
-      active
-        ? "bg-white shadow-sm border border-neutral-200"
-        : "text-neutral-600 hover:text-neutral-800",
-    ].join(" ");
+  // Save
+  const { mutate, isPending } = useSaveScheduleBlock();
+  const canSave = !!block && !isPending;
 
-  const handleApply = () => {
-    if (!blockId) return;
-
-    dispatch(
-      updateBlockParts({
-        id: blockId,
-        // only send if there are selections
-        screens: screensSel.length
-          ? screensSel.map((s) => ({ screenId: s.id }))
-          : undefined,
-        groupId: groupSel != null ? groupSel : undefined,
-      })
-    );
-
-    onClose?.();
+  const handleSave = () => {
+    if (!block) return;
+    // Send as-is; your hook transforms & sends token
+    mutate(block, { onSuccess: () => onClose?.() });
   };
 
   return (
     <div>
-      {/* Toggle */}
-      <div className="mb-3 flex items-center">
-        <div className="inline-flex rounded-lg border border-neutral-200 bg-neutral-50 p-0.5">
-          <button className={tabBtn(tab === "screens")} onClick={() => setTab("screens")}>
-            Screens
-          </button>
-          <button className={tabBtn(tab === "groups")} onClick={() => setTab("groups")}>
-            Groups
-          </button>
-        </div>
-      </div>
-
-      {/* Screens (controlled) */}
-      <section className={tab === "groups" ? "hidden" : ""} aria-hidden={tab === "groups"}>
-        <ScreenSchedule
-          blockId={blockId}
-          value={screensSel}
-          onChange={setScreensSel}
-          // no onDone here; parent owns Apply
-        />
-      </section>
-
-      {/* Groups (controlled) */}
-      <section className={tab === "screens" ? "hidden" : ""} aria-hidden={tab === "screens"}>
-        <GroupSchedule
-          blockId={blockId}
-          value={groupSel}
-          onChange={setGroupSel}
-          // no onDone here; parent owns Apply
-        />
-      </section>
+      {/* Pass conflict set down so UI can disable conflicted screens */}
+      <ScreenSchedule
+        blockId={effectiveBlockId}
+        defaultFilter="all"
+        conflictedScreenIds={conflictedScreenIds}
+      />
 
       <div className="mt-4 flex justify-end gap-2">
         <button
           onClick={onClose}
           className="rounded-md border border-neutral-200 px-3 py-1.5 text-sm hover:bg-neutral-50"
         >
-          Cancel
+          Close
         </button>
+
         <button
-          onClick={handleApply}
-          className="rounded-md bg-red-500 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-600"
-          disabled={!blockId}
+          onClick={handleSave}
+          disabled={!canSave}
+          className={[
+            "rounded-md px-4 py-1.5 text-sm font-semibold text-white",
+            canSave ? "bg-red-500 hover:bg-red-600" : "bg-red-300 cursor-not-allowed",
+          ].join(" ")}
         >
-          Apply
+          {isPending ? "Saving…" : "Save"}
         </button>
       </div>
     </div>

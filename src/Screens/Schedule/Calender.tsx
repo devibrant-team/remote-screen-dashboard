@@ -18,9 +18,15 @@ import {
   removeBlock,
   selectCalendarEvents,
   selectBlocks,
+  setSelectedBlockId,
+  clearSelectedBlockId,
+  selectSelectedBlockId,
 } from "../../Redux/Schedule/SheduleSlice";
+
 import { shallowEqual, useDispatch, useSelector } from "react-redux";
 import ScheduleModel from "../../Components/Models/ScheduleModel";
+import { useStep } from "../../Hook/Schedule/StepContext";
+import { nanoid } from "@reduxjs/toolkit";
 
 /** ---------- Utils ---------- */
 const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
@@ -44,9 +50,10 @@ function hasOverlap(
 export default function Calender() {
   const dispatch = useDispatch();
   const calRef = useRef<FullCalendar | null>(null);
-  const events = useSelector(selectCalendarEvents); // memoized, no warning
-
+  const events = useSelector(selectCalendarEvents);
   const savedBlocks = useSelector(selectBlocks, shallowEqual);
+  const selectedBlockId = useSelector(selectSelectedBlockId);
+
   // ⬇️ modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clickedEvent, setClickedEvent] = useState<{
@@ -60,9 +67,7 @@ export default function Calender() {
   }, [savedBlocks]);
 
   // grid step UI (local to component)
-  const [stepMinutes, setStepMinutes] = useState<number>(10);
-  const [customStep, setCustomStep] = useState<string>("");
-
+  const { stepMinutes } = useStep();
   const stepMs = stepMinutes * 60_000;
   const floorToStep = (d: Date) =>
     new Date(Math.floor(d.getTime() / stepMs) * stepMs);
@@ -109,52 +114,6 @@ export default function Calender() {
 
   return (
     <div className="w-full min-h-screen rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-      {/* Step control */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-semibold text-black">Step:</span>
-
-        <div className="ml-2 flex items-center gap-1">
-          <input
-            type="number"
-            min={1}
-            placeholder="Custom (min)"
-            className="w-28 rounded-md border border-neutral-300 px-2 py-1 text-black"
-            value={customStep}
-            onChange={(e) => setCustomStep(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const n = Number(customStep);
-                if (Number.isFinite(n) && n >= 1) setStepMinutes(Math.floor(n));
-              }
-            }}
-          />
-          {[5, 10, 15].map((m) => (
-            <button
-              key={m}
-              onClick={() => setStepMinutes(m)}
-              className={[
-                "rounded-md border px-2 py-1",
-                stepMinutes === m
-                  ? "border-red-700 bg-red-500 text-white"
-                  : "border-red-500 bg-white text-black hover:bg-red-500 hover:text-white",
-              ].join(" ")}
-            >
-              {m}m
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              const n = Number(customStep);
-              if (Number.isFinite(n) && n >= 1) setStepMinutes(Math.floor(n));
-            }}
-            className="rounded-md border border-red-500 bg-white px-2 py-1 text-black hover:bg-red-500 hover:text-white"
-          >
-            Set
-          </button>
-          <span className="ml-2 text-black/60">Current: {stepMinutes}m</span>
-        </div>
-      </div>
-
       <FullCalendar
         ref={calRef as any}
         plugins={[timeGridPlugin, interactionPlugin]}
@@ -191,13 +150,14 @@ export default function Calender() {
         droppable
         editable
         eventOverlap={false}
-        // Prevent overlaps against current rendered events
+        // prevent overlaps against current rendered events
         eventAllow={(dropInfo, draggedEvent) => {
           const start = dropInfo.start;
           const end = dropInfo.end;
           const exceptId = draggedEvent?.id ?? null;
           return !hasOverlap(events, start, end, exceptId);
         }}
+
         // External item dropped onto calendar
         eventReceive={(info: EventReceiveArg) => {
           const ev = info.event;
@@ -208,14 +168,16 @@ export default function Calender() {
               ? new Date(start.getTime() + durationSec * 1000)
               : ceilToStep(new Date(start.getTime() + stepMinutes * 60 * 1000));
 
-          // guard overlaps
           if (hasOverlap(events, start, end, null)) {
             ev.remove();
             return;
           }
 
+          // Generate an id so we can immediately select the new block
+          const newId = nanoid();
           dispatch(
             addBlockFromISO({
+              idOverride: newId,
               title: ev.title || "Playlist",
               startISO: start.toISOString(),
               endISO: end.toISOString(),
@@ -226,53 +188,52 @@ export default function Calender() {
             })
           );
 
-          // prevent “ghost” temp event
-          ev.remove();
+          dispatch(setSelectedBlockId(newId)); // select the new block
+          setClickedEvent({
+            id: `${newId}-${start.toISOString().slice(0, 10)}`,
+            title: ev.title || "Playlist",
+            blockId: newId,
+          });
+          setIsModalOpen(true);
+
+          ev.remove(); // prevent ghost
         }}
+
         // Drag existing event
         eventDrop={(info: EventDropArg) => {
-          const blockId = info.event.extendedProps?.blockId as
-            | string
-            | undefined;
+          const blockId = info.event.extendedProps?.blockId as string | undefined;
           if (!blockId) {
             info.revert();
             return;
           }
-
           const start = info.event.start!;
           const end = info.event.end!;
-          // prevent overlaps
           if (hasOverlap(events, start, end, info.event.id)) {
             info.revert();
             return;
           }
-
           dispatch(
             updateBlockFromISO({
               id: blockId,
               startISO: start.toISOString(),
               endISO: end.toISOString(),
-              // zone omitted => "local"
             })
           );
         }}
+
         // Resize existing event
         eventResize={(info: EventResizeDoneArg) => {
-          const blockId = info.event.extendedProps?.blockId as
-            | string
-            | undefined;
+          const blockId = info.event.extendedProps?.blockId as string | undefined;
           if (!blockId) {
             info.revert();
             return;
           }
-
           const start = info.event.start!;
           const end = info.event.end!;
           if (hasOverlap(events, start, end, info.event.id)) {
             info.revert();
             return;
           }
-
           dispatch(
             updateBlockFromISO({
               id: blockId,
@@ -281,11 +242,15 @@ export default function Calender() {
             })
           );
         }}
-        // ⬇️ Open the modal when a block is clicked
+
+        // Click: set selected block + open drawer
         eventClick={(info: EventClickArg) => {
-          const blockId = info.event.extendedProps?.blockId as
-            | string
-            | undefined;
+          const blockId = info.event.extendedProps?.blockId as string | undefined;
+          if (blockId) {
+            dispatch(setSelectedBlockId(blockId));
+          } else {
+            dispatch(clearSelectedBlockId());
+          }
           setClickedEvent({
             id: info.event.id,
             title: info.event.title || "",
@@ -293,21 +258,27 @@ export default function Calender() {
           });
           setIsModalOpen(true);
         }}
+
+        // Add a class to the currently selected block for visual cue
+        eventClassNames={(arg) => {
+          const isSelected = arg.event.extendedProps?.blockId === selectedBlockId;
+          return isSelected ? ["ring-2", "ring-red-400", "ring-offset-2"] : [];
+        }}
+
         // Render + inline delete button
         eventContent={(arg) => {
-          const blockId = arg.event.extendedProps?.blockId as
-            | string
-            | undefined;
+          const blockId = arg.event.extendedProps?.blockId as string | undefined;
           const screensCount = Array.isArray(arg.event.extendedProps?.screens)
             ? arg.event.extendedProps.screens.length
             : 0;
-
-          // if you store a single primitive groupId (number|string)
           const groupCount =
             arg.event.extendedProps?.groupId !== undefined &&
             arg.event.extendedProps?.groupId !== null
               ? 1
               : 0;
+
+          const selected = blockId && blockId === selectedBlockId;
+
           return (
             <div className="ev-wrap relative h-full w-full px-1 py-0.5">
               <button
@@ -323,18 +294,23 @@ export default function Calender() {
                 ×
               </button>
 
-              <div className="ev-card ev-confirmed">
+              <div
+                className={[
+                  "ev-card ev-confirmed",
+                  selected ? "ring-2 ring-white/70  outline-2 outline-red-400" : "",
+                ].join(" ")}
+              >
                 {arg.timeText && <div className="ev-time">{arg.timeText}</div>}
                 <div className="ev-title">{arg.event.title}</div>
                 <div className="ev-meta font-bold">
-                  Groups: {groupCount} ,Screens:{" "}
-                  {screensCount}
+                  Groups: {groupCount} ,Screens: {screensCount}
                 </div>
               </div>
             </div>
           );
         }}
-        // Tweak font sizing based on available height (unchanged)
+
+        // Font-size tuning (unchanged)
         eventDidMount={(info) => {
           const wrap = info.el.querySelector(".ev-wrap") as HTMLElement | null;
           const card = info.el.querySelector(".ev-card") as HTMLElement | null;
@@ -362,39 +338,60 @@ export default function Calender() {
           card.style.setProperty("--ev-fs", `${fs}px`);
           card.style.setProperty("--ev-lines", `${lines}`);
         }}
+
         // ← Render Redux-derived events
         events={events}
       />
 
-      {/* Simple modal for ScheduleModel */}
+      {/* Modal / Drawer */}
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          aria-modal="true"
-          role="dialog"
-        >
+        <div className="fixed inset-0 z-50" aria-modal="true" role="dialog" aria-labelledby="schedule-drawer-title">
+          {/* Backdrop */}
           <div
             className="absolute inset-0 bg-black/40"
-            onClick={() => setIsModalOpen(false)}
+            onClick={() => {
+              setIsModalOpen(false);
+              dispatch(clearSelectedBlockId()); // clear on close
+            }}
           />
-          <div className="relative z-10 w-full max-w-5xl rounded-2xl bg-white p-4 shadow-2xl">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="text-lg font-semibold">
+
+          {/* Right drawer */}
+          <aside
+            className={[
+              "pointer-events-auto fixed right-0 top-0 h-full w-full max-w-xl",
+              "bg-white shadow-2xl",
+              "transition-transform duration-300 ease-out",
+              "translate-x-0",
+            ].join(" ")}
+          >
+            {/* Sticky header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-neutral-200 bg-white/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+              <div className="text-lg font-semibold" id="schedule-drawer-title">
                 {clickedEvent?.title || "Schedule"}
               </div>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  dispatch(clearSelectedBlockId());
+                }}
                 className="rounded-md border border-neutral-200 px-3 py-1 text-sm hover:bg-neutral-50"
+                autoFocus
               >
                 Close
               </button>
             </div>
 
-            <ScheduleModel
-              blockId={clickedEvent?.blockId}
-              onClose={() => setIsModalOpen(false)}
-            />
-          </div>
+            {/* Drawer body */}
+            <div className="h-[calc(100%-52px)] overflow-y-auto p-4">
+              <ScheduleModel
+                blockId={clickedEvent?.blockId}
+                onClose={() => {
+                  setIsModalOpen(false);
+                  dispatch(clearSelectedBlockId());
+                }}
+              />
+            </div>
+          </aside>
         </div>
       )}
     </div>

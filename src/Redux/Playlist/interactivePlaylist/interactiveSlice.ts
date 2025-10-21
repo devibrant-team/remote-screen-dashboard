@@ -30,7 +30,7 @@ const initialState: InteractiveState = {
   details: null,
   status: "idle",
   error: null,
-  isEditing: false,              // 👈 add this
+  isEditing: false, 
 };
 
 export const fetchInteractiveDetails = createAsyncThunk<
@@ -41,7 +41,7 @@ export const fetchInteractiveDetails = createAsyncThunk<
   try {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    const res = await fetch(`https://srv964353.hstgr.cloud/api/playlistdetails/${id}`, {
+    const res = await fetch(`https://srv1005364.hstgr.cloud/api/playlistdetails/${id}`, {
       headers: {
         Accept: "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -3,7 +3,8 @@ import axios from "axios";
 // If you want a runtime-editable base URL, you can hook it up later.
 // For now, just use your default API base:
 // const DEFAULT_BASE_URL = "https://srv964353.hstgr.cloud/api/";
-const DEFAULT_BASE_URL = "http://192.168.10.107/remote-screen-backend/public/api/";
+const DEFAULT_BASE_URL = "https://srv1005364.hstgr.cloud/api/";
+
 export const api = axios.create({
   baseURL: DEFAULT_BASE_URL,
   withCredentials: false,

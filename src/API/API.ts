@@ -1,5 +1,5 @@
 // export const http = "http://192.168.10.107/remote-screen-backend/public/api/";
-export const http =  "https://srv964353.hstgr.cloud/api/";
+export const http =  "https://srv1005364.hstgr.cloud/api/";
 export const loginApi = `${http}dashboard/login`
 export const playlisttypeApi = `${http}getplaylistStyle`
 export const PlaylistPostApi = `${http}postNormal`
@@ -22,3 +22,6 @@ export const insertRatioApi = `${http}insertratio`
 export const deletePlaylistApi = `${http}deleteplaylist`
 export const PostmediaApi = `${http}postmedia`
 export const DeletemediaApi = `${http}deletemedia`
+export const postscheduleApi = `${http}postschedule`
+export const GetScheduleDetailsApi= `${http}dashboard/schedules
+`

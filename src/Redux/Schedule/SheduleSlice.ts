@@ -21,14 +21,15 @@ export type ScheduleBlock = {
   endTime: string; // "HH:mm:ss"
   ratio?: string;
   playlistId?: string | number;
-  /** Selected screens, shape: [{ id: 1 }, { id: "abc" }] */
+  /** Selected screens, shape: [{ screenId: 1 }, { screenId: "abc" }] */
   screens?: Array<{ screenId: number | string }>;
-  groupId?: number|string;
+  groupId?: number | string;
 };
 
 type ScheduleState = {
   blocks: ScheduleBlock[];
   timeZone: string;
+  selectedBlockId: string | null; // ⭐ NEW
 };
 
 // ————————————————————————
@@ -50,7 +51,7 @@ function dayFirstToISO(dateStr: string): string {
   return `${y}-${mon}-${day}`;
 }
 
-const TIME_FMT = "H:mm:ss";
+const TIME_FMT = "HH:mm:ss";
 
 /** "8" → "08:00:00", "8:5" → "08:05:00", "08:00" → "08:00:00" */
 function normalizeTime(t: string): string {
@@ -122,6 +123,7 @@ export function expandBlockToEvents(
 const initialState: ScheduleState = {
   blocks: [],
   timeZone: "local", // e.g., 'Asia/Beirut' | 'utc' | 'local'
+  selectedBlockId: null, // ⭐ NEW
 };
 
 const scheduleSlice = createSlice({
@@ -151,11 +153,13 @@ const scheduleSlice = createSlice({
         startISO: string;
         endISO: string;
         playlistId?: string | number;
-        /** Selected screens from UI: [{id: 1}, {id: 5}] */
+        /** Selected screens from UI: [{screenId: 1}, {screenId: 5}] */
         screens?: Array<{ screenId: number | string }>;
-        groupId?:  number | string ;
+        groupId?: number | string;
         /** Optional override; defaults to state.timeZone */
         zone?: string;
+        /** ⭐ Optional: pass a custom id so UI can select immediately */
+        idOverride?: string; // ⭐ NEW (optional)
       }>
     ) => {
       const {
@@ -166,16 +170,19 @@ const scheduleSlice = createSlice({
         screens,
         groupId,
         zone,
+        idOverride, // ⭐
       } = action.payload;
       const useZone = zone ?? state.timeZone ?? "local";
 
       const s = DateTime.fromISO(startISO, { zone: useZone });
       const e = DateTime.fromISO(endISO, { zone: useZone });
+      const id = idOverride ?? nanoid(); // ⭐
+
       state.blocks.push({
-        id: nanoid(),
+        id,
         title,
-        startDate: s.toFormat("d-M-yyyy"),
-        endDate: e.toFormat("d-M-yyyy"),
+        startDate: s.toFormat("dd-MM-yyyy"),
+        endDate: e.toFormat("dd-MM-yyyy"),
         startTime: s.toFormat(TIME_FMT), // HH:mm:ss
         endTime: e.toFormat(TIME_FMT), // HH:mm:ss
         playlistId,
@@ -202,8 +209,8 @@ const scheduleSlice = createSlice({
       const e = DateTime.fromISO(endISO, { zone: useZone });
       const b = state.blocks.find((x) => x.id === id);
       if (b) {
-        b.startDate = s.toFormat("d-M-yyyy");
-        b.endDate = e.toFormat("d-M-yyyy");
+        b.startDate = s.toFormat("dd-MM-yyyy");
+        b.endDate = e.toFormat("dd-MM-yyyy");
         b.startTime = s.toFormat(TIME_FMT);
         b.endTime = e.toFormat(TIME_FMT);
       }
@@ -221,11 +228,30 @@ const scheduleSlice = createSlice({
 
     removeBlock: (state, action: PayloadAction<{ id: string }>) => {
       state.blocks = state.blocks.filter((b) => b.id !== action.payload.id);
+      // ⭐ Clear selection if we removed the selected block
+      if (state.selectedBlockId === action.payload.id) {
+        state.selectedBlockId = null;
+      }
     },
 
     /** Replace all (optional) */
     setBlocks: (state, action: PayloadAction<ScheduleBlock[]>) => {
       state.blocks = action.payload;
+      // ⭐ If the selected id no longer exists after replace, clear it
+      if (
+        state.selectedBlockId &&
+        !state.blocks.some((b) => b.id === state.selectedBlockId)
+      ) {
+        state.selectedBlockId = null;
+      }
+    },
+
+    /** ⭐ Selection controls */
+    setSelectedBlockId: (state, action: PayloadAction<string | null>) => {
+      state.selectedBlockId = action.payload;
+    },
+    clearSelectedBlockId: (state) => {
+      state.selectedBlockId = null;
     },
   },
 });
@@ -238,6 +264,8 @@ export const {
   updateBlockParts,
   removeBlock,
   setBlocks,
+  setSelectedBlockId, // ⭐
+  clearSelectedBlockId, // ⭐
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;
@@ -247,6 +275,12 @@ export default scheduleSlice.reducer;
 // ————————————————————————
 export const selectBlocks = (s: RootState) => s.schedule.blocks;
 export const selectTimeZone = (s: RootState) => s.schedule.timeZone ?? "local";
+export const selectSelectedBlockId = (s: RootState) =>
+  s.schedule.selectedBlockId; // ⭐
+export const selectSelectedBlock = (s: RootState) =>
+  s.schedule.selectedBlockId
+    ? s.schedule.blocks.find((b) => b.id === s.schedule.selectedBlockId) ?? null
+    : null; // ⭐
 
 // ✅ Memoized selector: same inputs => same array reference
 export const selectCalendarEvents = createSelector(

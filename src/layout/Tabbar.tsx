@@ -1,16 +1,12 @@
+// ToolBar.tsx
 import { useState } from "react";
 import {
-  LayoutDashboard,
-  Monitor,
-  MonitorPlay,
-  CalendarDays,
-  User,
-  LifeBuoy,
-  Menu,
-  X,
-  UploadCloudIcon
+  LayoutDashboard, Monitor, MonitorPlay, CalendarDays, User, LifeBuoy, Menu, X, UploadCloudIcon
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import fetchScheduleDetails from "../ReactQuery/Schedule/ScheduleDetails"; // default export is fine
+import type { ScheduleBlock } from "../Redux/Schedule/SheduleSlice";
 
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -27,6 +23,25 @@ const ToolBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+  const qc = useQueryClient();
+
+  const prewarmSchedule = async () => {
+    const data = await qc.ensureQueryData<ScheduleBlock[]>({
+      queryKey: ["schedule-details"],
+      queryFn: fetchScheduleDetails,
+      staleTime: 60_000,
+    });
+    console.log("[schedule-details] (ensureQueryData)", data);
+    return data;
+  };
+
+  const go = async (path: string) => {
+    if (path === "/schedule") {
+      await prewarmSchedule();
+    }
+    navigate(path);
+    setIsOpen(false);
+  };
 
   return (
     <>
@@ -41,26 +56,26 @@ const ToolBar = () => {
 
       {/* Sidebar Navigation */}
       <aside
-        className={`fixed top-0 left-0 z-40 h-screen w-70 bg-white  shadow-md transform transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 z-40 h-screen w-70 bg-white shadow-md transform transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:static`}
       >
         <div className="p-6 flex flex-col h-full">
-          {/* Header */}
           <h1 className="text-2xl font-bold text-[var(--mainred)] mb-6">
             Admin Dashboard
           </h1>
 
-          {/* Navigation Items */}
           <nav className="flex flex-col gap-5 overflow-y-auto flex-1 ">
-            {menuItems.map(({ label, icon: Icon, path }, index) => {
+            {menuItems.map(({ label, icon: Icon, path }) => {
               const isActive = currentPath.startsWith(path);
               return (
                 <button
-                  key={`${label}-${index}`}
-                  onClick={() => {
-                    navigate(path);
-                    setIsOpen(false);
+                  key={path}
+                  onClick={() => go(path)}
+                  onMouseEnter={() => {
+                    if (path === "/schedule") {
+                      prewarmSchedule(); // logs on hover too
+                    }
                   }}
                   className={`flex items-center gap-3 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors whitespace-nowrap ${
                     isActive
@@ -75,7 +90,6 @@ const ToolBar = () => {
             })}
           </nav>
 
-          {/* Footer */}
           <div className="pt-6 text-sm text-gray-500">v1.0.0</div>
         </div>
       </aside>
