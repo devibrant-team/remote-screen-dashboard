@@ -23,5 +23,4 @@ export const deletePlaylistApi = `${http}deleteplaylist`
 export const PostmediaApi = `${http}postmedia`
 export const DeletemediaApi = `${http}deletemedia`
 export const postscheduleApi = `${http}postschedule`
-export const GetScheduleDetailsApi= `${http}dashboard/schedules
-`
+export const GetScheduleDetailsApi= `${http}dashboard/schedules`;

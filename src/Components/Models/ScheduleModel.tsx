@@ -1,4 +1,3 @@
-// src/Components/Models/ScheduleModel.tsx
 import React, { useMemo } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from "../../../store";
@@ -7,9 +6,7 @@ import ScreenSchedule from "../../Screens/Schedule/ScreenSchedule";
 import { useSaveScheduleBlock } from "../../ReactQuery/Schedule/SaveBlock";
 import { useGetScheduleDetails } from "../../ReactQuery/Schedule/ScheduleDetails";
 
-/** ---------- helpers ---------- */
-
-// "18-10-2025" -> "2025-10-18" (zero-padded, ISO-sortable)
+// "18-10-2025" -> "2025-10-18"
 const toYMD = (df: string) => {
   const [d, m, y] = df.split("-").map((s) => s.trim());
   const dd = String(d).padStart(2, "0");
@@ -23,7 +20,6 @@ const tToSec = (t: string) => {
   return Number(h) * 3600 + Number(m) * 60 + Number(s);
 };
 
-// Inclusive date-range overlap (per-day expansion semantics)
 const dateOverlap = (
   aStartYMD: string,
   aEndYMD: string,
@@ -35,7 +31,6 @@ const dateOverlap = (
   return startMax <= endMin;
 };
 
-// Strict time overlap (touching edges NO conflict)
 const timeOverlap = (
   aStart: string,
   aEnd: string,
@@ -50,15 +45,15 @@ const ScheduleModel: React.FC<Props> = ({ blockId, onClose }) => {
   const selectedBlockId = useSelector(selectSelectedBlockId);
   const effectiveBlockId = blockId ?? selectedBlockId ?? undefined;
 
-  // Current block from Redux (the one being edited)
+  // current editable block from Redux
   const block = useSelector((s: RootState) =>
-    s.schedule.blocks.find((b) => b.id === effectiveBlockId)
+    s.schedule.blocks.find((b) => String(b.id) === String(effectiveBlockId))
   );
 
-  // Server schedules mapped to ScheduleBlock-like rows
+  // server schedules (used to detect conflicts)
   const { data: serverBlocks = [] } = useGetScheduleDetails();
 
-  // Screens that conflict with the *current* block
+  // build set of conflicting screenIds
   const conflictedScreenIds = useMemo(() => {
     const set = new Set<number | string>();
     if (!block) return set;
@@ -69,22 +64,21 @@ const ScheduleModel: React.FC<Props> = ({ blockId, onClose }) => {
     const aEndT = block.endTime;
 
     for (const sb of serverBlocks) {
-      // If the server returns the same id as the local one, skip self
       if (String(sb.id) === String(block.id)) continue;
 
       const bStartYMD = toYMD(sb.startDate);
       const bEndYMD = toYMD(sb.endDate);
 
-      // ✅ No conflict if dates don't overlap (same time but different dates is OK)
       if (!dateOverlap(aStartYMD, aEndYMD, bStartYMD, bEndYMD)) continue;
-
-      // ✅ Time windows must also overlap
       if (!timeOverlap(aStartT, aEndT, sb.startTime, sb.endTime)) continue;
 
       for (const scr of sb.screens ?? []) {
-        if (scr?.screenId != null) set.add(scr.screenId);
+        if (scr?.screenId != null) {
+          set.add(scr.screenId);
+        }
       }
     }
+
     return set;
   }, [
     block?.id,
@@ -95,25 +89,54 @@ const ScheduleModel: React.FC<Props> = ({ blockId, onClose }) => {
     serverBlocks,
   ]);
 
-  // Save
+  // mutation hook that saves a block
   const { mutate, isPending } = useSaveScheduleBlock();
+
   const canSave = !!block && !isPending;
 
   const handleSave = () => {
     if (!block) return;
-    // Send as-is; your hook transforms & sends token
-    mutate(block, { onSuccess: () => onClose?.() });
+
+    // 🔴 normalize for API / DTO
+    // assume your API expects DD-MM-YYYY for startDate/endDate,
+    // and arrays for groups/screens exactly as stored.
+
+    const dto = {
+      // force id to string, TS happy + backend happy
+      id: String(block.id),
+
+      title: block.title,
+      playlistId: block.playlistId,
+
+      startDate: block.startDate, // still "DD-MM-YYYY" in your local state
+      endDate: block.endDate,
+      startTime: block.startTime,
+      endTime: block.endTime,
+
+      // always send arrays (never undefined)
+      groups: block.groups ?? [],
+      screens: block.screens ?? [],
+
+      ratio: block.ratio,
+    };
+
+    mutate(dto, {
+      onSuccess: () => {
+        onClose?.();
+      },
+    });
   };
 
   return (
     <div>
-      {/* Pass conflict set down so UI can disable conflicted screens */}
+      {/* device/group picker */}
       <ScreenSchedule
         blockId={effectiveBlockId}
         defaultFilter="all"
         conflictedScreenIds={conflictedScreenIds}
       />
 
+      {/* footer buttons */}
       <div className="mt-4 flex justify-end gap-2">
         <button
           onClick={onClose}
@@ -127,7 +150,9 @@ const ScheduleModel: React.FC<Props> = ({ blockId, onClose }) => {
           disabled={!canSave}
           className={[
             "rounded-md px-4 py-1.5 text-sm font-semibold text-white",
-            canSave ? "bg-red-500 hover:bg-red-600" : "bg-red-300 cursor-not-allowed",
+            canSave
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-red-300 cursor-not-allowed",
           ].join(" ")}
         >
           {isPending ? "Saving…" : "Save"}

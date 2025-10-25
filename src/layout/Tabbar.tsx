@@ -1,13 +1,18 @@
 // ToolBar.tsx
 import { useState } from "react";
 import {
-  LayoutDashboard, Monitor, MonitorPlay, CalendarDays, User, LifeBuoy, Menu, X, UploadCloudIcon
+  LayoutDashboard,
+  Monitor,
+  MonitorPlay,
+  CalendarDays,
+  User,
+  LifeBuoy,
+  Menu,
+  X,
+  UploadCloudIcon,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import fetchScheduleDetails from "../ReactQuery/Schedule/ScheduleDetails"; // default export is fine
-import type { ScheduleBlock } from "../Redux/Schedule/SheduleSlice";
-
+import SelectScreenModal from "../Components/Models/SelectScreenModal";
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
@@ -23,24 +28,26 @@ const ToolBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
-  const qc = useQueryClient();
+  const [ScheduleisOpen, setScheduleIsOpen] = useState(false);
 
-  const prewarmSchedule = async () => {
-    const data = await qc.ensureQueryData<ScheduleBlock[]>({
-      queryKey: ["schedule-details"],
-      queryFn: fetchScheduleDetails,
-      staleTime: 60_000,
-    });
-    console.log("[schedule-details] (ensureQueryData)", data);
-    return data;
-  };
-
-  const go = async (path: string) => {
+  // when user clicks any sidebar item
+  const handleNavClick = async (path: string) => {
     if (path === "/schedule") {
-      await prewarmSchedule();
+      // 2. open the SelectScreenModal instead of navigating directly
+      setScheduleIsOpen(true);
+      // 3. close mobile drawer
+      setIsOpen(false);
+      return;
     }
+
+    // normal case: navigate immediately
     navigate(path);
     setIsOpen(false);
+  };
+
+  // called AFTER the user confirms inside the modal
+  const goToSchedule = () => {
+    navigate("/schedule");
   };
 
   return (
@@ -71,12 +78,7 @@ const ToolBar = () => {
               return (
                 <button
                   key={path}
-                  onClick={() => go(path)}
-                  onMouseEnter={() => {
-                    if (path === "/schedule") {
-                      prewarmSchedule(); // logs on hover too
-                    }
-                  }}
+                  onClick={() => handleNavClick(path)}
                   className={`flex items-center gap-3 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors whitespace-nowrap ${
                     isActive
                       ? "bg-[var(--mainred)] text-white"
@@ -93,6 +95,11 @@ const ToolBar = () => {
           <div className="pt-6 text-sm text-gray-500">v1.0.0</div>
         </div>
       </aside>
+      <SelectScreenModal
+        open={ScheduleisOpen}
+        onClose={() => setScheduleIsOpen(false)}
+        onConfirmNavigate={goToSchedule}
+      />
     </>
   );
 };

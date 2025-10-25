@@ -1,4 +1,3 @@
-// src/Redux/Schedule/scheduleSlice.ts
 import {
   createSlice,
   nanoid,
@@ -9,41 +8,38 @@ import { DateTime } from "luxon";
 import type { EventInput } from "@fullcalendar/core";
 import type { RootState } from "../../../store";
 
-// ————————————————————————
-// Types
-// ————————————————————————
+/* ---------------- Types ---------------- */
+
 export type ScheduleBlock = {
-  id: string;
+  id: string | number;
   title: string;
-  startDate: string; // day-first, e.g. "31-8-2025"
-  endDate: string; // day-first, e.g. "31-8-2025"
-  startTime: string; // "HH:mm:ss"
-  endTime: string; // "HH:mm:ss"
+  startDate: string; // "25-10-2025"  (dd-MM-yyyy)
+  endDate: string;
+  startTime: string; // "08:00:00"
+  endTime: string;   // "09:00:00"
   ratio?: string;
   playlistId?: string | number;
-  /** Selected screens, shape: [{ screenId: 1 }, { screenId: "abc" }] */
+
+  // ---- these two are now ARRAYS ----
   screens?: Array<{ screenId: number | string }>;
-  groupId?: number | string;
+  groups?: Array<{ groupId: number | string }>;
 };
 
 type ScheduleState = {
-  blocks: ScheduleBlock[];
+  blocks: ScheduleBlock[];          // <- your editable red blocks
+  reservedBlocks: ScheduleBlock[];  // <- readonly gray blocks from server
   timeZone: string;
-  selectedBlockId: string | null; // ⭐ NEW
+  selectedBlockId: string | null;
 };
 
-// ————————————————————————
-// Helpers
-// ————————————————————————
+/* ---------------- helpers from your file (unchanged) ---------------- */
 
-/** Always return ISO string or throw (avoids string|null in strict TS) */
 const toISOorThrow = (dt: DateTime): string => {
   const s = dt.toISO();
-  if (!s) throw new Error(`Invalid DateTime: ${dt.invalidReason ?? "unknown"}`);
+  if (!s) throw new Error("Invalid DateTime");
   return s;
 };
 
-/** "31-8-2025" | "31/08/2025" | "31.08.2025" → "2025-08-31" */
 function dayFirstToISO(dateStr: string): string {
   const [d, m, y] = dateStr.split(/[-/.\s]/).map((s) => s.trim());
   const day = d.padStart(2, "0");
@@ -53,7 +49,6 @@ function dayFirstToISO(dateStr: string): string {
 
 const TIME_FMT = "HH:mm:ss";
 
-/** "8" → "08:00:00", "8:5" → "08:05:00", "08:00" → "08:00:00" */
 function normalizeTime(t: string): string {
   if (/^\d{1,2}$/.test(t)) return t.padStart(2, "0") + ":00:00";
   if (/^\d{1,2}:\d{1,2}$/.test(t)) {
@@ -70,7 +65,6 @@ function normalizeTime(t: string): string {
   return "00:00:00";
 }
 
-/** Build ISO datetime (with correct offset) from day-first date & time in a zone */
 function partsToISO(dateDF: string, time: string, zone: string): string {
   const isoDate = dayFirstToISO(dateDF);
   const hhmm = normalizeTime(time);
@@ -78,64 +72,78 @@ function partsToISO(dateDF: string, time: string, zone: string): string {
   return toISOorThrow(dt);
 }
 
-/** Expand one block into FullCalendar events (one per day in range) */
+/**
+ * Expand block over each day between startDate..endDate and return
+ * FullCalendar EventInput objects.
+ *
+ * `readonly` param lets us mark reserved blocks as non-editable + gray.
+ */
 export function expandBlockToEvents(
   b: ScheduleBlock,
-  zone: string
+  zone: string,
+  readonly = false
 ): EventInput[] {
   const startISODate = dayFirstToISO(b.startDate);
   const endISODate = dayFirstToISO(b.endDate);
+
   let cur = DateTime.fromISO(startISODate, { zone }).startOf("day");
   const end = DateTime.fromISO(endISODate, { zone }).startOf("day");
 
   const events: EventInput[] = [];
   while (cur <= end) {
     const dayStr = cur.toFormat("yyyy-MM-dd");
-    const start = DateTime.fromISO(`${dayStr}T${normalizeTime(b.startTime)}`, {
-      zone,
-    });
-    const finish = DateTime.fromISO(`${dayStr}T${normalizeTime(b.endTime)}`, {
-      zone,
-    });
+
+    const start = DateTime.fromISO(
+      `${dayStr}T${normalizeTime(b.startTime)}`,
+      { zone }
+    );
+    const finish = DateTime.fromISO(
+      `${dayStr}T${normalizeTime(b.endTime)}`,
+      { zone }
+    );
 
     events.push({
-      id: `${b.id}-${dayStr}`,
+      id: `${b.id}-${dayStr}`, // unique per day
       title: b.title,
       start: toISOorThrow(start),
       end: toISOorThrow(finish),
+      // ⬇⬇ what FullCalendar will get on .event.extendedProps
       extendedProps: {
-        blockId: b.id,
+        blockId: readonly ? undefined : String(b.id), // only editable events expose blockId
+        readonly, // <-- important
         ratio: b.ratio,
         playlistId: b.playlistId,
-        screens: b.screens,
-        groupId: b.groupId,
+        screens: b.screens ?? [],
+        groups: b.groups ?? [],
       },
     });
 
     cur = cur.plus({ days: 1 });
   }
+
   return events;
 }
 
-// ————————————————————————
-// Slice
-// ————————————————————————
+/* ---------------- initial state ---------------- */
+
 const initialState: ScheduleState = {
   blocks: [],
-  timeZone: "local", // e.g., 'Asia/Beirut' | 'utc' | 'local'
-  selectedBlockId: null, // ⭐ NEW
+  reservedBlocks: [], // start empty
+  timeZone: "local",
+  selectedBlockId: null,
 };
+
+/* ---------------- slice ---------------- */
 
 const scheduleSlice = createSlice({
   name: "schedule",
   initialState,
   reducers: {
-    /** Change the global time zone used for conversions/selectors */
     setTimeZone: (state, action: PayloadAction<string>) => {
-      state.timeZone = action.payload; // e.g. 'Europe/Paris' | 'utc' | 'local'
+      state.timeZone = action.payload;
     },
 
-    /** Add using day-first dates and times (your preferred format) */
+    // create a new editable block
     addBlock: {
       prepare: (payload: Omit<ScheduleBlock, "id">) => ({
         payload: { id: nanoid(), ...payload },
@@ -145,7 +153,7 @@ const scheduleSlice = createSlice({
       },
     },
 
-    /** Quick add from ISO (used by FullCalendar select/drop/resize) */
+    // quick add (drag from playlist)
     addBlockFromISO: (
       state,
       action: PayloadAction<{
@@ -153,13 +161,10 @@ const scheduleSlice = createSlice({
         startISO: string;
         endISO: string;
         playlistId?: string | number;
-        /** Selected screens from UI: [{screenId: 1}, {screenId: 5}] */
         screens?: Array<{ screenId: number | string }>;
-        groupId?: number | string;
-        /** Optional override; defaults to state.timeZone */
+        groups?: Array<{ groupId: number | string }>;
         zone?: string;
-        /** ⭐ Optional: pass a custom id so UI can select immediately */
-        idOverride?: string; // ⭐ NEW (optional)
+        idOverride?: string;
       }>
     ) => {
       const {
@@ -168,37 +173,37 @@ const scheduleSlice = createSlice({
         title = "New Block",
         playlistId,
         screens,
-        groupId,
+        groups,
         zone,
-        idOverride, // ⭐
+        idOverride,
       } = action.payload;
+
       const useZone = zone ?? state.timeZone ?? "local";
 
       const s = DateTime.fromISO(startISO, { zone: useZone });
       const e = DateTime.fromISO(endISO, { zone: useZone });
-      const id = idOverride ?? nanoid(); // ⭐
+
+      const id = idOverride ?? nanoid();
 
       state.blocks.push({
         id,
         title,
         startDate: s.toFormat("dd-MM-yyyy"),
         endDate: e.toFormat("dd-MM-yyyy"),
-        startTime: s.toFormat(TIME_FMT), // HH:mm:ss
-        endTime: e.toFormat(TIME_FMT), // HH:mm:ss
+        startTime: s.toFormat(TIME_FMT),
+        endTime: e.toFormat(TIME_FMT),
         playlistId,
         screens,
-        groupId,
+        groups,
       });
     },
 
-    /** Update an existing block using ISO times (from drag/drop/resize) */
     updateBlockFromISO: (
       state,
       action: PayloadAction<{
         id: string;
         startISO: string;
         endISO: string;
-        /** Optional override; defaults to state.timeZone */
         zone?: string;
       }>
     ) => {
@@ -207,7 +212,8 @@ const scheduleSlice = createSlice({
 
       const s = DateTime.fromISO(startISO, { zone: useZone });
       const e = DateTime.fromISO(endISO, { zone: useZone });
-      const b = state.blocks.find((x) => x.id === id);
+
+      const b = state.blocks.find((x) => String(x.id) === String(id));
       if (b) {
         b.startDate = s.toFormat("dd-MM-yyyy");
         b.endDate = e.toFormat("dd-MM-yyyy");
@@ -216,38 +222,49 @@ const scheduleSlice = createSlice({
       }
     },
 
-    /** Update using parts (good for a form) */
     updateBlockParts: (
       state,
-      action: PayloadAction<Partial<Omit<ScheduleBlock, "id">> & { id: string }>
+      action: PayloadAction<
+        Partial<Omit<ScheduleBlock, "id">> & { id: string | number }
+      >
     ) => {
       const { id, ...rest } = action.payload;
-      const b = state.blocks.find((x) => x.id === id);
-      if (b) Object.assign(b, rest);
+      const b = state.blocks.find((x) => String(x.id) === String(id));
+      if (b) {
+        Object.assign(b, rest);
+      }
     },
 
-    removeBlock: (state, action: PayloadAction<{ id: string }>) => {
-      state.blocks = state.blocks.filter((b) => b.id !== action.payload.id);
-      // ⭐ Clear selection if we removed the selected block
-      if (state.selectedBlockId === action.payload.id) {
+    removeBlock: (state, action: PayloadAction<{ id: string | number }>) => {
+      state.blocks = state.blocks.filter(
+        (b) => String(b.id) !== String(action.payload.id)
+      );
+      if (state.selectedBlockId === String(action.payload.id)) {
         state.selectedBlockId = null;
       }
     },
 
-    /** Replace all (optional) */
     setBlocks: (state, action: PayloadAction<ScheduleBlock[]>) => {
       state.blocks = action.payload;
-      // ⭐ If the selected id no longer exists after replace, clear it
       if (
         state.selectedBlockId &&
-        !state.blocks.some((b) => b.id === state.selectedBlockId)
+        !state.blocks.some(
+          (b) => String(b.id) === String(state.selectedBlockId)
+        )
       ) {
         state.selectedBlockId = null;
       }
     },
 
-    /** ⭐ Selection controls */
-    setSelectedBlockId: (state, action: PayloadAction<string | null>) => {
+    /* NEW: store reserved/readonly blocks from server */
+    setReservedBlocks: (state, action: PayloadAction<ScheduleBlock[]>) => {
+      state.reservedBlocks = action.payload ?? [];
+    },
+
+    setSelectedBlockId: (
+      state,
+      action: PayloadAction<string | null>
+    ) => {
       state.selectedBlockId = action.payload;
     },
     clearSelectedBlockId: (state) => {
@@ -264,31 +281,40 @@ export const {
   updateBlockParts,
   removeBlock,
   setBlocks,
-  setSelectedBlockId, // ⭐
-  clearSelectedBlockId, // ⭐
+  setReservedBlocks,      // <-- export new action
+  setSelectedBlockId,
+  clearSelectedBlockId,
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;
 
-// ————————————————————————
-// Selectors & helpers
-// ————————————————————————
+/* ---------------- selectors ---------------- */
+
 export const selectBlocks = (s: RootState) => s.schedule.blocks;
+export const selectReservedBlocks = (s: RootState) =>
+  s.schedule.reservedBlocks;
 export const selectTimeZone = (s: RootState) => s.schedule.timeZone ?? "local";
 export const selectSelectedBlockId = (s: RootState) =>
-  s.schedule.selectedBlockId; // ⭐
-export const selectSelectedBlock = (s: RootState) =>
-  s.schedule.selectedBlockId
-    ? s.schedule.blocks.find((b) => b.id === s.schedule.selectedBlockId) ?? null
-    : null; // ⭐
+  s.schedule.selectedBlockId;
 
-// ✅ Memoized selector: same inputs => same array reference
+/**
+ * Merge editable blocks (red) and reserved blocks (gray) into one
+ * array of FullCalendar EventInput objects.
+ */
 export const selectCalendarEvents = createSelector(
-  [selectBlocks, selectTimeZone],
-  (blocks, zone) => blocks.flatMap((b) => expandBlockToEvents(b, zone))
+  [selectBlocks, selectReservedBlocks, selectTimeZone],
+  (blocks, reserved, zone) => {
+    const redEvents = blocks.flatMap((b) =>
+      expandBlockToEvents(b, zone, /*readonly*/ false)
+    );
+    const grayEvents = reserved.flatMap((b) =>
+      expandBlockToEvents(b, zone, /*readonly*/ true)
+    );
+    return [...grayEvents, ...redEvents];
+  }
 );
 
-/** Utility to get ISO start/end for a block (handy for previews) */
+/** helper if you ever need ISO start/end */
 export function getBlockISO(
   b: ScheduleBlock,
   zone: string

@@ -41,7 +41,7 @@ const GroupSchedule: React.FC<Props> = ({ blockId, onDone, value, onChange }) =>
     }
     const saved = (block as any)?.groupId;
     setSelectedId(typeof saved !== "undefined" ? saved : null);
-  }, [controlled, blockId, block?.groupId]);
+  }, [controlled, blockId, block?.groups]);
 
   const current = controlled ? (typeof value !== "undefined" ? value : null) : selectedId;
   const setCurrent = (next: number | string | null) =>

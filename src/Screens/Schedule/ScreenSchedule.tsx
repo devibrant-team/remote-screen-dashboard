@@ -82,14 +82,18 @@ const ScreenSchedule: React.FC<Props> = ({
 
   // Current selection mirrored from the block in Redux
   const selection = useMemo(() => {
-    const gRaw = (block as any)?.groupId;
-    const groupIds = Array.isArray(gRaw) ? gRaw : gRaw != null ? [gRaw] : [];
+    // groups stored like [{groupId: 3}, {groupId: 7}]
+    const gArr = (block as any)?.groups;
+    const groupIds = Array.isArray(gArr) ? gArr.map((g: any) => g.groupId) : [];
+
+    // screens stored like [{screenId: 57}, {screenId: 58}]
     const scr = (block as any)?.screens;
     const screenIds = Array.isArray(scr)
       ? scr.map((x: any) => x.screenId ?? x.id)
       : [];
+
     return { groupIds, screenIds };
-  }, [block?.id, (block as any)?.groupId, (block as any)?.screens]);
+  }, [block?.id, (block as any)?.groups, (block as any)?.screens]);
 
   /** UI state */
   const [mode, setMode] = useState<FilterMode>(defaultFilter);
@@ -177,13 +181,11 @@ const ScreenSchedule: React.FC<Props> = ({
     const nextGroupIds = next.groupIds ?? selection.groupIds;
     const nextScreenIds = next.screenIds ?? selection.screenIds;
 
-    const firstGroupId = nextGroupIds[0];
     dispatch(
       updateBlockParts({
         id: effectiveBlockId,
-        groupId:
-          typeof firstGroupId !== "undefined" ? firstGroupId : undefined,
-        screens: nextScreenIds.map((id) => ({ screenId: id })),
+        groups: nextGroupIds.map((gid) => ({ groupId: gid })),
+        screens: nextScreenIds.map((sid) => ({ screenId: sid })),
       })
     );
   };
@@ -214,13 +216,9 @@ const ScreenSchedule: React.FC<Props> = ({
     }
   };
 
-  const clearSelection = () =>
-    writeSelection({ groupIds: [], screenIds: [] });
-
+  const clearSelection = () => writeSelection({ groupIds: [], screenIds: [] });
   const selectAllInView = () => {
-    const gIds = filtered
-      .filter((r) => r.kind === "group")
-      .map((r) => r.id);
+    const gIds = filtered.filter((r) => r.kind === "group").map((r) => r.id);
     const sIds = filtered
       .filter(
         (r) => r.kind === "screen" && !conflictedScreenIds.has(r.id as any)
@@ -238,8 +236,7 @@ const ScreenSchedule: React.FC<Props> = ({
     });
   };
 
-  const selectedCount =
-    selection.groupIds.length + selection.screenIds.length;
+  const selectedCount = selection.groupIds.length + selection.screenIds.length;
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -287,7 +284,7 @@ const ScreenSchedule: React.FC<Props> = ({
             ))}
           </div>
 
-          {(mode === "screens" || mode === "all") ? (
+          {mode === "screens" || mode === "all" ? (
             <button
               type="button"
               onClick={() => setOnlyActive((v) => !v)}
@@ -361,12 +358,8 @@ const ScreenSchedule: React.FC<Props> = ({
         {filtered.map((r) => {
           const selected =
             r.kind === "group"
-              ? selection.groupIds.some(
-                  (x) => String(x) === String(r.id)
-                )
-              : selection.screenIds.some(
-                  (x) => String(x) === String(r.id)
-                );
+              ? selection.groupIds.some((x) => String(x) === String(r.id))
+              : selection.screenIds.some((x) => String(x) === String(r.id));
 
           const isConflict =
             r.kind === "screen" && conflictedScreenIds.has(r.id as any);

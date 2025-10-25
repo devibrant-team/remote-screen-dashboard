@@ -6,6 +6,7 @@ import type { ScheduleBlock } from "../../Redux/Schedule/SheduleSlice";
 /** ----- API shapes (from your sample) ----- */
 type ApiGroup = { groupId: number | string };
 type ApiScreen = { screenId: number | string };
+
 export type ApiScheduleItem = {
   id: number | string;
   groups?: ApiGroup[];
@@ -14,37 +15,48 @@ export type ApiScheduleItem = {
   startTime: string;   // "20:30:00"
   endTime: string;     // "23:00:00"
   screens?: ApiScreen[];
-  // playlistId? ratio? (add if present)
-
+  // playlistId?: string | number;
+  // ratio?: string;
 };
+
 type ApiResponse = {
   success: boolean;
   count: number;
-  data: ApiScheduleItem[];
+  data: unknown; // backend is not always trustworthy, so mark as unknown
 };
 
 /** ----- helpers to convert API → Redux slice format ----- */
 const ymdToDayFirst = (isoDate: string) => {
-   const [y, m, d] = isoDate.split("-");
-   return `${d.padStart(2, "0")}-${m.padStart(2, "0")}-${y}`;
- };
-function mapApiToScheduleBlocks(rows: ApiScheduleItem[]): ScheduleBlock[] {
+  const [y, m, d] = isoDate.split("-");
+  return `${d.padStart(2, "0")}-${m.padStart(2, "0")}-${y}`;
+};
+
+// make this defensive
+function mapApiToScheduleBlocks(
+  rowsMaybe: unknown
+): ScheduleBlock[] {
+  // Force rows to be an array of objects we expect
+  const rows = Array.isArray(rowsMaybe) ? rowsMaybe : [];
+
   return rows.map((r) => {
-    // your slice currently stores a SINGLE groupId (legacy). take first if multiple:
-    const groupId = r.groups?.[0]?.groupId;
+    const row = r as ApiScheduleItem;
+
+    // your slice currently stores ONE groupId, we pick first
+    const groupId = row.groups?.[0]?.groupId;
+
     return {
-      id: String(r.id),
-      title: `Block ${r.id}`, // change if API returns a title
-      startDate: ymdToDayFirst(r.startDate),
-      endDate: ymdToDayFirst(r.endDate),
-      startTime: r.startTime, // already "HH:mm:ss"
-      endTime: r.endTime,     // already "HH:mm:ss"
+      id: String(row.id),
+      title: `Block ${row.id}`, // adjust if API sends a real title/playlist name
+      startDate: ymdToDayFirst(row.startDate),
+      endDate: ymdToDayFirst(row.endDate),
+      startTime: row.startTime,
+      endTime: row.endTime,
       groupId,
-      // keep screens as [{screenId}]
-      screens: (r.screens ?? []).map(s => ({ screenId: s.screenId })),
-      // add playlistId/ratio if the API returns them
-      // playlistId: r.playlistId,
-      // ratio: r.ratio,
+      screens: (row.screens ?? []).map((s) => ({
+        screenId: s.screenId,
+      })),
+      // playlistId: row.playlistId,
+      // ratio: row.ratio,
     };
   });
 }
@@ -62,6 +74,7 @@ function getAuthToken(): string | null {
 /** ----- query fn ----- */
 async function fetchScheduleDetails(): Promise<ScheduleBlock[]> {
   const token = getAuthToken();
+
   try {
     const res = await axios.get<ApiResponse>(GetScheduleDetailsApi, {
       headers: {
@@ -69,8 +82,11 @@ async function fetchScheduleDetails(): Promise<ScheduleBlock[]> {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
-    const rows = res.data?.data ?? [];
-    return mapApiToScheduleBlocks(rows);
+
+    // res.data.data could be an array, OR an object, OR undefined
+    const raw = res.data?.data;
+    const blocks = mapApiToScheduleBlocks(raw);
+    return blocks;
   } catch (err) {
     const ax = err as AxiosError<any>;
     const msg =
@@ -87,7 +103,8 @@ export function useGetScheduleDetails() {
   return useQuery({
     queryKey: ["schedule-details"],
     queryFn: fetchScheduleDetails,
-    staleTime: 60_000, // 1 min (tweak as you like)
+    staleTime: 60_000,
   });
 }
+
 export default fetchScheduleDetails;
