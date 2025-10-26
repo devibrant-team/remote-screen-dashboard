@@ -31,3 +31,11 @@
 
 .fc-draggable { cursor: grab; }
 .fc-draggable:active { cursor: grabbing; }
+
+/* Only dim when .calendar-dim-others is on container */
+.calendar-dim-others .fc-event {
+  filter: brightness(0.75) saturate(0.75);
+}
+.calendar-dim-others .fc-event.fc-ev-selected {
+  filter: none !important;
+}

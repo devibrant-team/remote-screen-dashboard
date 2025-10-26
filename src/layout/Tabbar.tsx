@@ -12,7 +12,7 @@ import {
   UploadCloudIcon,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import SelectScreenModal from "../Components/Models/SelectScreenModal";
+
 const menuItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
@@ -95,11 +95,7 @@ const ToolBar = () => {
           <div className="pt-6 text-sm text-gray-500">v1.0.0</div>
         </div>
       </aside>
-      <SelectScreenModal
-        open={ScheduleisOpen}
-        onClose={() => setScheduleIsOpen(false)}
-        onConfirmNavigate={goToSchedule}
-      />
+
     </>
   );
 };
