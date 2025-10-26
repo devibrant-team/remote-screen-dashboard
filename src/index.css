@@ -39,3 +39,12 @@
 .calendar-dim-others .fc-event.fc-ev-selected {
   filter: none !important;
 }
+
+.fc .fc-timegrid-slot {
+  height: 100px !important;   /* each slot = 56px */
+}
+
+
+.fc .fc-timegrid-slot-minor {
+  height: 28px !important;
+}

@@ -1,4 +1,3 @@
-// ToolBar.tsx
 import { useState } from "react";
 import {
   LayoutDashboard,
@@ -28,26 +27,10 @@ const ToolBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
-  const [ScheduleisOpen, setScheduleIsOpen] = useState(false);
 
-  // when user clicks any sidebar item
-  const handleNavClick = async (path: string) => {
-    if (path === "/schedule") {
-      // 2. open the SelectScreenModal instead of navigating directly
-      setScheduleIsOpen(true);
-      // 3. close mobile drawer
-      setIsOpen(false);
-      return;
-    }
-
-    // normal case: navigate immediately
+  const handleNavClick = (path: string) => {
     navigate(path);
     setIsOpen(false);
-  };
-
-  // called AFTER the user confirms inside the modal
-  const goToSchedule = () => {
-    navigate("/schedule");
   };
 
   return (
@@ -95,7 +78,6 @@ const ToolBar = () => {
           <div className="pt-6 text-sm text-gray-500">v1.0.0</div>
         </div>
       </aside>
-
     </>
   );
 };
