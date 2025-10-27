@@ -1,6 +1,12 @@
 // src/Redux/schedule/scheduleSlice.ts
 import { createSlice, type PayloadAction, nanoid } from "@reduxjs/toolkit";
-import type { ScheduleItem, ScheduleState, ScreenRef, GroupRef } from "../Schedule/ScheduleTypes";
+import type {
+  ScheduleItem,
+  ScheduleState,
+  ScreenRef,
+  GroupRef,
+} from "../Schedule/ScheduleTypes";
+import type { RootState } from "../../../store";
 
 const initialState: ScheduleState = {
   byId: {},
@@ -141,6 +147,7 @@ const scheduleSlice = createSlice({
   },
 });
 
+
 export const {
   addItem,
   updateItem,
@@ -156,4 +163,3 @@ export const {
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;
-

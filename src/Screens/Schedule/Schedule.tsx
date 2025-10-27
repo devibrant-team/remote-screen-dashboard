@@ -1,7 +1,8 @@
 import { useState } from "react";
 import ScheduleCalendarArea from "./Components/ScheduleCalendarArea";
-import ScheduleEventsSidebar from "./Components/ScheduleEventsSidebar";
+
 import ScheduleToolBar from "./ScheduleToolBar";
+import ScheduleAssignSidebar from "./Components/ScheduleAssignSidebar";
 
 export default function Schedule() {
   const [toolbarOpen, setToolbarOpen] = useState(false);           // mobile drawer
@@ -79,7 +80,7 @@ export default function Schedule() {
               </div>
             ) : (
               <div className="min-h-[60vh] flex-1 border-t border-gray-200 bg-white">
-                <ScheduleEventsSidebar />
+                <ScheduleAssignSidebar />
               </div>
             )}
           </div>
@@ -90,7 +91,7 @@ export default function Schedule() {
               <ScheduleCalendarArea />
             </section>
             <aside className="w-[360px] shrink-0 border-l border-gray-200 bg-white">
-              <ScheduleEventsSidebar />
+              <ScheduleAssignSidebar />
             </aside>
           </div>
         </div>

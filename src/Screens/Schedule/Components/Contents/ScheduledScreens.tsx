@@ -1,10 +1,11 @@
 // src/Screens/Schedule/ScheduledScreens.tsx
-import React, { useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Monitor, Search, CalendarClock, UsersRound } from "lucide-react";
-import { selectAllReservedBlocks } from "../../../../Redux/Schedule/ReservedBlockSlice";
+import { selectAllReservedBlocks } from "../../../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import { selectGroups } from "../../../../Redux/ScreenManagement/GroupSlice";
 import type { RootState } from "../../../../../store";
+import { setOverlayScreenId, selectOverlayScreenId } from "../../../../Redux/Schedule/UiSlice";
 
 /* helpers */
 function getDeviceId(s: any): number | null {
@@ -21,12 +22,16 @@ function getGroupId(g: any): number | null {
 type Props = { className?: string };
 
 const ScheduledScreens: React.FC<Props> = ({ className }) => {
+  const dispatch = useDispatch();
+  const overlayScreenId = useSelector(selectOverlayScreenId);
   const blocks = useSelector(selectAllReservedBlocks);
+ 
+
 
   // Enrichment from store
   const storeScreens =
     useSelector((s: RootState) => s.screens.items as any[] | undefined) ?? [];
-  const storeGroups = useSelector(selectGroups) as any[]; // id, name, branchName, screenNumber…
+  const storeGroups = useSelector(selectGroups) as any[];
 
   const [query, setQuery] = useState("");
 
@@ -129,6 +134,14 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
     [groupRows, q]
   );
 
+  useEffect(() => {
+    console.log("[ScheduledScreens] overlayScreenId changed:", overlayScreenId);
+  }, [overlayScreenId]);
+
+  const handleToggleOverlay = (id: number) => {
+    console.log("[ScheduledScreens] clicked screen id:", id, "current overlayScreenId:", overlayScreenId);
+    dispatch(setOverlayScreenId(overlayScreenId === id ? null : id));
+  };
   /* -------------------- UI -------------------- */
   return (
     <div className={`flex h-full min-h-0 flex-col ${className ?? ""}`}>
@@ -169,43 +182,62 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
             </div>
           ) : (
             <ul className="space-y-2">
-              {filteredScreens.map((r) => (
-                <li key={`scr-${r.id}`}>
-                  <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 transition hover:border-gray-300 hover:shadow-sm">
-                    <div
+              {filteredScreens.map((r) => {
+                const selected = overlayScreenId === r.id;
+                return (
+                  <li key={`scr-${r.id}`}>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleOverlay(r.id)}
                       className={[
-                        "grid h-9 w-9 place-items-center rounded-md",
-                        r.active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600",
+                        "w-full text-left",
+                        selected ? "ring-1 ring-red-300 rounded-lg" : "",
                       ].join(" ")}
-                      title={r.active ? "Active" : "Inactive"}
                     >
-                      <Monitor className="h-4.5 w-4.5" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <div className="truncate text-[13px] font-semibold text-gray-900">
-                          {r.name}
+                      <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5 transition hover:border-gray-300 hover:shadow-sm">
+                        <div
+                          className={[
+                            "grid h-9 w-9 place-items-center rounded-md",
+                            r.active ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-600",
+                          ].join(" ")}
+                          title={r.active ? "Active" : "Inactive"}
+                        >
+                          <Monitor className="h-4.5 w-4.5" />
                         </div>
 
-                        {/* remove if you don't want counts */}
-                        <span
-                          className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-[2px] text-[10px] font-medium text-red-700 ring-1 ring-red-200"
-                          title="Total reserved blocks for this screen"
-                        >
-                          <CalendarClock className="h-3.5 w-3.5" />
-                          {r.count}
-                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <div className="truncate text-[13px] font-semibold text-gray-900">
+                              {r.name}
+                            </div>
+                            <span
+                              className={[
+                                "ml-auto inline-flex items-center gap-1 rounded-full px-1.5 py-[2px] text-[10px] font-medium ring-1",
+                                selected
+                                  ? "bg-gray-800 text-white ring-gray-800"
+                                  : "bg-red-50 text-red-700 ring-red-200",
+                              ].join(" ")}
+                              title={
+                                selected
+                                  ? "Overlay active on calendar"
+                                  : "Total reserved blocks for this screen"
+                              }
+                            >
+                              <CalendarClock className="h-3.5 w-3.5" />
+                              {r.count}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
 
-        {/* Groups */}
+        {/* Groups (unchanged) */}
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-500">
@@ -234,7 +266,6 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
                         <div className="truncate text-[13px] font-semibold text-gray-900">
                           {g.name}
                         </div>
-                        {/* remove if you don't want counts */}
                         <span
                           className="ml-auto inline-flex items-center gap-1 rounded-full bg-red-50 px-1.5 py-[2px] text-[10px] font-medium text-red-700 ring-1 ring-red-200"
                           title="Total reserved blocks for this group"

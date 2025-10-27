@@ -1,26 +1,29 @@
 // src/Redux/schedule/scheduleSelectors.ts
 import { createSelector } from "@reduxjs/toolkit";
-import type { RootState } from "../../../store"; // adjust if needed
+import type { RootState } from "../../../store";
 import type { ScheduleItem } from "./ScheduleTypes";
 
-/* Root slice */
+/* Root slice (make sure your combineReducers key is 'schedule') */
 const selectScheduleState = (state: RootState) => state.schedule;
 
-/* Return a stable array of ScheduleItem (memoized) */
+/* All items as an array */
 export const selectAllScheduleItems = createSelector(
   [selectScheduleState],
   (schedule): ScheduleItem[] =>
     schedule.allIds.map((id) => schedule.byId[id]).filter(Boolean)
 );
 
-/* --- date helpers --- */
+/* Selector factory: item by id */
+export const selectScheduleItemById = (id: string) =>
+  createSelector([selectScheduleState], (s) => s.byId[id] as ScheduleItem | undefined);
+
+/* (Optional) Base events and decorated events — keep if you use them */
 const fromDateTimeStrings = (date: string, time: string) => {
   const [dd, mm, yyyy] = date.split("-").map(Number);
   const [hh, mi, ss] = time.split(":").map(Number);
   return new Date(yyyy, (mm || 1) - 1, dd || 1, hh || 0, mi || 0, ss || 0);
 };
 
-/* Base events for FullCalendar (stable & memoized) */
 export const selectCalendarBaseEvents = createSelector(
   [selectAllScheduleItems],
   (items) =>
@@ -36,16 +39,13 @@ export const selectCalendarBaseEvents = createSelector(
     })
 );
 
-/* Lane colors */
 const LANE_COLORS = ["#EF4444", "#8B5CF6", "#F59E0B", "#10B981", "#3B82F6", "#EC4899"];
 
-/* Decorated events with lane info (memoized) */
 export const selectDecoratedCalendarEvents = createSelector(
   [selectCalendarBaseEvents],
   (baseEvents) => {
     type Tmp = (typeof baseEvents)[number] & { sd: Date; ed: Date; used?: boolean };
     const tmp: Tmp[] = baseEvents.map((e) => ({ ...e, sd: new Date(e.start), ed: new Date(e.end) }));
-
     const overlaps = (a: Tmp, b: Tmp) => a.sd < b.ed && b.sd < a.ed;
     const out: Array<
       (typeof baseEvents)[number] & {
@@ -59,10 +59,8 @@ export const selectDecoratedCalendarEvents = createSelector(
       const root = tmp[i];
       if (root.used) continue;
 
-      // build overlap cluster
       const cluster: Tmp[] = [root];
       root.used = true;
-
       let grew = true;
       while (grew) {
         grew = false;
@@ -77,7 +75,6 @@ export const selectDecoratedCalendarEvents = createSelector(
         }
       }
 
-      // assign lanes in the cluster
       type Lane = { end: Date };
       const lanes: Lane[] = [];
       const assigned: Array<{ ev: Tmp; laneIdx: number }> = [];
@@ -109,11 +106,6 @@ export const selectDecoratedCalendarEvents = createSelector(
         });
       }
     }
-
     return out;
   }
 );
-
-/* Optional convenience selectors */
-export const selectScheduleItemById = (id: string) =>
-  createSelector([selectScheduleState], (s) => s.byId[id] as ScheduleItem | undefined);

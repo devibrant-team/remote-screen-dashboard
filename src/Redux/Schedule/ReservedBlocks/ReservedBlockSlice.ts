@@ -1,6 +1,6 @@
 // src/Redux/Schedule/ReservedBlockSlice.ts
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { RootState } from "../../../store";
+import type { RootState } from "../../../../store";
 
 
 /* ================= Types that match your API ================= */

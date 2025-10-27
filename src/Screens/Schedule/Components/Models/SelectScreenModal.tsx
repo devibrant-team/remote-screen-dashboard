@@ -34,7 +34,7 @@ import {
   postGetScheduleDetails,
   type GetScheduleDetailsPayload,
 } from "../../../../Redux/Schedule/GetDevicesSchedule";
-import { selectAllReservedBlocks, setReservedFromResponse } from "../../../../Redux/Schedule/ReservedBlockSlice";
+import { selectAllReservedBlocks, setReservedFromResponse } from "../../../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 
 type FilterMode = "all" | "groups" | "screens";
 
