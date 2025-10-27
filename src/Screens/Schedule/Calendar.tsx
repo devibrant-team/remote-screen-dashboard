@@ -20,8 +20,11 @@ import { selectAllScheduleItems } from "../../Redux/Schedule/ScheduleSelectors";
 
 import { selectAllReservedBlocks } from "../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import { selectOverlayScreenId } from "../../Redux/Schedule/UiSlice";
+import { selectSelectedGroups } from "../../Redux/ScreenManagement/GroupSlice";
 
-import ScheduleAssignSidebar from "./Components/ScheduleAssignSidebar";
+import ScheduleAssignSidebar, {
+  type ScheduleLike,
+} from "./Components/ScheduleAssignSidebar";
 
 /* -------------------------------- types ---------------------------------- */
 type ViewMode = "timeGridDay" | "timeGridWeek" | "dayGridMonth";
@@ -33,75 +36,29 @@ type CalendarEvent = BaseEvent & {
   extendedProps?: Record<string, any>;
 };
 
-/* A schedule-like shape we can pass into the sidebar when editing reserved */
-type ScheduleLike = {
-  id: string;
-  title: string;
-  playlistId: string | number | "";
-  startDate: string; // DD-MM-YYYY
-  startTime: string; // HH:mm:ss
-  endDate: string;   // DD-MM-YYYY
-  endTime: string;   // HH:mm:ss
-  screens: Array<{ screenId: number }>;
-  groups: Array<{ groupId: number }>;
-  _reservedBlockId?: string | number;
-};
-
 /* ----------------------- lane colors (lane 0 is red) ---------------------- */
-const LANE_COLORS = [
-  "#EF4444",
-  "#8B5CF6",
-  "#F59E0B",
-  "#10B981",
-  "#3B82F6",
-  "#EC4899",
-];
+const LANE_COLORS = ["#EF4444", "#8B5CF6", "#F59E0B", "#10B981", "#3B82F6", "#EC4899"];
 
 /* ---------------- helpers: date parsing/formatting ------------------------ */
-const toDDMMYYYY = (d: Date) => {
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd}-${mm}-${yyyy}`;
-};
-const toHHMMSS = (d: Date) => {
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
-  return `${hh}:${mi}:${ss}`;
-};
+const toDDMMYYYY = (d: Date) =>
+  `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+const toHHMMSS = (d: Date) =>
+  `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+
 function parseDateTime(dateStr: string, timeStr: string) {
-  // accepts DD-MM-YYYY or YYYY-MM-DD (also works if "/" is used)
   if (!dateStr) return new Date(NaN);
   const sep = dateStr.includes("-") ? "-" : "/";
   const parts = dateStr.split(sep).map((x) => Number(x));
   let y = 0, m = 0, d = 0;
-  if (parts[0] > 31) [y, m, d] = parts; // YYYY-MM-DD
-  else [d, m, y] = parts;               // DD-MM-YYYY
-
-  const [hh = 0, mi = 0, ss = 0] = (timeStr || "00:00:00")
-    .split(":")
-    .map((x) => Number(x || 0));
-
+  if (parts[0] > 31) [y, m, d] = parts; else [d, m, y] = parts;
+  const [hh = 0, mi = 0, ss = 0] = (timeStr || "00:00:00").split(":").map((x) => Number(x || 0));
   return new Date(y, (m || 1) - 1, d || 1, hh, mi, ss);
-}
-
-function isoToDMYHHMMSS(iso: string) {
-  const d = new Date(iso);
-  return {
-    dmy: toDDMMYYYY(d),
-    hms: toHHMMSS(d),
-  };
 }
 
 /* --------- Build overlapping lanes for prettier side-by-side events ------- */
 function decorateForEdit(evts: BaseEvent[]): CalendarEvent[] {
   type Tmp = BaseEvent & { sd: Date; ed: Date; used?: boolean };
-  const tmp: Tmp[] = evts.map((e) => ({
-    ...e,
-    sd: new Date(e.start),
-    ed: new Date(e.end),
-  }));
+  const tmp: Tmp[] = evts.map((e) => ({ ...e, sd: new Date(e.start), ed: new Date(e.end) }));
   const overlaps = (a: Tmp, b: Tmp) => a.sd < b.ed && b.sd < a.ed;
 
   const out: CalendarEvent[] = [];
@@ -170,44 +127,90 @@ export default function Calendar() {
   const [viewMode, setViewMode] = useState<ViewMode>("timeGridWeek");
   const [currentRangeLabel, setCurrentRangeLabel] = useState("");
 
-  // NEW: if set, we're editing a reserved block (gray)
+  // track ONLY newly created (server) ids as strings
+  const [justCreatedIds, setJustCreatedIds] = useState<Set<string>>(new Set());
+
+  // when non-null, we're editing a gray reserved block
   const [reservedEditItem, setReservedEditItem] = useState<ScheduleLike | null>(null);
 
   const overlayScreenId = useSelector(selectOverlayScreenId);
   const reservedBlocks = useSelector(selectAllReservedBlocks);
 
+  // Selected devices & groups
+
+  const selectedGroupIds  = useSelector(selectSelectedGroups)  as Array<string | number>;
+
+
+  const selectedGroupIdSet = useMemo(
+    () => new Set(selectedGroupIds.map((v) => Number(v))),
+    [selectedGroupIds]
+  );
+
   useEffect(() => {
-    // Debug visibility for the toggle
     console.log("[Calendar] overlayScreenId:", overlayScreenId);
   }, [overlayScreenId]);
+const reservedEvents = useMemo(() => {
+  const out: CalendarEvent[] = [];
 
-  /* ------------------- RESERVED (gray, full-size, read-only) -------------- */
-  const reservedEvents = useMemo(() => {
-    if (!overlayScreenId) return [];
+  const haveOverlayScreen = overlayScreenId != null;
+  const haveGroupSelection = selectedGroupIdSet.size > 0;
 
-    const evts: CalendarEvent[] = [];
-    for (const b of reservedBlocks) {
-      const matchesScreen = b.screens?.some(
-        (s: any) => Number(s.screenId) === overlayScreenId
-      );
-      if (!matchesScreen) continue;
+  // helpers
+  const blockTargetsOverlay = (b: any) => {
+    if (overlayScreenId == null) return false;
+    const sid = Number(overlayScreenId);
+    return (b.screens ?? []).some((s: any) => Number(s.screenId) === sid);
+  };
 
-      const start = parseDateTime(b.startDate, b.startTime);
-      const end = parseDateTime(b.endDate, b.endTime);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+  const blockTargetsSelectedGroups = (b: any) => {
+    if (selectedGroupIdSet.size === 0) return false;
+    return (b.groups ?? []).some((g: any) =>
+      selectedGroupIdSet.has(Number(g.groupId))
+    );
+  };
 
-      evts.push({
-        id: `reserved-${overlayScreenId}-${b.id ?? `${b.startDate}-${b.startTime}`}`,
-        title: b.title || `Playlist ${b.playlistId ?? ""}`,
-        start: start.toISOString(),
-        end: end.toISOString(),
-        backgroundColor: "#9CA3AF", // gray-400
-        borderColor: "#6B7280",     // gray-500
-        extendedProps: { isReserved: true, raw: b },
-      });
+  for (const b of reservedBlocks) {
+    const start = parseDateTime(b.startDate, b.startTime);
+    const end   = parseDateTime(b.endDate, b.endTime);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+
+    const isJustCreated = justCreatedIds.has(String(b.id));
+
+    // --- strict visibility rules ---
+    let visible = false;
+
+    if (!haveOverlayScreen && !haveGroupSelection) {
+      // No overlay, no groups → show only newly created
+      visible = isJustCreated;
+    } else if (haveOverlayScreen) {
+      // Overlay device view → only that device's blocks + newly created
+      visible = isJustCreated || blockTargetsOverlay(b);
+    } else {
+      // Groups selected (and no overlay) → those groups' blocks + newly created
+      visible = isJustCreated || blockTargetsSelectedGroups(b);
     }
-    return evts;
-  }, [overlayScreenId, reservedBlocks]);
+
+    if (!visible) continue;
+
+    out.push({
+      id: `reserved-${b.id}`,
+      title: b.title || `Playlist ${b.playlistId ?? ""}`,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      backgroundColor: "#9CA3AF",
+      borderColor: "#6B7280",
+      extendedProps: { isReserved: true, raw: b, isJustCreated },
+    });
+  }
+
+  return out;
+}, [
+  reservedBlocks,
+  justCreatedIds,
+  overlayScreenId,          // <-- only device driver
+  selectedGroupIdSet,       // <-- optional group driver
+]);
+
 
   /* ----------------------- NEW/EDITABLE CALENDAR ITEMS -------------------- */
   const receivingRef = useRef(false);
@@ -231,48 +234,38 @@ export default function Calendar() {
 
   /* -------------------------- Calendar handlers --------------------------- */
   const handleEventClick = (arg: any) => {
-    const ext = arg.event.extendedProps || {};
-    const isReserved = !!ext.isReserved;
+    const isReserved = !!arg.event.extendedProps?.isReserved;
 
     if (isReserved) {
-      // Build a schedule-like object from reserved raw
-      const raw = ext.raw || {};
-      const { dmy: sd, hms: st } = isoToDMYHHMMSS(arg.event.startStr);
-      const { dmy: ed, hms: et } = isoToDMYHHMMSS(arg.event.endStr);
+      const raw = arg.event.extendedProps?.raw ?? {};
+      const sd = new Date(arg.event.start!);
+      const ed = new Date(arg.event.end!);
 
-      const screens = Array.isArray(raw.screens)
-        ? raw.screens
-            .map((s: any) => Number(s?.screenId))
-            .filter((n: number) => Number.isFinite(n))
-            .map((screenId: number) => ({ screenId }))
-        : [];
+      const toDDMMYYYY = (d: Date) =>
+        `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+      const toHHMMSS = (d: Date) =>
+        `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
 
-      const groups = Array.isArray(raw.groups)
-        ? raw.groups
-            .map((g: any) => Number(g?.groupId))
-            .filter((n: number) => Number.isFinite(n))
-            .map((groupId: number) => ({ groupId }))
-        : [];
+      const screens = (raw.screens ?? []).map((s: any) => ({ screenId: Number(s.screenId) }));
+      const groups = (raw.groups ?? []).map((g: any) => ({ groupId: Number(g.groupId) }));
 
+      setActiveItemId(null);
+      setAssignOpen(true);
       setReservedEditItem({
         id: String(raw.id ?? arg.event.id),
         title: String(raw.title ?? arg.event.title ?? ""),
         playlistId: String(raw.playlistId ?? ""),
-        startDate: sd,
-        startTime: st,
-        endDate: ed,
-        endTime: et,
+        startDate: toDDMMYYYY(sd),
+        startTime: toHHMMSS(sd),
+        endDate: toDDMMYYYY(ed),
+        endTime: toHHMMSS(ed),
         screens,
         groups,
-        _reservedBlockId: raw.id ?? arg.event.id,
+        _reservedBlockId: raw.id as string | number,
       });
-
-      setActiveItemId(null);     // NOT editing a draft item
-      setAssignOpen(true);
       return;
     }
 
-    // default: editing a draft/new item from schedule slice
     setReservedEditItem(null);
     setActiveItemId(arg.event.id);
     setAssignOpen(true);
@@ -284,21 +277,14 @@ export default function Calendar() {
     const ev = info.event;
     const title = ev.title || "Playlist";
     const playlistId = String((ev.extendedProps as any)?.playlistId || "");
-    const durationSec = Number(
-      (ev.extendedProps as any)?.durationSec || DEFAULT_SECONDS
-    );
+    const durationSec = Number((ev.extendedProps as any)?.durationSec || DEFAULT_SECONDS);
 
     const start = ev.start as Date;
     const end = (ev.end as Date) ?? new Date(start.getTime() + durationSec * 1000);
 
-    // de-dupe key: same title+playlist+start within 500ms
     const key = `${title}|${playlistId}|${start.getTime()}`;
     const now = Date.now();
-    if (
-      lastReceiveKeyRef.current &&
-      lastReceiveKeyRef.current.key === key &&
-      now - lastReceiveKeyRef.current.ts < 500
-    ) {
+    if (lastReceiveKeyRef.current && lastReceiveKeyRef.current.key === key && now - lastReceiveKeyRef.current.ts < 500) {
       ev.remove();
       return;
     }
@@ -327,10 +313,7 @@ export default function Calendar() {
 
   const handleEventDrop = (arg: EventDropArg) => {
     const { event } = arg;
-    if (event.extendedProps?.isReserved) {
-      // If later you want to allow drag-resize of reserved, branch here
-      return;
-    }
+    if (event.extendedProps?.isReserved) return;
     const start = event.start as Date;
     const end = (event.end as Date) ?? new Date(start.getTime() + 60 * 1000);
     dispatch(
@@ -346,10 +329,7 @@ export default function Calendar() {
 
   const handleEventResize = (arg: EventResizeDoneArg) => {
     const { event } = arg;
-    if (event.extendedProps?.isReserved) {
-      // If later you want to allow drag-resize of reserved, branch here
-      return;
-    }
+    if (event.extendedProps?.isReserved) return;
     const start = event.start as Date;
     const end = (event.end as Date) ?? new Date(start.getTime() + 60 * 1000);
     dispatch(
@@ -387,9 +367,8 @@ export default function Calendar() {
     const isReserved = !!arg.event.extendedProps?.isReserved;
 
     if (isReserved) {
-      // solid gray, full block
-      arg.el.style.background = "#9CA3AF"; // gray-400
-      arg.el.style.border = "1px solid #6B7280"; // gray-500
+      arg.el.style.background = "#9CA3AF";
+      arg.el.style.border = "1px solid #6B7280";
       arg.el.style.borderRadius = "8px";
       arg.el.style.overflow = "hidden";
       arg.el.style.boxShadow = "inset 0 0 0 1px rgba(0,0,0,0.04)";
@@ -398,7 +377,6 @@ export default function Calendar() {
       return;
     }
 
-    // editable “new” blocks style
     const ext: any = arg.event.extendedProps || {};
     arg.el.style.background = "transparent";
     arg.el.style.border = "none";
@@ -414,16 +392,11 @@ export default function Calendar() {
 
   const renderEventContent = (arg: EventContentArg) => {
     const isReserved = !!arg.event.extendedProps?.isReserved;
-
     if (isReserved) {
       return (
         <div className="h-full w-full px-1.5 py-1">
-          <div className="text-[10px] font-semibold text-gray-900">
-            {arg.timeText}
-          </div>
-          <div className="truncate text-[11px] font-semibold text-gray-800">
-            {arg.event.title}
-          </div>
+          <div className="text-[10px] font-semibold text-gray-900">{arg.timeText}</div>
+          <div className="truncate text-[11px] font-semibold text-gray-800">{arg.event.title}</div>
         </div>
       );
     }
@@ -433,23 +406,13 @@ export default function Calendar() {
     return (
       <div className="h-full w-full">
         <div className="flex h-full w-full rounded-md bg-white/95">
-          <div
-            style={{ background: laneColor }}
-            className="w-1.5 shrink-0 rounded-l-md"
-          />
+          <div style={{ background: laneColor }} className="w-1.5 shrink-0 rounded-l-md" />
           <div className="min-w-0 p-1.5">
             <div className="flex items-center gap-1">
-              <span className="text-[10px] font-semibold text-gray-900">
-                {arg.timeText}
-              </span>
-              <span
-                className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: laneColor }}
-              />
+              <span className="text-[10px] font-semibold text-gray-900">{arg.timeText}</span>
+              <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: laneColor }} />
             </div>
-            <div className="truncate text-[11px] font-semibold text-gray-800">
-              {arg.event.title}
-            </div>
+            <div className="truncate text-[11px] font-semibold text-gray-800">{arg.event.title}</div>
           </div>
         </div>
       </div>
@@ -489,9 +452,7 @@ export default function Calendar() {
   const handleDatesSet = (arg: DatesSetArg) => {
     const newViewType = arg.view.type as ViewMode;
     if (viewMode !== newViewType) setViewMode(newViewType);
-    setCurrentRangeLabel(
-      formatRangeLabel({ start: arg.start, end: arg.end }, arg.view.type)
-    );
+    setCurrentRangeLabel(formatRangeLabel({ start: arg.start, end: arg.end }, arg.view.type));
   };
 
   return (
@@ -507,19 +468,9 @@ export default function Calendar() {
               Today
             </button>
             <div className="flex h-8 overflow-hidden rounded border border-gray-300 bg-white shadow-sm">
-              <button
-                onClick={handlePrev}
-                className="px-2 text-[13px] leading-none hover:bg-gray-50"
-              >
-                ‹
-              </button>
+              <button onClick={handlePrev} className="px-2 text-[13px] leading-none hover:bg-gray-50">‹</button>
               <div className="w-px bg-gray-300" />
-              <button
-                onClick={handleNext}
-                className="px-2 text-[13px] leading-none hover:bg-gray-50"
-              >
-                ›
-              </button>
+              <button onClick={handleNext} className="px-2 text-[13px] leading-none hover:bg-gray-50">›</button>
             </div>
           </div>
           <div className="mt-2 text-[13px] font-semibold leading-none text-[#1a1f2e] md:mt-0">
@@ -611,7 +562,7 @@ export default function Calendar() {
         open={assignOpen}
         itemId={activeItemId}
         mode={reservedEditItem ? "editReserved" : "create"}
-        overrideItem={reservedEditItem || undefined}
+        overrideItem={reservedEditItem}
         onClose={() => {
           setAssignOpen(false);
           setReservedEditItem(null);
@@ -624,6 +575,16 @@ export default function Calendar() {
             screens: payload.screens,
             groups: payload.groups,
             reservedBlockId: reservedEditItem?._reservedBlockId,
+          });
+        }}
+        onOpenScheduledScreens={() => {
+          console.log("Open ScheduledScreens panel");
+        }}
+        onCreated={({ serverId }) => {
+          setJustCreatedIds((prev) => {
+            const next = new Set(prev);
+            next.add(String(serverId));
+            return next;
           });
         }}
       />

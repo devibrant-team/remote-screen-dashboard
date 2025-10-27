@@ -2,8 +2,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Monitor, Search, CalendarClock, UsersRound } from "lucide-react";
+
 import { selectAllReservedBlocks } from "../../../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import { selectGroups } from "../../../../Redux/ScreenManagement/GroupSlice";
+import { selectSelectedDevices } from "../../../../Redux/ScreenManagement/ScreenSlice";
 import type { RootState } from "../../../../../store";
 import { setOverlayScreenId, selectOverlayScreenId } from "../../../../Redux/Schedule/UiSlice";
 
@@ -25,8 +27,9 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
   const dispatch = useDispatch();
   const overlayScreenId = useSelector(selectOverlayScreenId);
   const blocks = useSelector(selectAllReservedBlocks);
- 
 
+  // Selected devices from store (only show these)
+  const selectedDeviceIds = useSelector(selectSelectedDevices) as Array<string | number>;
 
   // Enrichment from store
   const storeScreens =
@@ -35,15 +38,29 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
 
   const [query, setQuery] = useState("");
 
-  /* -------------------- Screens (unique) -------------------- */
+  // Fast membership check for selected device IDs
+  const selectedSet = useMemo(() => {
+    const ids = selectedDeviceIds
+      .map((v) => Number(v))
+      .filter((n) => Number.isFinite(n)) as number[];
+    return new Set<number>(ids);
+  }, [selectedDeviceIds]);
+
+  /* -------------------- Screens (unique, filtered by selection) -------------------- */
   const screenIds = useMemo(() => {
     const set = new Set<number>();
-    for (const b of blocks) for (const s of b.screens) {
-      const id = Number(s.screenId);
-      if (Number.isFinite(id)) set.add(id);
+    for (const b of blocks) {
+      for (const s of b.screens) {
+        const id = Number(s.screenId);
+        if (!Number.isFinite(id)) continue;
+        // Only include if this device is currently selected
+        if (selectedSet.size === 0 || selectedSet.has(id)) {
+          set.add(id);
+        }
+      }
     }
     return Array.from(set);
-  }, [blocks]);
+  }, [blocks, selectedSet]);
 
   type ScreenRow = {
     id: number;
@@ -55,10 +72,13 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
 
   const screenRows = useMemo<ScreenRow[]>(() => {
     const counts = new Map<number, number>();
-    for (const b of blocks) for (const s of b.screens) {
-      const id = Number(s.screenId);
-      if (!Number.isFinite(id)) continue;
-      counts.set(id, (counts.get(id) ?? 0) + 1);
+    for (const b of blocks) {
+      for (const s of b.screens) {
+        const id = Number(s.screenId);
+        if (!Number.isFinite(id)) continue;
+        if (selectedSet.size > 0 && !selectedSet.has(id)) continue;
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
     }
 
     return screenIds.map((id) => {
@@ -71,9 +91,9 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
         count: counts.get(id) ?? 0,
       };
     });
-  }, [blocks, screenIds, storeScreens]);
+  }, [blocks, screenIds, storeScreens, selectedSet]);
 
-  /* -------------------- Groups (unique) -------------------- */
+  /* -------------------- Groups (unchanged) -------------------- */
   const groupIds = useMemo(() => {
     const set = new Set<number>();
     for (const b of blocks) for (const g of b.groups) {
@@ -134,14 +154,27 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
     [groupRows, q]
   );
 
+  // If current overlay is not visible anymore, clear it
+  useEffect(() => {
+    if (overlayScreenId != null && !screenIds.includes(overlayScreenId)) {
+      dispatch(setOverlayScreenId(null));
+    }
+  }, [overlayScreenId, screenIds, dispatch]);
+
   useEffect(() => {
     console.log("[ScheduledScreens] overlayScreenId changed:", overlayScreenId);
   }, [overlayScreenId]);
 
   const handleToggleOverlay = (id: number) => {
-    console.log("[ScheduledScreens] clicked screen id:", id, "current overlayScreenId:", overlayScreenId);
+    console.log(
+      "[ScheduledScreens] clicked screen id:",
+      id,
+      "current overlayScreenId:",
+      overlayScreenId
+    );
     dispatch(setOverlayScreenId(overlayScreenId === id ? null : id));
   };
+
   /* -------------------- UI -------------------- */
   return (
     <div className={`flex h-full min-h-0 flex-col ${className ?? ""}`}>
