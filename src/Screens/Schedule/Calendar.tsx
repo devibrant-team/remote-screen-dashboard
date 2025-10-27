@@ -1,3 +1,4 @@
+// src/Screens/Schedule/Calendar.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -20,6 +21,7 @@ import { selectAllScheduleItems } from "../../Redux/Schedule/ScheduleSelectors";
 
 import { selectAllReservedBlocks } from "../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import { selectOverlayScreenId } from "../../Redux/Schedule/UiSlice";
+import { selectSelectedDevices } from "../../Redux/ScreenManagement/ScreenSlice";
 import { selectSelectedGroups } from "../../Redux/ScreenManagement/GroupSlice";
 
 import ScheduleAssignSidebar, {
@@ -137,10 +139,13 @@ export default function Calendar() {
   const reservedBlocks = useSelector(selectAllReservedBlocks);
 
   // Selected devices & groups
-
+  const selectedDeviceIds = useSelector(selectSelectedDevices) as Array<string | number>;
   const selectedGroupIds  = useSelector(selectSelectedGroups)  as Array<string | number>;
 
-
+  const selectedScreenIdSet = useMemo(
+    () => new Set(selectedDeviceIds.map((v) => Number(v))),
+    [selectedDeviceIds]
+  );
   const selectedGroupIdSet = useMemo(
     () => new Set(selectedGroupIds.map((v) => Number(v))),
     [selectedGroupIds]
@@ -149,68 +154,67 @@ export default function Calendar() {
   useEffect(() => {
     console.log("[Calendar] overlayScreenId:", overlayScreenId);
   }, [overlayScreenId]);
-const reservedEvents = useMemo(() => {
-  const out: CalendarEvent[] = [];
 
-  const haveOverlayScreen = overlayScreenId != null;
-  const haveGroupSelection = selectedGroupIdSet.size > 0;
+  /* ----------------------- RESERVED (server) EVENTS ----------------------- */
+  // Strict visibility:
+  // - If no overlay & no groups selected -> ONLY newly created.
+  // - If overlay set -> newly created OR blocks targeting that overlay screen.
+  // - Else (groups only) -> newly created OR blocks targeting those groups.
+  const reservedEvents = useMemo(() => {
+    const out: CalendarEvent[] = [];
 
-  // helpers
-  const blockTargetsOverlay = (b: any) => {
-    if (overlayScreenId == null) return false;
-    const sid = Number(overlayScreenId);
-    return (b.screens ?? []).some((s: any) => Number(s.screenId) === sid);
-  };
+    const haveOverlayScreen = overlayScreenId != null;
+    const haveGroupSelection = selectedGroupIdSet.size > 0;
 
-  const blockTargetsSelectedGroups = (b: any) => {
-    if (selectedGroupIdSet.size === 0) return false;
-    return (b.groups ?? []).some((g: any) =>
-      selectedGroupIdSet.has(Number(g.groupId))
-    );
-  };
+    const blockTargetsOverlay = (b: any) => {
+      if (overlayScreenId == null) return false;
+      const sid = Number(overlayScreenId);
+      return (b.screens ?? []).some((s: any) => Number(s.screenId) === sid);
+    };
 
-  for (const b of reservedBlocks) {
-    const start = parseDateTime(b.startDate, b.startTime);
-    const end   = parseDateTime(b.endDate, b.endTime);
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+    const blockTargetsSelectedGroups = (b: any) => {
+      if (selectedGroupIdSet.size === 0) return false;
+      return (b.groups ?? []).some((g: any) =>
+        selectedGroupIdSet.has(Number(g.groupId))
+      );
+    };
 
-    const isJustCreated = justCreatedIds.has(String(b.id));
+    for (const b of reservedBlocks) {
+      const start = parseDateTime(b.startDate, b.startTime);
+      const end   = parseDateTime(b.endDate, b.endTime);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
 
-    // --- strict visibility rules ---
-    let visible = false;
+      const isJustCreated = justCreatedIds.has(String(b.id));
 
-    if (!haveOverlayScreen && !haveGroupSelection) {
-      // No overlay, no groups → show only newly created
-      visible = isJustCreated;
-    } else if (haveOverlayScreen) {
-      // Overlay device view → only that device's blocks + newly created
-      visible = isJustCreated || blockTargetsOverlay(b);
-    } else {
-      // Groups selected (and no overlay) → those groups' blocks + newly created
-      visible = isJustCreated || blockTargetsSelectedGroups(b);
+      let visible = false;
+      if (!haveOverlayScreen && !haveGroupSelection) {
+        visible = isJustCreated;
+      } else if (haveOverlayScreen) {
+        visible = isJustCreated || blockTargetsOverlay(b);
+      } else {
+        visible = isJustCreated || blockTargetsSelectedGroups(b);
+      }
+
+      if (!visible) continue;
+
+      out.push({
+        id: `reserved-${b.id}`,
+        title: b.title || `Playlist ${b.playlistId ?? ""}`,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        backgroundColor: "#EF4444", // red (will also be enforced in didMount)
+        borderColor: "#B91C1C",     // dark red
+        extendedProps: { isReserved: true, raw: b, isJustCreated },
+      });
     }
 
-    if (!visible) continue;
-
-    out.push({
-      id: `reserved-${b.id}`,
-      title: b.title || `Playlist ${b.playlistId ?? ""}`,
-      start: start.toISOString(),
-      end: end.toISOString(),
-      backgroundColor: "#9CA3AF",
-      borderColor: "#6B7280",
-      extendedProps: { isReserved: true, raw: b, isJustCreated },
-    });
-  }
-
-  return out;
-}, [
-  reservedBlocks,
-  justCreatedIds,
-  overlayScreenId,          // <-- only device driver
-  selectedGroupIdSet,       // <-- optional group driver
-]);
-
+    return out;
+  }, [
+    reservedBlocks,
+    justCreatedIds,
+    overlayScreenId,     // device driver (only one we care about)
+    selectedGroupIdSet,  // group driver (when no overlay)
+  ]);
 
   /* ----------------------- NEW/EDITABLE CALENDAR ITEMS -------------------- */
   const receivingRef = useRef(false);
@@ -363,61 +367,79 @@ const reservedEvents = useMemo(() => {
   };
 
   /* --------------------------- event cosmetics --------------------------- */
-  const handleEventDidMount = (arg: any) => {
-    const isReserved = !!arg.event.extendedProps?.isReserved;
+const handleEventDidMount = (arg: any) => {
+  const isReserved = !!arg.event.extendedProps?.isReserved;
 
-    if (isReserved) {
-      arg.el.style.background = "#9CA3AF";
-      arg.el.style.border = "1px solid #6B7280";
-      arg.el.style.borderRadius = "8px";
-      arg.el.style.overflow = "hidden";
-      arg.el.style.boxShadow = "inset 0 0 0 1px rgba(0,0,0,0.04)";
-      arg.el.title = arg.event.title;
-      arg.el.style.zIndex = "60";
-      return;
+  if (isReserved) {
+    const isNew = !!arg.event.extendedProps?.isJustCreated;
+
+    // NEW (just created) => RED + white text
+    // OLD                  => GRAY + dark text
+    if (isNew) {
+      arg.el.style.background = "#EF4444";           // red
+      arg.el.style.border = "1px solid #B91C1C";     // dark red
+      arg.el.style.color = "#FFFFFF";                // white text
+    } else {
+      arg.el.style.background = "#9CA3AF";           // gray
+      arg.el.style.border = "1px solid #6B7280";     // darker gray
+      arg.el.style.color = "#111827";                // gray-900 text
     }
 
-    const ext: any = arg.event.extendedProps || {};
-    arg.el.style.background = "transparent";
-    arg.el.style.border = "none";
-    arg.el.style.marginLeft = "2px";
-    arg.el.style.marginRight = "2px";
-    arg.el.style.marginTop = "1px";
-    arg.el.style.marginBottom = "1px";
-    arg.el.style.borderRadius = "10px";
+    arg.el.style.borderRadius = "8px";
     arg.el.style.overflow = "hidden";
-    arg.el.style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)";
-    if (ext.laneIndex != null) arg.el.style.zIndex = String(100 + ext.laneIndex);
-  };
+    arg.el.style.boxShadow = "inset 0 0 0 1px rgba(0,0,0,0.06)";
+    arg.el.title = arg.event.title;
+    arg.el.style.zIndex = "60";
+    return;
+  }
 
-  const renderEventContent = (arg: EventContentArg) => {
-    const isReserved = !!arg.event.extendedProps?.isReserved;
-    if (isReserved) {
-      return (
-        <div className="h-full w-full px-1.5 py-1">
-          <div className="text-[10px] font-semibold text-gray-900">{arg.timeText}</div>
-          <div className="truncate text-[11px] font-semibold text-gray-800">{arg.event.title}</div>
-        </div>
-      );
-    }
+  // ... keep your editable (non-reserved) styling
+  const ext: any = arg.event.extendedProps || {};
+  arg.el.style.background = "transparent";
+  arg.el.style.border = "none";
+  arg.el.style.marginLeft = "2px";
+  arg.el.style.marginRight = "2px";
+  arg.el.style.marginTop = "1px";
+  arg.el.style.marginBottom = "1px";
+  arg.el.style.borderRadius = "10px";
+  arg.el.style.overflow = "hidden";
+  arg.el.style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)";
+  if (ext.laneIndex != null) arg.el.style.zIndex = String(100 + ext.laneIndex);
+};
+const renderEventContent = (arg: EventContentArg) => {
+  const isReserved = !!arg.event.extendedProps?.isReserved;
+  if (isReserved) {
+    const isNew = !!arg.event.extendedProps?.isJustCreated;
+    const timeCls = isNew ? "text-white" : "text-gray-900";
+    const titleCls = isNew ? "text-white" : "text-gray-800";
 
-    const ext: any = arg.event.extendedProps || {};
-    const laneColor = ext.laneColor ?? "#EF4444";
     return (
-      <div className="h-full w-full">
-        <div className="flex h-full w-full rounded-md bg-white/95">
-          <div style={{ background: laneColor }} className="w-1.5 shrink-0 rounded-l-md" />
-          <div className="min-w-0 p-1.5">
-            <div className="flex items-center gap-1">
-              <span className="text-[10px] font-semibold text-gray-900">{arg.timeText}</span>
-              <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: laneColor }} />
-            </div>
-            <div className="truncate text-[11px] font-semibold text-gray-800">{arg.event.title}</div>
-          </div>
-        </div>
+      <div className="h-full w-full px-1.5 py-1">
+        <div className={`text-[10px] font-semibold ${timeCls}`}>{arg.timeText}</div>
+        <div className={`truncate text-[11px] font-semibold ${titleCls}`}>{arg.event.title}</div>
       </div>
     );
-  };
+  }
+
+  // ... keep your editable (non-reserved) rendering
+  const ext: any = arg.event.extendedProps || {};
+  const laneColor = ext.laneColor ?? "#EF4444";
+  return (
+    <div className="h-full w-full">
+      <div className="flex h-full w-full rounded-md bg-white/95">
+        <div style={{ background: laneColor }} className="w-1.5 shrink-0 rounded-l-md" />
+        <div className="min-w-0 p-1.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-semibold text-gray-900">{arg.timeText}</span>
+            <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: laneColor }} />
+          </div>
+          <div className="truncate text-[11px] font-semibold text-gray-800">{arg.event.title}</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 
   /* ------------------------------- nav api ------------------------------- */
   const api = () => calendarRef.current?.getApi();
