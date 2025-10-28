@@ -27,31 +27,55 @@ import {
 import type { RootState } from "../../../../../store";
 import { useGetGroups } from "../../../../ReactQuery/Group/GetGroup";
 import { useGetScreen } from "../../../../ReactQuery/Screen/GetScreen";
+
 import {
   postGetScheduleDetails,
   type GetScheduleDetailsPayload,
 } from "../../../../Redux/Schedule/GetDevicesSchedule";
+
 import { setReservedFromResponse } from "../../../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
+
 import { usePostScheduleItem } from "../../../../Redux/Schedule/ScheduleItem/PostScheduleItem";
-import { setCurrentScheduleName } from "../../../../Redux/Schedule/SheduleSlice";
+
+import {
+  setCurrentScheduleName,
+  setCurrentScheduleId, // ✅ make sure this exists in SheduleSlice
+} from "../../../../Redux/Schedule/SheduleSlice";
+
+/* ------------------------------------------------------------------ */
+/* Types                                                               */
+/* ------------------------------------------------------------------ */
 
 type FilterMode = "all" | "groups" | "screens";
+
+type CreatedSummary = { id: string; name: string };
 
 type SelectScreenModalProps = {
   open: boolean;
   onClose: () => void;
-  onConfirmNavigate?: () => void; // parent navigates to /calender (or wherever)
+  /** Optional legacy path: parent decides navigation */
+  onConfirmNavigate?: () => void;
+  /** Optional modern path: we hand the created schedule up */
+  onCreated?: (s: CreatedSummary) => void;
 };
+
+/* ------------------------------------------------------------------ */
+/* Component                                                           */
+/* ------------------------------------------------------------------ */
 
 const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
   open,
   onClose,
   onConfirmNavigate,
+  onCreated,
 }) => {
   const dispatch = useDispatch();
+
+  // 🔗 create schedule mutation
   const { mutateAsync: createSchedule, isPending: isCreating } =
     usePostScheduleItem();
 
+  // Selectors
   const groups = useSelector(selectGroups) as Group[];
   const screens = useSelector(
     (s: RootState) => s.screens.items
@@ -59,10 +83,10 @@ const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
   const selectedDevices = useSelector(selectSelectedDevices);
   const selectedGroups = useSelector(selectSelectedGroups);
 
+  // Prefetch lists (hydrate slices if empty)
   const { data: apiGroups, isLoading: loadingGroups } = useGetGroups();
   const { data: apiScreens, isLoading: loadingScreens } = useGetScreen();
 
-  // hydrate store if empty
   useEffect(() => {
     if (!groups.length && Array.isArray(apiGroups) && apiGroups.length) {
       dispatch(setGroups(apiGroups as Group[]));
@@ -75,12 +99,14 @@ const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
     }
   }, [screens.length, apiScreens, dispatch]);
 
+  // UI state
   const [mode, setMode] = useState<FilterMode>("all");
   const [onlyActive] = useState(false);
   const [query, setQuery] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [scheduleName, setScheduleName] = useState<string>("");
 
+  // Row union view
   type Row =
     | {
         kind: "group";
@@ -142,59 +168,15 @@ const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
     return list;
   }, [unionAll, mode, onlyActive, query]);
 
-  const handleToggleRow = (row: Row) => {
-    if (row.kind === "group") dispatch(toggleSelectedGroup(row.id));
-    else dispatch(toggleSelectedDevice(row.id));
-  };
-
-  // --- UPDATED: Next also POSTs the schedule first ---
-  const handleNext = async () => {
-    // guards
-    const name = scheduleName.trim();
-    if (!name) return;
-    if ((selectedGroups?.length ?? 0) === 0 && (selectedDevices?.length ?? 0) === 0) return;
-
-    try {
-      setIsPosting(true);
-
-
-
-
-      // Keep the name in Redux for continuity
-      dispatch(setCurrentScheduleName(name));
-      // If you later add setCurrentScheduleId(newId), dispatch it here.
-
-      // 2) Fetch reserved details for selected targets
-      const payload: GetScheduleDetailsPayload = {
-        screens: (selectedDevices ?? [])
-          .map((id) => Number(id))
-          .filter(Number.isFinite)
-          .map((screenId) => ({ screenId })),
-        groups: (selectedGroups ?? [])
-          .map((id) => Number(id))
-          .filter(Number.isFinite)
-          .map((groupId) => ({ groupId })),
-      };
-
-      const res = await postGetScheduleDetails(payload);
-      dispatch(setReservedFromResponse(res as any));
-
-      // 3) Close & let parent navigate (you can read newId from Redux later if needed)
-      onClose();
-      onConfirmNavigate?.();
-      // If you prefer direct routing with id here, inject useNavigate & do:
-      // navigate(`/calender?scheduleId=${encodeURIComponent(String(newId))}`);
-    } catch (err) {
-      console.error("❌ Create schedule / Get details error:", err);
-    } finally {
-      setIsPosting(false);
-    }
-  };
-
   const rowIsSelected = (row: Row) =>
     row.kind === "group"
       ? selectedGroups.some((gid) => String(gid) === String(row.id))
       : selectedDevices.some((sid) => String(sid) === String(row.id));
+
+  const handleToggleRow = (row: Row) => {
+    if (row.kind === "group") dispatch(toggleSelectedGroup(row.id));
+    else dispatch(toggleSelectedDevice(row.id));
+  };
 
   const selectedChips: Array<{
     label: string;
@@ -270,6 +252,108 @@ const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
     !scheduleName.trim() ||
     (selectedGroups.length === 0 && selectedDevices.length === 0);
 
+  /* ------------------------------------------------------------------ */
+  /* MAIN: Create schedule, set Redux (id+name), hydrate reserved blocks */
+  /* ------------------------------------------------------------------ */
+  const handleNext = async () => {
+    const name = scheduleName.trim();
+    if (!name) return;
+    if (
+      (selectedGroups?.length ?? 0) === 0 &&
+      (selectedDevices?.length ?? 0) === 0
+    )
+      return;
+
+    try {
+      setIsPosting(true);
+
+      // Build creation payload (adjust if your API differs)
+      const creationPayload: any = {
+        name, // or "title" if backend expects it
+       
+      };
+
+      // 1) Create schedule on backend
+      const created = await createSchedule(creationPayload);
+      console.log("[createSchedule] raw response →", created);
+      const anyRes = created as Record<string, any>;
+      console.log("[createSchedule] normalized anyRes →", anyRes);
+      console.log(
+        "[createSchedule] candidates →",
+        "scheduleItemId:",
+        anyRes?.scheduleItemId,
+        "schedule_item.id:",
+        anyRes?.schedule_item?.id,
+        "id:",
+        anyRes?.id,
+        "data.id:",
+        anyRes?.data?.id
+      );
+
+      // ✅ primary source
+      let idNum: number | undefined =
+        typeof anyRes?.scheduleItemId === "number"
+          ? anyRes.scheduleItemId
+          : undefined;
+
+      // ✅ fallback to nested object
+      if (
+        !Number.isFinite(idNum) &&
+        typeof anyRes?.schedule_item?.id === "number"
+      ) {
+        idNum = anyRes.schedule_item.id;
+      }
+
+      // guard
+      if (!Number.isFinite(idNum)) {
+        console.error(
+          "Create succeeded but no schedule item id was found:",
+          anyRes
+        );
+        return;
+      }
+
+      // friendly name (echoed back or your input)
+      const createdName: string = (
+        anyRes?.schedule_item?.name?.trim?.()
+          ? anyRes.schedule_item.name
+          : scheduleName
+      ) as string;
+
+      const createdId = String(idNum);
+      console.log("✔ scheduleItemId:", createdId);
+
+      // 2) Store in Redux
+      dispatch(setCurrentScheduleId(createdId));
+      dispatch(setCurrentScheduleName(createdName));
+
+      // 3) hydrate reserved details (unchanged)
+      const detailsPayload: GetScheduleDetailsPayload = {
+        screens: creationPayload.screens,
+        groups: creationPayload.groups,
+      };
+      const reserved = await postGetScheduleDetails(detailsPayload);
+      dispatch(setReservedFromResponse(reserved as any));
+
+      // 4) notify parent / navigate
+      onCreated
+        ? onCreated({ id: createdId, name: createdName })
+        : onConfirmNavigate?.();
+
+      // 5) close
+      onClose();
+    } catch (err) {
+      console.error("❌ Create schedule / Get details error:", err);
+      // TODO: toast error UI if you have a toaster
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* Render                                                              */
+  /* ------------------------------------------------------------------ */
+
   return (
     <div
       className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
@@ -300,7 +384,7 @@ const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
 
         {/* Content area (scroll) */}
         <div className="max-h-[calc(90vh-56px-64px)] overflow-y-auto px-6 pb-6 pt-4">
-          {/* Header: Select Targets + Schedule Name */}
+          {/* Header: Schedule Name */}
           <div className="mb-4 grid gap-3 md:grid-cols-3">
             <div className="md:col-span-2">
               <label className="mb-1 block text-xs font-medium text-gray-700">
@@ -383,7 +467,7 @@ const SelectScreenModal: React.FC<SelectScreenModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleRemoveChip(chip)}
-                    className="ml-0.5 rounded-full p-0.5 hover:bg-black/5"
+                    className="ml-0.5 rounded-full p-0.5 hover:bg.black/5"
                     aria-label="Remove"
                   >
                     <X className="h-3 w-3" />

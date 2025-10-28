@@ -1,16 +1,16 @@
-// src/Redux/schedule/scheduleSlice.ts
 import { createSlice, type PayloadAction, nanoid } from "@reduxjs/toolkit";
 import type {
   ScheduleItem,
   ScheduleState,
   ScreenRef,
   GroupRef,
-} from "../Schedule/ScheduleTypes";
+} from "./ScheduleTypes";
 
 const initialState: ScheduleState = {
   byId: {},
   allIds: [],
   currentName: "",
+  currentId: null,
 };
 
 type AddItemPayload = Omit<ScheduleItem, "id"> & { id?: string };
@@ -23,9 +23,7 @@ const scheduleSlice = createSlice({
     addItem: {
       reducer(state, action: PayloadAction<ScheduleItem>) {
         const item = action.payload;
-        if (!state.byId[item.id]) {
-          state.allIds.push(item.id);
-        }
+        if (!state.byId[item.id]) state.allIds.push(item.id);
         state.byId[item.id] = item;
       },
       prepare(payload: AddItemPayload) {
@@ -57,17 +55,28 @@ const scheduleSlice = createSlice({
       if (!state.byId[id]) return;
       delete state.byId[id];
       state.allIds = state.allIds.filter((x) => x !== id);
+
+      if (state.currentId === id) {
+        state.currentId = null;
+        state.currentName = "";
+      }
     },
 
     clearAll(state) {
       state.byId = {};
       state.allIds = [];
       state.currentName = "";
+      state.currentId = null;
     },
+
     setCurrentScheduleName(state, action: PayloadAction<string>) {
       state.currentName = action.payload;
     },
-    // convenience helpers
+
+    setCurrentScheduleId(state, action: PayloadAction<string | null>) {
+      state.currentId = action.payload;
+    },
+
     setItemTimes(
       state,
       action: PayloadAction<{
@@ -102,7 +111,6 @@ const scheduleSlice = createSlice({
       item.playlistId = action.payload.playlistId;
     },
 
-    // screens
     addScreenToItem(
       state,
       action: PayloadAction<{ id: string; screen: ScreenRef }>
@@ -125,7 +133,6 @@ const scheduleSlice = createSlice({
       item.screens = item.screens.filter((s) => s.screenId !== screenId);
     },
 
-    // groups
     addGroupToItem(
       state,
       action: PayloadAction<{ id: string; group: GroupRef }>
@@ -163,7 +170,7 @@ export const {
   addGroupToItem,
   removeGroupFromItem,
   setCurrentScheduleName,
-  
+  setCurrentScheduleId,
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;

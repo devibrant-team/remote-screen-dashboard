@@ -20,7 +20,7 @@ import {
   setItemTimes,
 } from "../../../Redux/Schedule/SheduleSlice";
 import { useDeleteReservedBlock } from "../../../Redux/Schedule/ReservedBlocks/useDeleteReservedBlock";
-
+import { selectCurrentScheduleId } from "../../../Redux/Schedule/ScheduleSelectors";
 import { selectSelectedDevices } from "../../../Redux/ScreenManagement/ScreenSlice";
 import { selectSelectedGroups } from "../../../Redux/ScreenManagement/GroupSlice";
 import type { RootState } from "../../../../store";
@@ -195,7 +195,13 @@ const ScheduleAssignSidebar: React.FC<Props> = ({
 
   /* ----------------------- Local draft for edit mode ---------------------- */
   const [draft, setDraft] = useState<ScheduleLike | null>(null);
-
+const currentScheduleId = useSelector(selectCurrentScheduleId) as string | number | null;
+const normalizedScheduleId = useMemo<number | null>(() => {
+  if (currentScheduleId == null) return null;
+  const n = Number(currentScheduleId);
+  return Number.isFinite(n) ? n : null;
+}, [currentScheduleId]);
+  console.log("currentScheduleId:", currentScheduleId);
   useEffect(() => {
     if (mode === "editReserved" && overrideItem) {
       setDraft(JSON.parse(JSON.stringify(overrideItem)));
@@ -285,7 +291,8 @@ const ScheduleAssignSidebar: React.FC<Props> = ({
   }, [workingItem, reservedBlocks, selfReservedId]);
 
   /* ------------------------ Mutations ------------------------- */
-const { mutateAsync: deleteReservedAsync, isPending: isDeleting } = useDeleteReservedBlock();
+  const { mutateAsync: deleteReservedAsync, isPending: isDeleting } =
+    useDeleteReservedBlock();
 
   const { mutateAsync, isPending } = usePostSchedule({
     onSuccess: (resp) => {
@@ -412,75 +419,85 @@ const { mutateAsync: deleteReservedAsync, isPending: isDeleting } = useDeleteRes
   };
 
   /* ------------------------------- submit --------------------------------- */
-  const handleSubmit = async () => {
-    const src = workingItem;
-    if (!src) return;
+const handleSubmit = async () => {
+  const src = workingItem;
+  if (!src) return;
 
-    const hasTargets = src.screens.length > 0 || src.groups.length > 0;
-    if (!hasTargets) {
-      console.warn("No screens or groups selected for this block.");
-      return;
-    }
-    if (!src.playlistId || String(src.playlistId).trim() === "") {
-      console.warn("No playlist assigned for this block.");
-      return;
-    }
+  const hasTargets = src.screens.length > 0 || src.groups.length > 0;
+  if (!hasTargets) {
+    console.warn("No screens or groups selected for this block.");
+    return;
+  }
+  if (!src.playlistId || String(src.playlistId).trim() === "") {
+    console.warn("No playlist assigned for this block.");
+    return;
+  }
 
-    const payload: SchedulePostPayload = {
-      title: src.title,
-      playlistId: String(src.playlistId),
-      startDate: src.startDate,
-      startTime: src.startTime,
-      endDate: src.endDate,
-      endTime: src.endTime,
-      screens: src.screens.map((s) => ({ screenId: s.screenId })),
-      groups: src.groups.map((g) => ({ groupId: g.groupId })),
-    };
-
-    onSubmit?.({
-      itemId: src.id,
-      screens: payload.screens,
-      groups: payload.groups,
-    });
-
-    if (mode === "editReserved") {
-      if (selfReservedId == null) {
-        console.warn("Missing reserved block id for update.");
-        return;
-      }
-      await updateReservedAsync({ id: selfReservedId, ...payload } as any);
-      return;
-    }
-
-    await mutateAsync(payload);
+  const payload: SchedulePostPayload = {
+    title: src.title,
+    playlistId: String(src.playlistId),
+    startDate: src.startDate,
+    startTime: src.startTime,
+    endDate: src.endDate,
+    endTime: src.endTime,
+    screens: src.screens.map((s) => ({ screenId: s.screenId })),
+    groups: src.groups.map((g) => ({ groupId: g.groupId })),
   };
 
-const handleDelete = async () => {
+  onSubmit?.({
+    itemId: src.id,
+    screens: payload.screens,
+    groups: payload.groups,
+  });
+
+  // ----- edit path -----
   if (mode === "editReserved") {
-    if (selfReservedId == null) return;
-
-    const ok = window.confirm("Delete this reserved block?");
-    if (!ok) return;
-
-    try {
-      if (onDeleteReserved) {
-        await onDeleteReserved(selfReservedId);
-      } else {
-        // call API via hook; it should also dispatch removeById internally
-        await deleteReservedAsync(Number(selfReservedId));
-        // If your hook does NOT dispatch, uncomment the next line:
-        // dispatch(removeById(Number(selfReservedId)));
-      }
-      onClose();
-    } catch (err) {
-      console.error("❌ delete reserved block error:", err);
+    if (selfReservedId == null) {
+      console.warn("Missing reserved block id for update.");
+      return;
     }
-  } else {
-    // local draft only
-    dispatch(removeItem({ id: (workingItem as ScheduleReduxItem).id }));
-    onClose();
+    await updateReservedAsync({ id: selfReservedId, ...payload } as any);
+    return;
   }
+
+  // ----- create path (mode is narrowed to "create" here) -----
+  if (normalizedScheduleId === null) {
+    console.warn("No current schedule id set; cannot submit block.");
+    return;
+  }
+
+  await mutateAsync({
+    scheduleItemId: normalizedScheduleId, // number
+    payload,
+  });
 };
+
+  const handleDelete = async () => {
+    if (mode === "editReserved") {
+      if (selfReservedId == null) return;
+
+      const ok = window.confirm("Delete this reserved block?");
+      if (!ok) return;
+
+      try {
+        if (onDeleteReserved) {
+          await onDeleteReserved(selfReservedId);
+        } else {
+          // call API via hook; it should also dispatch removeById internally
+          await deleteReservedAsync(Number(selfReservedId));
+          // If your hook does NOT dispatch, uncomment the next line:
+          // dispatch(removeById(Number(selfReservedId)));
+        }
+        onClose();
+      } catch (err) {
+        console.error("❌ delete reserved block error:", err);
+      }
+    } else {
+      // local draft only
+      dispatch(removeItem({ id: (workingItem as ScheduleReduxItem).id }));
+      onClose();
+    }
+  };
 
   /* --------------------------------- UI ----------------------------------- */
   return (
@@ -507,17 +524,20 @@ const handleDelete = async () => {
 
           <div className="flex items-center gap-2">
             {/* Delete */}
-<button
-  onClick={handleDelete}
-  className="rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
-  aria-label="Delete"
-  disabled={busy || isDeleting}                  // <-- add isDeleting here
-  title={mode === "editReserved" ? "Delete reserved block" : "Remove draft"}
->
-  <Trash2 className="mr-1 inline-block h-4 w-4" />
-  {isDeleting ? "Deleting…" : "Delete"}       
-</button>
-
+            <button
+              onClick={handleDelete}
+              className="rounded-md border border-red-200 bg-red-50 px-2 py-1.5 text-[12px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+              aria-label="Delete"
+              disabled={busy || isDeleting} // <-- add isDeleting here
+              title={
+                mode === "editReserved"
+                  ? "Delete reserved block"
+                  : "Remove draft"
+              }
+            >
+              <Trash2 className="mr-1 inline-block h-4 w-4" />
+              {isDeleting ? "Deleting…" : "Delete"}
+            </button>
 
             <button
               onClick={onClose}

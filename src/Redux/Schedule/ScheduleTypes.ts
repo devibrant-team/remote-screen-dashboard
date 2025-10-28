@@ -17,4 +17,5 @@ export type ScheduleState = {
   byId: Record<string, ScheduleItem>;
   allIds: string[];
    currentName: string;  
+   currentId: string | null;
 };

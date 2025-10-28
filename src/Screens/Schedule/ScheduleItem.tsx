@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import {
   Plus, ChevronRight, Search, Loader2, Trash2, Edit3, X, Check
 } from "lucide-react";
@@ -7,6 +8,8 @@ import SelectScreenModal from "./Components/Models/SelectScreenModal";
 import { useGetScheduleItem } from "../../Redux/Schedule/ScheduleItem/GetScheduleItem";
 import { useRenameScheduleItem } from "../../Redux/Schedule/ScheduleItem/RenameScheduleItem";
 import { useDeleteScheduleItem } from "../../Redux/Schedule/ScheduleItem/DeleteScheduleItem";
+import { setCurrentScheduleId, setCurrentScheduleName } from "../../Redux/Schedule/SheduleSlice";
+
 
 /* ------------------------------ helpers ------------------------------ */
 const fmtDateTime = (iso: string) => {
@@ -15,8 +18,6 @@ const fmtDateTime = (iso: string) => {
   const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }).replace(" ", "");
   return `${date.replace(" ", " , ")} - ${time}`;
 };
-
-// 🔴 Reusable style for rename input (red background + border + focus ring)
 const RENAME_INPUT_CLS =
   "w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm " +
   "outline-none ring-2 ring-transparent focus:ring-red-400 " +
@@ -27,22 +28,19 @@ const ScheduleItem: React.FC = () => {
   const [query, setQuery] = useState("");
   const [openWizard, setOpenWizard] = useState(false);
 
-  // inline rename state
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement | null>(null);
 
-  // delete confirm
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { data: rows = [], isLoading, isError, refetch } = useGetScheduleItem();
 
-  // 🔗 mutations
+  const { data: rows = [], isLoading, isError, refetch } = useGetScheduleItem();
   const { mutateAsync: renameSchedule, isPending: isRenaming } = useRenameScheduleItem();
   const { mutateAsync: deleteScheduleItem, isPending: isDeleting } = useDeleteScheduleItem();
 
-  // focus the inline input when renaming starts
   useEffect(() => {
     if (renamingId) {
       const t = setTimeout(() => renameInputRef.current?.focus(), 0);
@@ -50,7 +48,6 @@ const ScheduleItem: React.FC = () => {
     }
   }, [renamingId]);
 
-  // Search-only filtering
   const visible = useMemo(() => {
     if (!query.trim()) return rows;
     const q = query.trim().toLowerCase();
@@ -75,12 +72,13 @@ const ScheduleItem: React.FC = () => {
     } finally {
       setRenamingId(null);
       setRenameValue("");
-      // invalidate runs inside the hook
     }
   };
 
-  const openSchedule = (id: string) => {
-    navigate(`/calender?scheduleId=${id}`);
+  const openSchedule = (id: string, name?: string) => {
+    dispatch(setCurrentScheduleId(id));
+    if (name) dispatch(setCurrentScheduleName(name));
+    navigate("/calender");
   };
 
   const askDelete = (id: string) => setDeletingId(id);
@@ -91,7 +89,6 @@ const ScheduleItem: React.FC = () => {
       await deleteScheduleItem({ id: deletingId });
     } finally {
       setDeletingId(null);
-      // list refresh handled by invalidation
     }
   };
 
@@ -103,15 +100,12 @@ const ScheduleItem: React.FC = () => {
   /* ------------------------------ UI ------------------------------ */
   return (
     <>
-      {/* Full-screen container */}
       <section className="w-full mt-5 px-5">
-        {/* Top bar */}
         <div className="w-full border-b border-gray-200 bg-white px-5 py-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-center">
             <h2 className="text-lg font-semibold text-gray-900">Schedules</h2>
 
             <div className="flex w-full items-center gap-2 sm:justify-end">
-              {/* Search */}
               <div className="relative w-full max-w-xs">
                 <Search className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
@@ -135,9 +129,7 @@ const ScheduleItem: React.FC = () => {
           </div>
         </div>
 
-        {/* Content area */}
         <div className="flex-1 overflow-auto px-5 py-4">
-          {/* Loading / Error */}
           {isLoading && (
             <div className="rounded-xl border border-gray-200 bg-white p-6">
               <div className="flex items-center gap-3 text-sm text-gray-600">
@@ -161,7 +153,6 @@ const ScheduleItem: React.FC = () => {
             </div>
           )}
 
-          {/* Empty state */}
           {!isLoading && !isError && visible.length === 0 && (
             <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-10 text-center">
               <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100">
@@ -183,7 +174,6 @@ const ScheduleItem: React.FC = () => {
             </div>
           )}
 
-          {/* Table (desktop) */}
           {!isLoading && !isError && visible.length > 0 && (
             <div className="hidden md:block">
               <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
@@ -219,7 +209,7 @@ const ScheduleItem: React.FC = () => {
                               </div>
                             ) : (
                               <button
-                                onClick={() => openSchedule(r.id)}
+                                onClick={() => openSchedule(r.id, r.name)}
                                 className="w-full text-left"
                                 title="Open schedule"
                               >
@@ -256,7 +246,7 @@ const ScheduleItem: React.FC = () => {
                               ) : (
                                 <>
                                   <button
-                                    onClick={() => openSchedule(r.id)}
+                                    onClick={() => openSchedule(r.id, r.name)}
                                     className="rounded p-2 hover:bg-gray-100"
                                     title="Open"
                                     aria-label="Open"
@@ -292,7 +282,6 @@ const ScheduleItem: React.FC = () => {
             </div>
           )}
 
-          {/* Cards (mobile) */}
           {!isLoading && !isError && visible.length > 0 && (
             <div className="grid gap-2 md:hidden">
               {visible.map((r) => {
@@ -316,7 +305,7 @@ const ScheduleItem: React.FC = () => {
                             aria-label="Rename schedule"
                           />
                         ) : (
-                          <button onClick={() => openSchedule(r.id)} className="min-w-0 text-left" title="Open">
+                          <button onClick={() => openSchedule(r.id, r.name)} className="min-w-0 text-left" title="Open">
                             <div className="truncate text-sm font-semibold text-gray-900">{r.name}</div>
                             <div className="mt-1 text-xs text-gray-500">{fmtDateTime(r.modifiedAtISO)}</div>
                           </button>
@@ -348,7 +337,7 @@ const ScheduleItem: React.FC = () => {
                         ) : (
                           <>
                             <button
-                              onClick={() => openSchedule(r.id)}
+                              onClick={() => openSchedule(r.id, r.name)}
                               className="rounded p-2 hover:bg-gray-100"
                               title="Open"
                               aria-label="Open"
@@ -383,14 +372,9 @@ const ScheduleItem: React.FC = () => {
         </div>
       </section>
 
-      {/* Delete confirm */}
       {deletingId && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40">
-          <div
-            className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl ring-1 ring-gray-200"
-            role="dialog"
-            aria-modal="true"
-          >
+          <div className="w-full max-w-sm rounded-xl bg-white p-4 shadow-xl ring-1 ring-gray-200" role="dialog" aria-modal="true">
             <div className="mb-2 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900">Delete schedule?</h3>
               <button onClick={() => setDeletingId(null)} className="rounded p-1 hover:bg-gray-100" aria-label="Close">
@@ -419,11 +403,16 @@ const ScheduleItem: React.FC = () => {
         </div>
       )}
 
-      {/* Wizard modal */}
       <SelectScreenModal
         open={openWizard}
         onClose={() => setOpenWizard(false)}
         onConfirmNavigate={() => {
+          setOpenWizard(false);
+          navigate("/calender");
+        }}
+        onCreated={(created) => {
+          dispatch(setCurrentScheduleId(created.id));
+          dispatch(setCurrentScheduleName(created.name));
           setOpenWizard(false);
           navigate("/calender");
         }}

@@ -109,3 +109,11 @@ export const selectDecoratedCalendarEvents = createSelector(
     return out;
   }
 );
+export const selectCurrentScheduleId = (s: RootState) => s.schedule.currentId;
+export const selectCurrentScheduleName = (s: RootState) => s.schedule.currentName;
+
+export const selectScheduleById = (id: string) => (s: RootState) =>
+  s.schedule.byId[id];
+
+export const selectAllSchedules = (s: RootState) =>
+  s.schedule.allIds.map((id) => s.schedule.byId[id]);

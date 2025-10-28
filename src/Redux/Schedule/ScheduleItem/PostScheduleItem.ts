@@ -1,49 +1,40 @@
+// src/Redux/Schedule/ScheduleItem/PostScheduleItem.ts
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { PostScheduleItem } from "../../../API/API";
 
-
 export type PostScheduleItemPayload = {
   name: string;
+  // add more fields if needed
 };
 
 export type PostScheduleItemResponse = {
-  id?: number | string;
-  name?: string;
-  // ...whatever your API returns
+  success?: boolean;
+  scheduleItemId?: number;
+  schedule_item?: {
+    id: number;
+    name?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
 };
 
-async function postScheduleItemApi(
-  payload: PostScheduleItemPayload,
-  token?: string
-): Promise<PostScheduleItemResponse> {
-  const t =
-    token ??
-    (typeof window !== "undefined" ? localStorage.getItem("token") ?? "" : "");
-
-  if (!t) {
-    throw new Error("Missing auth token");
-  }
-
-  const res = await axios.post<PostScheduleItemResponse>(
-    PostScheduleItem,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${t}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
-  return res.data;
-}
-
 export function usePostScheduleItem() {
-  return useMutation({
-    mutationFn: ({
-      name,
-      token,
-    }: PostScheduleItemPayload & { token?: string }) =>
-      postScheduleItemApi({ name }, token),
+  return useMutation<PostScheduleItemResponse, unknown, PostScheduleItemPayload>({
+    mutationFn: async (payload) => {
+      // ✅ Get token from localStorage
+      const token = localStorage.getItem("token");
+
+      // ✅ Send token in Authorization header
+      const res = await axios.post(PostScheduleItem, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}), // conditional header
+        },
+      });
+
+      // ✅ Always return the response body
+      return res.data;
+    },
   });
 }
