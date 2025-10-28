@@ -21,7 +21,6 @@ import { selectAllScheduleItems } from "../../Redux/Schedule/ScheduleSelectors";
 
 import { selectAllReservedBlocks } from "../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import { selectOverlayScreenId } from "../../Redux/Schedule/UiSlice";
-import { selectSelectedDevices } from "../../Redux/ScreenManagement/ScreenSlice";
 import { selectSelectedGroups } from "../../Redux/ScreenManagement/GroupSlice";
 
 import ScheduleAssignSidebar, {
@@ -139,13 +138,10 @@ export default function Calendar() {
   const reservedBlocks = useSelector(selectAllReservedBlocks);
 
   // Selected devices & groups
-  const selectedDeviceIds = useSelector(selectSelectedDevices) as Array<string | number>;
+
   const selectedGroupIds  = useSelector(selectSelectedGroups)  as Array<string | number>;
 
-  const selectedScreenIdSet = useMemo(
-    () => new Set(selectedDeviceIds.map((v) => Number(v))),
-    [selectedDeviceIds]
-  );
+
   const selectedGroupIdSet = useMemo(
     () => new Set(selectedGroupIds.map((v) => Number(v))),
     [selectedGroupIds]

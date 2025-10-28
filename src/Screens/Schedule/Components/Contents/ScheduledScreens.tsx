@@ -1,7 +1,7 @@
 // src/Screens/Schedule/ScheduledScreens.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Monitor, Search, CalendarClock, UsersRound } from "lucide-react";
+import { Monitor,  CalendarClock, UsersRound } from "lucide-react";
 
 import { selectAllReservedBlocks } from "../../../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import { selectGroups } from "../../../../Redux/ScreenManagement/GroupSlice";
@@ -175,6 +175,22 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
     dispatch(setOverlayScreenId(overlayScreenId === id ? null : id));
   };
 
+  /* -------------------- Warn on refresh/close if there are selected devices -------------------- */
+  const shouldWarn = selectedDeviceIds.length > 0;
+  useEffect(() => {
+    if (!shouldWarn) return;
+
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Browsers ignore custom texts; returning a value triggers the native confirm
+      e.preventDefault();
+      e.returnValue = "You have assigned devices not saved yet. If you refresh, they will be lost.";
+      return e.returnValue;
+    };
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [shouldWarn]);
+
   /* -------------------- UI -------------------- */
   return (
     <div className={`flex h-full min-h-0 flex-col ${className ?? ""}`}>
@@ -182,16 +198,7 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
       <div className="sticky top-0 z-[1] -mx-3 mb-2 border-b border-gray-100 bg-white/85 px-3 py-2 backdrop-blur">
         <div className="flex items-center justify-between gap-2">
           <div className="text-[13px] font-semibold text-gray-900">
-            Reserved targets
-          </div>
-          <div className="relative w-44">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              className="w-full rounded-md border border-gray-300 bg-white pl-8 pr-2 py-1.5 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400"
-              placeholder="Search screens/groups…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
+            Assigned Devices
           </div>
         </div>
       </div>
@@ -202,7 +209,7 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-500">
-              Screens with reservations
+              Screens
             </h3>
             <span className="text-[11px] text-gray-500">
               {filteredScreens.length}
@@ -274,7 +281,7 @@ const ScheduledScreens: React.FC<Props> = ({ className }) => {
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-[12px] font-semibold uppercase tracking-wide text-gray-500">
-              Groups with reservations
+              Groups
             </h3>
             <span className="text-[11px] text-gray-500">
               {filteredGroups.length}

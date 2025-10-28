@@ -1,721 +1,611 @@
-import axios from "axios";
-import {
-  updateSlideAtIndex,
-  updateSlotInSlide,
-  type PlaylistState,
-} from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import { useDispatch } from "react-redux";
-import { store } from "../../../store";
-import { PlaylistPostApi } from "../../API/API";
+// src/Screens/Schedule/Calendar.tsx
+import { useEffect, useMemo, useRef, useState } from "react";
+import FullCalendar from "@fullcalendar/react";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import interactionPlugin, {
+  type EventReceiveArg,
+  type EventResizeDoneArg,
+} from "@fullcalendar/interaction";
+import type {
+  EventContentArg,
+  EventDropArg,
+  DatesSetArg,
+} from "@fullcalendar/core";
 
-// Format and send playlist to backend
-export const savePlaylistToDatabase = async (playlist: PlaylistState) => {
-  const formData = new FormData();
+import { useDispatch, useSelector } from "react-redux";
+import { nanoid } from "@reduxjs/toolkit";
 
-  const totalDuration = playlist.slides.reduce(
-    (sum, slide) => sum + (slide.duration || 0),
-    0
-  );
+import { addItem, setItemTimes } from "../../Redux/Schedule/SheduleSlice";
+import { selectAllScheduleItems } from "../../Redux/Schedule/ScheduleSelectors";
 
-  // Basic fields
-  formData.append("id", String(playlist.id));
-  formData.append("name", playlist.name);
-  formData.append("type", String(playlist.type));
-  formData.append("NumberOfSlides", String(playlist.slides.length));
-  formData.append("total_duration", String(totalDuration));
+import { selectAllReservedBlocks } from "../../Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
+import { selectOverlayScreenId } from "../../Redux/Schedule/UiSlice";
+import { selectSelectedGroups } from "../../Redux/ScreenManagement/GroupSlice";
 
-  // Add slides as structured fields
-  playlist.slides.forEach((slide, slideIndex) => {
-    formData.append(`slides[${slideIndex}][index]`, String(slideIndex));
-    formData.append(
-      `slides[${slideIndex}][duration]`,
-      String(slide.duration || 0)
-    );
-    formData.append(
-      `slides[${slideIndex}][grid_style]`,
-      String(slide.grid_style)
-    );
+import ScheduleAssignSidebar, {
+  type ScheduleLike,
+} from "./Components/ScheduleAssignSidebar";
 
-    slide.slots.forEach((slot, slotIndex) => {
-      const mediaKey = `slides[${slideIndex}][slots][${slotIndex}][media]`;
+/* -------------------------------- types ---------------------------------- */
+type ViewMode = "timeGridDay" | "timeGridWeek" | "dayGridMonth";
+type VisibleRange = { start: Date; end: Date };
+type BaseEvent = { id: string; title: string; start: string; end: string };
+type CalendarEvent = BaseEvent & {
+  backgroundColor?: string;
+  borderColor?: string;
+  extendedProps?: Record<string, any>;
+};
 
-      if (slot.media instanceof File) {
-        formData.append(mediaKey, slot.media); // ✅ File will be handled properly
-      } else {
-        formData.append(mediaKey, slot.media || "");
+/* ----------------------- lane colors (lane 0 is red) ---------------------- */
+const LANE_COLORS = ["#EF4444", "#8B5CF6", "#F59E0B", "#10B981", "#3B82F6", "#EC4899"];
+
+/* ---------------- helpers: date parsing/formatting ------------------------ */
+const toDDMMYYYY = (d: Date) =>
+  `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+const toHHMMSS = (d: Date) =>
+  `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+
+function parseDateTime(dateStr: string, timeStr: string) {
+  if (!dateStr) return new Date(NaN);
+  const sep = dateStr.includes("-") ? "-" : "/";
+  const parts = dateStr.split(sep).map((x) => Number(x));
+  let y = 0, m = 0, d = 0;
+  if (parts[0] > 31) [y, m, d] = parts; else [d, m, y] = parts;
+  const [hh = 0, mi = 0, ss = 0] = (timeStr || "00:00:00").split(":").map((x) => Number(x || 0));
+  return new Date(y, (m || 1) - 1, d || 1, hh, mi, ss);
+}
+
+/* --------- Build overlapping lanes for prettier side-by-side events ------- */
+function decorateForEdit(evts: BaseEvent[]): CalendarEvent[] {
+  type Tmp = BaseEvent & { sd: Date; ed: Date; used?: boolean };
+  const tmp: Tmp[] = evts.map((e) => ({ ...e, sd: new Date(e.start), ed: new Date(e.end) }));
+  const overlaps = (a: Tmp, b: Tmp) => a.sd < b.ed && b.sd < a.ed;
+
+  const out: CalendarEvent[] = [];
+  for (let i = 0; i < tmp.length; i++) {
+    const root = tmp[i];
+    if (root.used) continue;
+
+    const cluster: Tmp[] = [root];
+    root.used = true;
+
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (let j = 0; j < tmp.length; j++) {
+        const c = tmp[j];
+        if (c.used) continue;
+        if (cluster.some((x) => overlaps(x, c))) {
+          c.used = true;
+          cluster.push(c);
+          grew = true;
+        }
       }
+    }
 
-      formData.append(
-        `slides[${slideIndex}][slots][${slotIndex}][index]`,
-        String(slot.index)
-      );
-      formData.append(
-        `slides[${slideIndex}][slots][${slotIndex}][mediaType]`,
-        slot.mediaType || ""
-      );
-      formData.append(
-        `slides[${slideIndex}][slots][${slotIndex}][scale]`,
-        slot.scale || ""
-      );
-    });
-  });
+    type Lane = { end: Date };
+    const lanes: Lane[] = [];
+    const assigned: Array<{ ev: Tmp; laneIdx: number }> = [];
 
-  const response = await axios.post(PlaylistPostApi, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
+    cluster
+      .slice()
+      .sort((a, b) => a.sd.getTime() - b.sd.getTime())
+      .forEach((ev) => {
+        let slot = lanes.findIndex((l) => l.end <= ev.sd);
+        if (slot === -1) {
+          lanes.push({ end: ev.ed });
+          slot = lanes.length - 1;
+        } else {
+          lanes[slot].end = ev.ed;
+        }
+        assigned.push({ ev, laneIdx: slot });
+      });
 
-  return response.data;
-};
+    for (const { ev, laneIdx } of assigned) {
+      const color = LANE_COLORS[laneIdx % LANE_COLORS.length];
+      out.push({
+        id: ev.id,
+        title: ev.title,
+        start: ev.start,
+        end: ev.end,
+        backgroundColor: "transparent",
+        borderColor: "transparent",
+        extendedProps: { laneIndex: laneIdx, laneColor: color },
+      });
+    }
+  }
+  return out;
+}
 
-// Format the payload structure
-export const formatPlaylistPayload = (playlist: PlaylistState) => {
-  const totalDuration = playlist.slides.reduce(
-    (sum, slide) => sum + (slide.duration || 0),
-    0
-  );
-  return {
-    id: playlist.id,
-    name: playlist.name,
-    type: playlist.type,
-    NumberOfSlides: playlist.slides.length,
-    total_duration: totalDuration,
-    slides: playlist.slides.map((slide, index) => {
-      const { selectedGrid, ...slideWithoutSelectedGrid } = slide;
-      return {
-        ...slideWithoutSelectedGrid,
-        index,
-        grid_style: slide.grid_style,
-      };
-    }),
-  };
-};
-
-export const useHandleMediaUpload = (selectedSlideIndex: number | null) => {
+/* ================================ component =============================== */
+export default function Calendar() {
+  const calendarRef = useRef<FullCalendar | null>(null);
   const dispatch = useDispatch();
 
-  const handleMediaUpload = (slotIndex: number, file: File) => {
-    if (selectedSlideIndex === null) return;
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [activeItemId, setActiveItemId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("timeGridWeek");
+  const [currentRangeLabel, setCurrentRangeLabel] = useState("");
 
-    const media = file;
-    const mediaType = file.type.startsWith("video") ? "video" : "image";
+  // track ONLY newly created (server) ids as strings
+  const [justCreatedIds, setJustCreatedIds] = useState<Set<string>>(new Set());
 
-    if (mediaType === "video") {
-      const video = document.createElement("video");
-      video.preload = "metadata";
-      video.src = URL.createObjectURL(media); // only for duration reading
+  // when non-null, we're editing a gray reserved block
+  const [reservedEditItem, setReservedEditItem] = useState<ScheduleLike | null>(null);
 
-      video.onloadedmetadata = () => {
-        const uploadedDuration = Math.round(video.duration);
-        console.log(
-          `🎥 Uploaded video slot ${slotIndex} duration:`,
-          uploadedDuration
-        );
+  const overlayScreenId = useSelector(selectOverlayScreenId);
+  const reservedBlocks = useSelector(selectAllReservedBlocks);
 
-        dispatch(
-          updateSlotInSlide({
-            slideIndex: selectedSlideIndex,
-            slotIndex,
-            media, // ✅ the actual File
-            mediaType,
-          })
-        );
+  // Selected devices & groups
 
-        setTimeout(() => {
-          const currentSlide =
-            store.getState().playlist.slides[selectedSlideIndex];
-
-          const durationPromises = currentSlide.slots
-            .filter(
-              (slot) => slot.mediaType === "video" && slot.media instanceof File
-            )
-            .map((slot) => {
-              return new Promise<number>((resolve) => {
-                if (!(slot.media instanceof File)) {
-                  return resolve(0); // Skip if media is not a File
-                }
-
-                const tempVid = document.createElement("video");
-                tempVid.preload = "metadata";
-                tempVid.src = URL.createObjectURL(slot.media); // ✅ now safe
-                tempVid.onloadedmetadata = () => resolve(tempVid.duration);
-                tempVid.onerror = () => resolve(0);
-              });
-            });
-
-          Promise.all(durationPromises).then((durations) => {
-            const maxDuration = Math.round(
-              Math.max(...durations, uploadedDuration)
-            );
-            console.log(
-              "🕒 Final slide duration (longest video):",
-              maxDuration
-            );
-
-            dispatch(
-              updateSlideAtIndex({
-                index: selectedSlideIndex,
-                updatedSlide: {
-                  ...currentSlide,
-                  duration: maxDuration,
-                },
-              })
-            );
-          });
-        }, 100);
-      };
-    } else {
-      dispatch(
-        updateSlotInSlide({
-          slideIndex: selectedSlideIndex,
-          slotIndex,
-          media, // ✅ the actual File
-          mediaType,
-        })
-      );
-    }
-  };
-
-  return handleMediaUpload;
-};
+  const selectedGroupIds  = useSelector(selectSelectedGroups)  as Array<string | number>;
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-{
-  "name": "userdashboard",
-  "version": "1.1.1",
-  "private": true,
-  "description": "User Dashboard -application",
-  "author": "Devibrant",
-  "type": "module",
-  "main": "electron/main.js",
-  "scripts": {
-    "dev": "concurrently \"vite\" \"wait-on http://localhost:5174 && cross-env NODE_ENV=development electron electron/main.js\"",
-    "build": "vite build",
-    "preview": "vite preview",
-    "lint": "eslint .",
-    "electron": "electron electron/main.js",
-    "start": "npm run dev",
-    "build:app": "vite build",
-    "pack": "npm run build:app && electron-builder"
-  },
-  "dependencies": {
-    "@reduxjs/toolkit": "^2.8.2",
-    "node-machine-id": "^1.1.12",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-redux": "^9.2.0",
-    "react-router-dom": "^7.6.3"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.5.2",
-    "concurrently": "^9.2.0",
-    "cross-env": "^7.0.3",
-    "electron": "^37.2.0",
-    "electron-builder": "^26.0.12",
-    "eslint": "^9.29.0",
-    "vite": "^7.0.0",
-    "wait-on": "^8.0.3"
-  },
-  "build": {
-    "appId": "com.devibrant.userdashboard",
-    "productName": "User Dashboard",
-    "files": [
-      "electron/**/*",
-      "**/*.js",
-      {
-        "from": "dist",
-        "to": "dist",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ],
-    "asar": true,
-    "asarUnpack": [
-      "dist/**"
-    ],
-    "directories": {
-      "buildResources": "assets"
-    },
-    "extraMetadata": {
-      "main": "electron/main.js"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "shortcutName": "User Dashboard",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    }
-  }
-}
-
-
-
-
-
-/////////////////////////////////////////////////////////APP.TSX/////////////////////
-
-
-
-
-import { useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
-import './App.css';
-
-// Extend Window interface to define electronAPI
-declare global {
-  interface Window {
-    electronAPI?: {
-      sendLog?: (...args: any[]) => void;
-      getMachineId?: () => Promise<string>;
-    };
-  }
-}
-
-// Override console.log to forward logs to Electron main process
-const originalConsoleLog = console.log;
-console.log = (...args: unknown[]) => {
-  if (window.electronAPI?.sendLog) {
-    window.electronAPI.sendLog(...args);
-  }
-  originalConsoleLog(...args);
-};
-
-function App() {
-  const [count, setCount] = useState<number>(0);
-  const [machineId, setMachineId] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const selectedGroupIdSet = useMemo(
+    () => new Set(selectedGroupIds.map((v) => Number(v))),
+    [selectedGroupIds]
+  );
 
   useEffect(() => {
-    if (window.electronAPI?.getMachineId) {
-      console.log('electronAPI object exists');
-      console.log('electronAPI.getMachineId is', typeof window.electronAPI.getMachineId);
+    console.log("[Calendar] overlayScreenId:", overlayScreenId);
+  }, [overlayScreenId]);
 
-      window.electronAPI.getMachineId()
-        .then((id: string) => {
-          setMachineId(id);
-        })
-        .catch(() => {
-          setError('Failed to get Machine ID');
-        });
-    } else {
-      setError('electronAPI.getMachineId not available');
+  /* ----------------------- RESERVED (server) EVENTS ----------------------- */
+  // Strict visibility:
+  // - If no overlay & no groups selected -> ONLY newly created.
+  // - If overlay set -> newly created OR blocks targeting that overlay screen.
+  // - Else (groups only) -> newly created OR blocks targeting those groups.
+  const reservedEvents = useMemo(() => {
+    const out: CalendarEvent[] = [];
+
+    const haveOverlayScreen = overlayScreenId != null;
+    const haveGroupSelection = selectedGroupIdSet.size > 0;
+
+    const blockTargetsOverlay = (b: any) => {
+      if (overlayScreenId == null) return false;
+      const sid = Number(overlayScreenId);
+      return (b.screens ?? []).some((s: any) => Number(s.screenId) === sid);
+    };
+
+    const blockTargetsSelectedGroups = (b: any) => {
+      if (selectedGroupIdSet.size === 0) return false;
+      return (b.groups ?? []).some((g: any) =>
+        selectedGroupIdSet.has(Number(g.groupId))
+      );
+    };
+
+    for (const b of reservedBlocks) {
+      const start = parseDateTime(b.startDate, b.startTime);
+      const end   = parseDateTime(b.endDate, b.endTime);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) continue;
+
+      const isJustCreated = justCreatedIds.has(String(b.id));
+
+      let visible = false;
+      if (!haveOverlayScreen && !haveGroupSelection) {
+        visible = isJustCreated;
+      } else if (haveOverlayScreen) {
+        visible = isJustCreated || blockTargetsOverlay(b);
+      } else {
+        visible = isJustCreated || blockTargetsSelectedGroups(b);
+      }
+
+      if (!visible) continue;
+
+      out.push({
+        id: `reserved-${b.id}`,
+        title: b.title || `Playlist ${b.playlistId ?? ""}`,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        backgroundColor: "#EF4444", // red (will also be enforced in didMount)
+        borderColor: "#B91C1C",     // dark red
+        extendedProps: { isReserved: true, raw: b, isJustCreated },
+      });
     }
-  }, []);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank" rel="noreferrer">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank" rel="noreferrer">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    return out;
+  }, [
+    reservedBlocks,
+    justCreatedIds,
+    overlayScreenId,     // device driver (only one we care about)
+    selectedGroupIdSet,  // group driver (when no overlay)
+  ]);
+
+  /* ----------------------- NEW/EDITABLE CALENDAR ITEMS -------------------- */
+  const receivingRef = useRef(false);
+  const lastReceiveKeyRef = useRef<{ key: string; ts: number } | null>(null);
+
+  const items = useSelector(selectAllScheduleItems);
+  const baseEvents: BaseEvent[] = useMemo(() => {
+    return items.map((it) => {
+      const start = parseDateTime(it.startDate, it.startTime);
+      const end = parseDateTime(it.endDate, it.endTime);
+      return {
+        id: it.id,
+        title: it.title || `Playlist ${it.playlistId ?? ""}`,
+        start: start.toISOString(),
+        end: end.toISOString(),
+      };
+    });
+  }, [items]);
+
+  const calendarEvents = useMemo(() => decorateForEdit(baseEvents), [baseEvents]);
+
+  /* -------------------------- Calendar handlers --------------------------- */
+  const handleEventClick = (arg: any) => {
+    const isReserved = !!arg.event.extendedProps?.isReserved;
+
+    if (isReserved) {
+      const raw = arg.event.extendedProps?.raw ?? {};
+      const sd = new Date(arg.event.start!);
+      const ed = new Date(arg.event.end!);
+
+      const toDDMMYYYY = (d: Date) =>
+        `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+      const toHHMMSS = (d: Date) =>
+        `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+
+      const screens = (raw.screens ?? []).map((s: any) => ({ screenId: Number(s.screenId) }));
+      const groups = (raw.groups ?? []).map((g: any) => ({ groupId: Number(g.groupId) }));
+
+      setActiveItemId(null);
+      setAssignOpen(true);
+      setReservedEditItem({
+        id: String(raw.id ?? arg.event.id),
+        title: String(raw.title ?? arg.event.title ?? ""),
+        playlistId: String(raw.playlistId ?? ""),
+        startDate: toDDMMYYYY(sd),
+        startTime: toHHMMSS(sd),
+        endDate: toDDMMYYYY(ed),
+        endTime: toHHMMSS(ed),
+        screens,
+        groups,
+        _reservedBlockId: raw.id as string | number,
+      });
+      return;
+    }
+
+    setReservedEditItem(null);
+    setActiveItemId(arg.event.id);
+    setAssignOpen(true);
+  };
+
+  const DEFAULT_SECONDS = 10 * 60;
+
+  const handleEventReceive = (info: EventReceiveArg) => {
+    const ev = info.event;
+    const title = ev.title || "Playlist";
+    const playlistId = String((ev.extendedProps as any)?.playlistId || "");
+    const durationSec = Number((ev.extendedProps as any)?.durationSec || DEFAULT_SECONDS);
+
+    const start = ev.start as Date;
+    const end = (ev.end as Date) ?? new Date(start.getTime() + durationSec * 1000);
+
+    const key = `${title}|${playlistId}|${start.getTime()}`;
+    const now = Date.now();
+    if (lastReceiveKeyRef.current && lastReceiveKeyRef.current.key === key && now - lastReceiveKeyRef.current.ts < 500) {
+      ev.remove();
+      return;
+    }
+    lastReceiveKeyRef.current = { key, ts: now };
+    receivingRef.current = true;
+
+    dispatch(
+      addItem({
+        id: nanoid(),
+        title,
+        playlistId,
+        startDate: toDDMMYYYY(start),
+        startTime: toHHMMSS(start),
+        endDate: toDDMMYYYY(end),
+        endTime: toHHMMSS(end),
+        screens: [],
+        groups: [],
+      })
+    );
+
+    ev.remove();
+    setTimeout(() => {
+      receivingRef.current = false;
+    }, 50);
+  };
+
+  const handleEventDrop = (arg: EventDropArg) => {
+    const { event } = arg;
+    if (event.extendedProps?.isReserved) return;
+    const start = event.start as Date;
+    const end = (event.end as Date) ?? new Date(start.getTime() + 60 * 1000);
+    dispatch(
+      setItemTimes({
+        id: event.id,
+        startDate: toDDMMYYYY(start),
+        startTime: toHHMMSS(start),
+        endDate: toDDMMYYYY(end),
+        endTime: toHHMMSS(end),
+      })
+    );
+  };
+
+  const handleEventResize = (arg: EventResizeDoneArg) => {
+    const { event } = arg;
+    if (event.extendedProps?.isReserved) return;
+    const start = event.start as Date;
+    const end = (event.end as Date) ?? new Date(start.getTime() + 60 * 1000);
+    dispatch(
+      setItemTimes({
+        id: event.id,
+        startDate: toDDMMYYYY(start),
+        startTime: toHHMMSS(start),
+        endDate: toDDMMYYYY(end),
+        endTime: toHHMMSS(end),
+      })
+    );
+  };
+
+  const handleSelect = (info: any) => {
+    if (receivingRef.current) return;
+    const start = info.start as Date;
+    const end = info.end as Date;
+    dispatch(
+      addItem({
+        id: nanoid(),
+        title: "New Item",
+        playlistId: "",
+        startDate: toDDMMYYYY(start),
+        startTime: toHHMMSS(start),
+        endDate: toDDMMYYYY(end),
+        endTime: toHHMMSS(end),
+        screens: [],
+        groups: [],
+      })
+    );
+  };
+
+  /* --------------------------- event cosmetics --------------------------- */
+const handleEventDidMount = (arg: any) => {
+  const isReserved = !!arg.event.extendedProps?.isReserved;
+
+  if (isReserved) {
+    const isNew = !!arg.event.extendedProps?.isJustCreated;
+
+    // NEW (just created) => RED + white text
+    // OLD                  => GRAY + dark text
+    if (isNew) {
+      arg.el.style.background = "#EF4444";           // red
+      arg.el.style.border = "1px solid #B91C1C";     // dark red
+      arg.el.style.color = "#FFFFFF";                // white text
+    } else {
+      arg.el.style.background = "#9CA3AF";           // gray
+      arg.el.style.border = "1px solid #6B7280";     // darker gray
+      arg.el.style.color = "#111827";                // gray-900 text
+    }
+
+    arg.el.style.borderRadius = "8px";
+    arg.el.style.overflow = "hidden";
+    arg.el.style.boxShadow = "inset 0 0 0 1px rgba(0,0,0,0.06)";
+    arg.el.title = arg.event.title;
+    arg.el.style.zIndex = "60";
+    return;
+  }
+
+  // ... keep your editable (non-reserved) styling
+  const ext: any = arg.event.extendedProps || {};
+  arg.el.style.background = "transparent";
+  arg.el.style.border = "none";
+  arg.el.style.marginLeft = "2px";
+  arg.el.style.marginRight = "2px";
+  arg.el.style.marginTop = "1px";
+  arg.el.style.marginBottom = "1px";
+  arg.el.style.borderRadius = "10px";
+  arg.el.style.overflow = "hidden";
+  arg.el.style.boxShadow = "0 3px 10px rgba(0,0,0,0.18)";
+  if (ext.laneIndex != null) arg.el.style.zIndex = String(100 + ext.laneIndex);
+};
+const renderEventContent = (arg: EventContentArg) => {
+  const isReserved = !!arg.event.extendedProps?.isReserved;
+  if (isReserved) {
+    const isNew = !!arg.event.extendedProps?.isJustCreated;
+    const timeCls = isNew ? "text-white" : "text-gray-900";
+    const titleCls = isNew ? "text-white" : "text-gray-800";
+
+    return (
+      <div className="h-full w-full px-1.5 py-1">
+        <div className={`text-[10px] font-semibold ${timeCls}`}>{arg.timeText}</div>
+        <div className={`truncate text-[11px] font-semibold ${titleCls}`}>{arg.event.title}</div>
       </div>
-      <h1>Vite + React + Electron</h1>
-      <div className="card">
-        <button onClick={() => setCount((c) => c + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Machine ID: <code>{machineId || error || 'Loading...'}</code>
-        </p>
-      </div>
-    </>
-  );
-}
+    );
+  }
 
-export default App;
-
-
-
-
-
-
-
-
-
-
-
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-} from "react-router-dom";
-import ToolBar from "./layout/Tabbar";
-import MediaContent from "./Screens/MediaContent/MediaContent";
-import PlayList from "./Screens/Playlist/Normal/PlayList";
-import LoginScreen from "./Screens/AuthScreens/LoginScreen";
-import LicenseKey from "./../LicenseKey/LicenseKey";
-import Test from "./Screens/Test";
-import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
-
-function AppWrapper() {
-  const location = useLocation();
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  const hideToolbarPaths = ["/login", "/license", "/playlist"];
-  const shouldHideToolbar = hideToolbarPaths.includes(location.pathname);
-
+  // ... keep your editable (non-reserved) rendering
+  const ext: any = arg.event.extendedProps || {};
+  const laneColor = ext.laneColor ?? "#EF4444";
   return (
-    <div className="flex">
-      {!shouldHideToolbar && <ToolBar />}
-      <LicenseKey />
-
-      
-        <Routes>
-          {/* Public routes (redirect to mediacontent if already logged in) */}
-          <Route
-            path="/"
-            element={token ? <Navigate to="/mediacontent" replace /> : <LoginScreen />}
-          />
-          <Route
-            path="/login"
-            element={token ? <Navigate to="/mediacontent" replace /> : <LoginScreen />}
-          />
-
-          {/* Protected routes (redirect to login if not logged in) */}
-          <Route
-            path="/mediacontent"
-            element={token ? <MediaContent /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/playlist"
-            element={token ? <PlayList /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/screenmanagement"
-            element={token ? <ScreenManagement /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/test"
-            element={token ? <Test /> : <Navigate to="/login" replace />}
-          />
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to={token ? "/mediacontent" : "/login"} replace />} />
-        </Routes>
-    
+    <div className="h-full w-full">
+      <div className="flex h-full w-full rounded-md bg-white/95">
+        <div style={{ background: laneColor }} className="w-1.5 shrink-0 rounded-l-md" />
+        <div className="min-w-0 p-1.5">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-semibold text-gray-900">{arg.timeText}</span>
+            <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: laneColor }} />
+          </div>
+          <div className="truncate text-[11px] font-semibold text-gray-800">{arg.event.title}</div>
+        </div>
+      </div>
     </div>
   );
-}
-
-export default function App() {
-  return (
-    <Router>
-      <AppWrapper />
-    </Router>
-  );
-}
+};
 
 
+  /* ------------------------------- nav api ------------------------------- */
+  const api = () => calendarRef.current?.getApi();
+  const handleToday = () => api()?.today();
+  const handlePrev = () => api()?.prev();
+  const handleNext = () => api()?.next();
+  const switchView = (v: ViewMode) => {
+    api()?.changeView(v);
+    setViewMode(v);
+  };
 
-
-
-
-
-
-
-import { useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import type { RootState } from "../../../../store";
-import {
-  addSlide,
-  setSelectedSlideIndex,
-  updateSlideAtIndex,
-  reorderSlide,
-} from "../../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
-import { OneImageGridConfig } from "../../../Config/GridConfig/DefaultGridConfig";
-import { Plus, Clock, ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
-
-const NormalSlider = () => {
-  const dispatch = useDispatch();
-
-  const playlistSlides = useSelector(
-    (state: RootState) => state.playlist.slides
-  );
-  const selectedSlide = useSelector(
-    (state: RootState) => state.playlist.selectedSlideIndex
-  );
-
-  const handleAddSlide = () => {
-    const defaultSlide = {
-      duration: 10,
-      selectedGrid: "default",
-      slots: OneImageGridConfig.slots.map((slot: any) => ({
-        ...slot,
-        media: null as string | null,
-        mediaType: undefined as "image" | "video" | undefined,
-      })),
+  /* ------------------------------- header label --------------------------- */
+  const formatRangeLabel = (range: VisibleRange, viewType: string) => {
+    const start = range.start;
+    const realEnd = new Date(range.end.getTime() - 1);
+    const s = {
+      month: start.toLocaleString("en-US", { month: "short" }),
+      day: start.getDate(),
+      year: start.getFullYear(),
     };
-
-    const newIndex = playlistSlides.length;
-    dispatch(addSlide(defaultSlide));
-    dispatch(setSelectedSlideIndex(newIndex));
+    const e = {
+      month: realEnd.toLocaleString("en-US", { month: "short" }),
+      day: realEnd.getDate(),
+      year: realEnd.getFullYear(),
+    };
+    if (viewType === "timeGridDay") return `${s.month} ${s.day}, ${s.year}`;
+    if (s.year === e.year && s.month === e.month)
+      return `${s.month} ${s.day} – ${e.day}, ${s.year}`;
+    return `${s.month} ${s.day}, ${s.year} – ${e.month} ${e.day}, ${e.year}`;
   };
 
-  const handleDurationChange = (index: number, newDuration: number) => {
-    const updatedSlide = { ...playlistSlides[index], duration: newDuration };
-    dispatch(updateSlideAtIndex({ index, updatedSlide }));
+  const handleDatesSet = (arg: DatesSetArg) => {
+    const newViewType = arg.view.type as ViewMode;
+    if (viewMode !== newViewType) setViewMode(newViewType);
+    setCurrentRangeLabel(formatRangeLabel({ start: arg.start, end: arg.end }, arg.view.type));
   };
-
-  // Jump/move a slide from index -> to index
-  const handleReorder = (from: number, to: number) => {
-    if (to < 0 || to >= playlistSlides.length || from === to) return;
-    dispatch(reorderSlide({ from, to }));
-    // keep focus on the moved slide
-    dispatch(setSelectedSlideIndex(to));
-  };
-
-  // Initialize selection when slides first appear
-  useEffect(() => {
-    if (playlistSlides.length > 0 && selectedSlide === null) {
-      dispatch(setSelectedSlideIndex(0));
-    }
-  }, [playlistSlides, selectedSlide, dispatch]);
 
   return (
-    <section className="p-4 md:p-6 max-h-screen">
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg md:text-xl font-semibold tracking-tight">
-          Normal Slider
-        </h2>
+    <div className="flex h-full w-full flex-col rounded border border-gray-200 bg-white shadow-inner">
+      {/* Header */}
+      <div className="flex flex-col gap-2 border-b border-gray-200 px-3 py-2 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:gap-3">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleToday}
+              className="h-8 rounded border border-gray-300 bg-white px-3 text-[12px] font-medium leading-none text-[#1a1f2e] shadow-sm hover:bg-gray-50"
+            >
+              Today
+            </button>
+            <div className="flex h-8 overflow-hidden rounded border border-gray-300 bg-white shadow-sm">
+              <button onClick={handlePrev} className="px-2 text-[13px] leading-none hover:bg-gray-50">‹</button>
+              <div className="w-px bg-gray-300" />
+              <button onClick={handleNext} className="px-2 text-[13px] leading-none hover:bg-gray-50">›</button>
+            </div>
+          </div>
+          <div className="mt-2 text-[13px] font-semibold leading-none text-[#1a1f2e] md:mt-0">
+            {currentRangeLabel || " "}
+          </div>
+        </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm text-gray-600">
-            Total slides: <b>{playlistSlides.length}</b>
-          </span>
-
+        <div className="flex items-center gap-1 text-[12px] font-medium text-[#1a1f2e]">
           <button
-            onClick={handleAddSlide}
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm font-medium shadow-sm hover:shadow transition bg-white hover:bg-gray-50 active:scale-[0.99]"
-            aria-label="Add current slide to playlist"
+            className={
+              "rounded border px-2 py-1 text-xs " +
+              (viewMode === "timeGridDay"
+                ? "border-[#1a1f2e] bg-[#1a1f2e] text-white"
+                : "border-gray-300 bg-white text-[#1a1f2e] hover:bg-gray-50")
+            }
+            onClick={() => switchView("timeGridDay")}
           >
-            <Plus size={16} color="red" />
-            Add slide
+            Day
+          </button>
+          <button
+            className={
+              "rounded border px-2 py-1 text-xs " +
+              (viewMode === "timeGridWeek"
+                ? "border-[#1a1f2e] bg-[#1a1f2e] text-white"
+                : "border-gray-300 bg-white text-[#1a1f2e] hover:bg-gray-50")
+            }
+            onClick={() => switchView("timeGridWeek")}
+          >
+            Week
+          </button>
+          <button
+            className={
+              "rounded border px-2 py-1 text-xs " +
+              (viewMode === "dayGridMonth"
+                ? "border-[#1a1f2e] bg-[#1a1f2e] text-white"
+                : "border-gray-300 bg-white text-[#1a1f2e] hover:bg-gray-50")
+            }
+            onClick={() => switchView("dayGridMonth")}
+          >
+            Month
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
-        {playlistSlides.map((slide: any, index: number) => (
-          <div
-            key={index}
-            onClick={() => dispatch(setSelectedSlideIndex(index))}
-            aria-pressed={selectedSlide === index}
-            className={`group cursor-pointer rounded-2xl border p-2 transition-all duration-200 bg-white
-              ${
-                selectedSlide === index
-                  ? "border-red-500 ring-2 ring-red-200 shadow-md"
-                  : "border-gray-200 hover:border-gray-300 hover:shadow-sm"
-              }`}
-          >
-            {/* Preview */}
-            <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-white">
-              {slide.slots[0]?.media ? (
-                slide.slots[0].mediaType === "video" ? (
-                  <div className="flex items-center justify-center w-full h-full text-xs font-medium">
-                    <span className="inline-flex items-center gap-1 rounded-md bg-gray-900/80 px-2 py-1 text-white">
-                      🎥 Video
-                    </span>
-                  </div>
-                ) : (
-                  <img
-                    src={slide.slots[0].media as string}
-                    alt={`Slide ${index + 1}`}
-                    className="object-contain w-full h-full transition-transform duration-200 group-hover:scale-[1.02]"
-                  />
-                )
-              ) : (
-                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                  No media
-                </div>
-              )}
-            </div>
-
-            {/* Title */}
-            <p className="text-center text-sm mt-2 font-medium">
-              Slide {index + 1}
-            </p>
-
-            {/* Duration */}
-            <div className="mt-2">
-              <label className="mb-1 flex items-center justify-center gap-1 text-[11px] text-gray-500">
-                <Clock size={12} /> Duration (sec)
-              </label>
-              <input
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                value={slide.duration}
-                onChange={(e) =>
-                  handleDurationChange(index, Number(e.target.value))
-                }
-                className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
-              />
-            </div>
-
-            {/* Reorder controls */}
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {/* Move Left */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleReorder(index, index - 1);
-                }}
-                disabled={index === 0}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-2 py-1 hover:bg-gray-50 disabled:opacity-50"
-                title="Move Left"
-                aria-label="Move slide Left"
-              >
-                <ChevronLeft size={16} color="red"/>
-              </button>
-
-              {/* Jump to position (1..N) */}
-              <input
-                type="number"
-                min={1}
-                max={playlistSlides.length}
-                value={index + 1}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => {
-                  const desired = Number(e.target.value);
-                  if (!Number.isFinite(desired)) return;
-                  const to = Math.min(
-                    Math.max(0, desired - 1),
-                    playlistSlides.length - 1
-                  );
-                  if (to !== index) handleReorder(index, to);
-                }}
-                className="w-full rounded-lg border border-gray-200 bg-white px-2 py-1 text-center text-sm outline-none focus:border-red-400 focus:ring-2 focus:ring-red-200"
-                title="Set slide position"
-                aria-label="Set slide position"
-              />
-
-              {/* Move Right */}
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleReorder(index, index + 1);
-                }}
-                disabled={index === playlistSlides.length - 1}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-2 py-1 hover:bg-gray-50 disabled:opacity-50"
-                title="Move Right"
-                aria-label="Move slide Right"
-              >
-                <ChevronRight size={16} color={"red"}/>
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* Calendar */}
+      <div className="min-h-0 flex-1 text-[12px] [&_.fc]:text-[12px] [&_.fc-scrollgrid]:border-0">
+        <FullCalendar
+          ref={calendarRef}
+          plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+          initialView={viewMode}
+          headerToolbar={false}
+          allDaySlot={false}
+          slotMinTime="00:00:00"
+          slotMaxTime="24:00:00"
+          slotDuration="01:00:00"
+          expandRows={true}
+          nowIndicator={true}
+          slotLabelFormat={{ hour: "2-digit", minute: "2-digit", hour12: false }}
+          /* interactions */
+          selectable={true}
+          selectMirror={true}
+          selectAllow={() => !receivingRef.current}
+          editable={true}
+          eventResizableFromStart={true}
+          eventOverlap={true}
+          droppable={true}
+          eventReceive={handleEventReceive}
+          /* handlers */
+          select={handleSelect}
+          eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventResize}
+          // disallow dragging/resizing reserved events
+          eventAllow={(_dropInfo, draggedEvent) => !draggedEvent?.extendedProps?.isReserved}
+          /* data */
+          events={[...calendarEvents, ...reservedEvents]}
+          eventDidMount={handleEventDidMount}
+          eventContent={renderEventContent}
+          datesSet={handleDatesSet}
+          /* layout */
+          height="100%"
+          dayHeaderClassNames={"bg-gray-50 text-[11px] font-semibold text-[#1a1f2e] border-b border-gray-200"}
+          slotLaneClassNames={"border-gray-100"}
+          slotLabelClassNames={"pr-2 text-[11px] font-medium text-gray-500"}
+        />
       </div>
-    </section>
-  );
-};
 
-export default NormalSlider;
-
-
-
-
-
-
-
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  Navigate,
-  useLocation,
-} from "react-router-dom";
-import ToolBar from "./layout/Tabbar";
-import MediaContent from "./Screens/MediaContent/MediaContent";
-import PlayList from "./Screens/Playlist/Normal/PlayList";
-import LoginScreen from "./Screens/AuthScreens/LoginScreen";
-import LicenseKey from "./../LicenseKey/LicenseKey";
-import Test from "./Screens/Test";
-import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
-
-function AppWrapper() {
-  const location = useLocation();
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  const hideToolbarPaths = ["/login", "/license", "/playlist"];
-  const shouldHideToolbar = hideToolbarPaths.includes(location.pathname);
-
-  return (
-    <div className="flex">
-      {!shouldHideToolbar && <ToolBar />}
-      <LicenseKey />
-
-      
-        <Routes>
-          {/* Public routes (redirect to mediacontent if already logged in) */}
-          <Route
-            path="/"
-            element={token ? <Navigate to="/mediacontent" replace /> : <LoginScreen />}
-          />
-          <Route
-            path="/login"
-            element={token ? <Navigate to="/mediacontent" replace /> : <LoginScreen />}
-          />
-
-          {/* Protected routes (redirect to login if not logged in) */}
-          <Route
-            path="/mediacontent"
-            element={token ? <MediaContent /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/playlist"
-            element={token ? <PlayList /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/screenmanagement"
-            element={token ? <ScreenManagement /> : <Navigate to="/login" replace />}
-          />
-          <Route
-            path="/test"
-            element={token ? <Test /> : <Navigate to="/login" replace />}
-          />
-
-          {/* Fallback */}
-          <Route path="*" element={<Navigate to={token ? "/mediacontent" : "/login"} replace />} />
-        </Routes>
-    
+      <ScheduleAssignSidebar
+        open={assignOpen}
+        itemId={activeItemId}
+        mode={reservedEditItem ? "editReserved" : "create"}
+        overrideItem={reservedEditItem}
+        onClose={() => {
+          setAssignOpen(false);
+          setReservedEditItem(null);
+          setActiveItemId(null);
+        }}
+        onSubmit={(payload) => {
+          console.log("Assign submit:", {
+            mode: reservedEditItem ? "editReserved" : "create",
+            itemId: payload.itemId,
+            screens: payload.screens,
+            groups: payload.groups,
+            reservedBlockId: reservedEditItem?._reservedBlockId,
+          });
+        }}
+        onOpenScheduledScreens={() => {
+          console.log("Open ScheduledScreens panel");
+        }}
+        onCreated={({ serverId }) => {
+          setJustCreatedIds((prev) => {
+            const next = new Set(prev);
+            next.add(String(serverId));
+            return next;
+          });
+        }}
+      />
     </div>
-  );
-}
-
-export default function App() {
-  return (
-    <Router>
-      <AppWrapper />
-    </Router>
   );
 }

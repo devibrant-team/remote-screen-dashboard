@@ -4,10 +4,11 @@ import ScheduleCalendarArea from "./Components/ScheduleCalendarArea";
 import ScheduleToolBar from "./ScheduleToolBar";
 import ScheduleAssignSidebar from "./Components/ScheduleAssignSidebar";
 
-export default function Schedule() {
-  const [toolbarOpen, setToolbarOpen] = useState(false);           // mobile drawer
-  const [mobileTab, setMobileTab] = useState<"calendar"|"events">("calendar"); // mobile content tabs
 
+export default function Schedule() {
+  const [toolbarOpen, setToolbarOpen] = useState(false); // mobile drawer
+  const [mobileTab, setMobileTab] = useState<"calendar" | "events">("calendar"); // mobile content tabs
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   return (
     <div className="flex min-h-screen w-full bg-[#f8f9fa] text-[#1a1f2e]">
       {/* ===== LEFT TOOLBAR (desktop persistent) ===== */}
@@ -16,29 +17,11 @@ export default function Schedule() {
           <ScheduleToolBar />
         </div>
       </aside>
-
       {/* ===== MAIN AREA ===== */}
       <main className="flex min-w-0 flex-1 flex-col">
         {/* Top bar: mobile controls + title (sticky) */}
         <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 backdrop-blur">
           <div className="flex items-center justify-between gap-2 px-3 py-2 sm:px-4">
-            {/* Left: mobile menu button (opens toolbar drawer) */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setToolbarOpen(true)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 lg:hidden"
-                aria-label="Open content picker"
-              >
-                {/* hamburger */}
-                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              </button>
-
-              <h1 className="truncate text-sm font-semibold sm:text-base">Schedule</h1>
-            </div>
-
             {/* Right: mobile tabs (Calendar / Events) */}
             <div className="lg:hidden">
               <div className="inline-flex rounded-xl border border-gray-200 bg-white p-1 shadow-sm">
@@ -80,7 +63,11 @@ export default function Schedule() {
               </div>
             ) : (
               <div className="min-h-[60vh] flex-1 border-t border-gray-200 bg-white">
-                <ScheduleAssignSidebar />
+                {/* ✅ Provide required props */}
+                <ScheduleAssignSidebar
+                  open={true}
+                  onClose={() => setMobileTab("calendar")}
+                />
               </div>
             )}
           </div>
@@ -90,9 +77,14 @@ export default function Schedule() {
             <section className="flex min-w-0 flex-1">
               <ScheduleCalendarArea />
             </section>
-            <aside className="w-[360px] shrink-0 border-l border-gray-200 bg-white">
-              <ScheduleAssignSidebar />
-            </aside>
+            {sidebarOpen && (
+              <aside className="w-[360px] shrink-0 border-l border-gray-200 bg-white">
+                <ScheduleAssignSidebar
+                  open={true}
+                  onClose={() => setSidebarOpen(false)} // closes + unmounts sidebar
+                />
+              </aside>
+            )}
           </div>
         </div>
       </main>
@@ -118,7 +110,13 @@ export default function Schedule() {
             className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50"
             aria-label="Close"
           >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2}>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>

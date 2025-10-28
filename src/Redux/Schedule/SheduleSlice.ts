@@ -6,11 +6,11 @@ import type {
   ScreenRef,
   GroupRef,
 } from "../Schedule/ScheduleTypes";
-import type { RootState } from "../../../store";
 
 const initialState: ScheduleState = {
   byId: {},
   allIds: [],
+  currentName: "",
 };
 
 type AddItemPayload = Omit<ScheduleItem, "id"> & { id?: string };
@@ -62,8 +62,11 @@ const scheduleSlice = createSlice({
     clearAll(state) {
       state.byId = {};
       state.allIds = [];
+      state.currentName = "";
     },
-
+    setCurrentScheduleName(state, action: PayloadAction<string>) {
+      state.currentName = action.payload;
+    },
     // convenience helpers
     setItemTimes(
       state,
@@ -147,7 +150,6 @@ const scheduleSlice = createSlice({
   },
 });
 
-
 export const {
   addItem,
   updateItem,
@@ -160,6 +162,8 @@ export const {
   removeScreenFromItem,
   addGroupToItem,
   removeGroupFromItem,
+  setCurrentScheduleName,
+  
 } = scheduleSlice.actions;
 
 export default scheduleSlice.reducer;

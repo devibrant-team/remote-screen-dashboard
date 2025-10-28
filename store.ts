@@ -17,6 +17,7 @@ import groupReducer from "./src/Redux/ScreenManagement/GroupSlice";
 import scheduleReducer from "./src/Redux/Schedule/SheduleSlice";
 import reservedBlocksReducer from "./src/Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
 import scheduleUiReducer from "./src/Redux/Schedule/UiSlice";
+
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
