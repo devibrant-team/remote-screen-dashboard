@@ -14,9 +14,6 @@ import playlistEditorReducer from "./src/Redux/Playlist/EditPlaylist/EditNormalP
 import mediaLibraryReducer from "./src/Redux/Media/MediaLibrarySlice";
 import interactiveReducer from "./src/Redux/Playlist/interactivePlaylist/interactiveSlice";
 import groupReducer from "./src/Redux/ScreenManagement/GroupSlice";
-import scheduleReducer from "./src/Redux/Schedule/SheduleSlice";
-import reservedBlocksReducer from "./src/Redux/Schedule/ReservedBlocks/ReservedBlockSlice";
-import scheduleUiReducer from "./src/Redux/Schedule/UiSlice";
 
 export const store = configureStore({
   reducer: {
@@ -34,10 +31,11 @@ export const store = configureStore({
     playlistEditor: playlistEditorReducer,
     mediaLibrary: mediaLibraryReducer,
     interactive: interactiveReducer,
-    schedule: scheduleReducer,
-    reservedBlocks: reservedBlocksReducer,
+
+
     groups: groupReducer,
-    scheduleUi: scheduleUiReducer,
+
+
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
