@@ -13,6 +13,8 @@ import LicenseKey from "./../LicenseKey/LicenseKey";
 import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 
 import Media from "./Screens/UploadMedia/Media";
+import ScheduleItem from "./Screens/Schedule/ScheduleItem/ScheduleItem";
+import Schedule from "./Screens/Schedule/Schedule";
 
 
 /* ---------- Auth gate ---------- */
@@ -67,7 +69,7 @@ export default function App() {
           <Route element={<RequireAuth />}>
             <Route element={<PlainLayout />}>
               <Route path="/playlist" element={<PlayList />} />
-            
+              <Route path="/calender" element={<Schedule />} />
             </Route>
           </Route>
 
@@ -77,7 +79,7 @@ export default function App() {
               <Route path="/mediacontent" element={<MediaContent />} />
               <Route path="/screenmanagement" element={<ScreenManagement />} />
               <Route path="/mediaupload" element={<Media />} />
-            
+              <Route path="/schedule" element={<ScheduleItem />} />
             </Route>
           </Route>
 

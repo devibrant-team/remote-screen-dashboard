@@ -28,23 +28,6 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
-.fc-draggable { cursor: grab; }
-.fc-draggable:active { cursor: grabbing; }
-
-/* Only dim when .calendar-dim-others is on container */
-.calendar-dim-others .fc-event {
-  filter: brightness(0.75) saturate(0.75);
-}
-.calendar-dim-others .fc-event.fc-ev-selected {
-  filter: none !important;
-}
-
-.fc .fc-timegrid-slot {
-  height: 100px !important;   /* each slot = 56px */
-}
-
-
-.fc .fc-timegrid-slot-minor {
-  height: 28px !important;
-}
+.fat-slots .fc-timegrid-slot {
+    height: 3.5rem; /* tweak to taste: 3rem, 4rem, etc. */
+  }
