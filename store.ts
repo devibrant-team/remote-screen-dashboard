@@ -15,7 +15,8 @@ import mediaLibraryReducer from "./src/Redux/Media/MediaLibrarySlice";
 import interactiveReducer from "./src/Redux/Playlist/interactivePlaylist/interactiveSlice";
 import groupReducer from "./src/Redux/ScreenManagement/GroupSlice";
 import ScheduleItemReducer from "./src/Redux/ScheduleItem/ScheduleItemSlice";
-import ReservedBlocksreducer from "./src/Redux/ReservedBlocks/ReservedBlocks"
+import ReservedBlocksreducer from "./src/Redux/ReservedBlocks/ReservedBlocks";
+import selectedBlockReducer from "./src/Redux/Block/BlockSlice";
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -35,6 +36,7 @@ export const store = configureStore({
     groups: groupReducer,
     ScheduleItem: ScheduleItemReducer,
     ReservedBlocks: ReservedBlocksreducer,
+    selectedBlock: selectedBlockReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -20,14 +20,58 @@
   --shadow-md: 0 6px 16px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.06);
   --ring-red: 0 0 0 2px rgba(239, 68, 68, 0.25);
 }
-.scrollbar-hide {
+/* if you're on Tailwind v3: use @layer utilities */
+/* if you're on Tailwind v4: you can keep it as-is or wrap in @layer utilities as well */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none; /* IE/Edge legacy */
+    scrollbar-width: none; /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome/Safari/Opera/Edge */
+    width: 0;
+    height: 0;
+    background: transparent;
+  }
+}
+
+/* Hide FullCalendar’s internal scrollbars */
+.fc .fc-scroller,
+.fc .fc-timegrid-body,
+.fc .fc-timegrid-slots {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.fc .fc-scroller::-webkit-scrollbar,
+.fc .fc-timegrid-body::-webkit-scrollbar,
+.fc .fc-timegrid-slots::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Your existing */
+.fat-slots .fc-timegrid-slot {
+  height: 3.5rem;
+}
+
+/* Wheel list utility */
+.wheel-hide-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-
-.scrollbar-hide::-webkit-scrollbar {
+.wheel-hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .fat-slots .fc-timegrid-slot {
-    height: 3.5rem; /* tweak to taste: 3rem, 4rem, etc. */
-  }
+  height: 3.5rem; /* tweak to taste: 3rem, 4rem, etc. */
+}
+.wheel-hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+.wheel-hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
+}
