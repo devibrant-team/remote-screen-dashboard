@@ -1,10 +1,16 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store";
 
-type Id = number | string;
-export type Named = { id: Id; name: string };
+/* ------------------------------- Debug ---------------------------------- */
+const DEBUG = true; // ← set false to mute logs
+const log = (...args: any[]) => {
+  if (DEBUG) console.log("%c[ReservedBlocks]", "color:#a21caf", ...args);
+};
 
-/** Stored block (schedule item) */
+/* ------------------------------- Types ---------------------------------- */
+export type Id = number | string;
+export type Named = { id: number; name: string };
+
 export type ReservedBlock = {
   id: Id;
   title?: string;
@@ -21,93 +27,90 @@ export type ReservedBlock = {
 };
 
 export type ReservedBlocksState = {
-  /** selection coming from the SelectDevicesModel (ids may be preset; names get auto-filled on blocks fetch) */
+  /** read-only selected devices (as provided by SelectDevices) */
   selectedGroups: Named[];
   selectedScreens: Named[];
+
   /** fetched/merged blocks from API */
   items: ReservedBlock[];
+
+  /** Focus state (mutually exclusive) + filtered lists */
+  focusedScreenId: Id | null;
+  focusedGroupId: Id | null;
+  reservedBlockforScreen: ReservedBlock[];
+  reservedBlockforGroup: ReservedBlock[];
 };
 
+/* -------------------------------- State --------------------------------- */
 const initialState: ReservedBlocksState = {
   selectedGroups: [],
   selectedScreens: [],
   items: [],
+  focusedScreenId: null,
+  focusedGroupId: null,
+  reservedBlockforScreen: [],
+  reservedBlockforGroup: [],
 };
 
-/* ---------------- helpers ---------------- */
+/* ------------------------------- Helpers -------------------------------- */
 function dedupeById<T extends { id: Id }>(arr: T[]): T[] {
   const map = new Map<Id, T>();
   for (const a of arr) map.set(a.id, a);
   return [...map.values()];
 }
 
-function buildLookups(blocks: ReservedBlock[]) {
-  const screenNameById = new Map<string, string>();
-  const groupNameById  = new Map<string, string>();
-
-  for (const b of blocks ?? []) {
-    for (const s of b.screens ?? []) {
-      if (s?.id != null && s?.name != null) {
-        screenNameById.set(String(s.id), s.name);
-      }
-    }
-    for (const g of b.groups ?? []) {
-      if (g?.id != null && g?.name != null) {
-        groupNameById.set(String(g.id), g.name);
-      }
-    }
+function blockHasScreen(b: ReservedBlock, screenId: Id): boolean {
+  const target = Number(screenId);
+  for (const s of b?.screens ?? []) {
+    const sid = typeof s?.id === "number" ? s.id : Number(s?.id);
+    if (sid === target) return true;
   }
-  return { screenNameById, groupNameById };
+  return false;
 }
 
-function refillSelectionFromBlocks(state: ReservedBlocksState) {
-  // Keep current IDs; refill their names from blocks if available
-  const currentScreenIds = state.selectedScreens.map((s) => s.id);
-  const currentGroupIds  = state.selectedGroups.map((g) => g.id);
-
-  const { screenNameById, groupNameById } = buildLookups(state.items);
-
-  const nextScreens: Named[] = [];
-  for (const id of currentScreenIds) {
-    const key = String(id);
-    const name = screenNameById.get(key);
-    if (name) nextScreens.push({ id, name });
+function blockHasGroup(b: ReservedBlock, groupId: Id): boolean {
+  const target = Number(groupId);
+  for (const g of b?.groups ?? []) {
+    const gid = typeof g?.id === "number" ? g.id : Number(g?.id);
+    if (gid === target) return true;
   }
-
-  const nextGroups: Named[] = [];
-  for (const id of currentGroupIds) {
-    const key = String(id);
-    const name = groupNameById.get(key);
-    if (name) nextGroups.push({ id, name });
-  }
-
-  state.selectedScreens = dedupeById(nextScreens);
-  state.selectedGroups  = dedupeById(nextGroups);
+  return false;
 }
 
-/* ---------------- slice ---------------- */
+/* -------------------------------- Slice --------------------------------- */
+/** NOTE: selection chips remain EXACTLY as provided; we don’t auto-refill names. */
 const reservedBlocksSlice = createSlice({
   name: "ReservedBlocks",
   initialState,
   reducers: {
-    /** Save current selection (chips) – you can pass ids-only; names will be auto-filled after blocks load */
+    /** Save current selection exactly as provided (ids or ids+names). */
     setReservedSelection(
       state,
       action: PayloadAction<{ groups: Named[]; screens: Named[] }>
     ) {
+      log("setReservedSelection(payload):", action.payload);
       state.selectedGroups = dedupeById(action.payload.groups ?? []);
       state.selectedScreens = dedupeById(action.payload.screens ?? []);
-      // No refill here; it will happen automatically when blocks come in (upsertMany / setAll)
+      log("setReservedSelection(state):", {
+        selectedGroups: state.selectedGroups,
+        selectedScreens: state.selectedScreens,
+      });
     },
 
-    /** Clear selection */
+    /** Clear selection + focus */
     clearReservedSelection(state) {
+      log("clearReservedSelection()");
       state.selectedGroups = [];
       state.selectedScreens = [];
+      state.focusedScreenId = null;
+      state.focusedGroupId = null;
+      state.reservedBlockforScreen = [];
+      state.reservedBlockforGroup = [];
     },
 
-    /** Merge or insert many blocks by id, then auto-refill selection names */
+    /** Merge or insert many blocks by id; DOES NOT touch selection/focus */
     upsertMany(state, action: PayloadAction<ReservedBlock[]>) {
+      log("upsertMany(count):", action.payload?.length ?? 0);
       const map = new Map<Id, ReservedBlock>();
       for (const b of state.items) map.set(b.id, b);
       for (const incoming of action.payload ?? []) {
@@ -115,24 +118,89 @@ const reservedBlocksSlice = createSlice({
         map.set(incoming.id, { ...(prev ?? {}), ...incoming });
       }
       state.items = [...map.values()];
-
-      // 🔁 auto-refill selected names using the new items
-      refillSelectionFromBlocks(state);
+      log("upsertMany → items:", state.items);
     },
 
-    /** Replace all blocks, then auto-refill selection names */
+    /** Replace all blocks; DOES NOT touch selection/focus */
     setAll(state, action: PayloadAction<ReservedBlock[]>) {
+      log("setAll(count):", action.payload?.length ?? 0);
       state.items = dedupeById(action.payload ?? []);
-      // 🔁 auto-refill selected names using the new items
-      refillSelectionFromBlocks(state);
+      log("setAll → items:", state.items);
     },
 
-    /** Optional: explicit sync API if you ever need to trigger it manually */
-    syncSelectionFromBlocks(
-      state,
-      action: PayloadAction<void | undefined>
-    ) {
-      refillSelectionFromBlocks(state);
+    /* ---------------- Focus logic (mutually exclusive + toggle) --------- */
+    /**
+     * Focus a screen:
+     * - Toggle if same as current (click again to unselect).
+     * - Clears group focus.
+     * - Computes reservedBlockforScreen.
+     */
+    setFocusedScreenAndCompute(state, action: PayloadAction<Id | null>) {
+      const incoming = action.payload;
+      const next =
+        incoming != null && state.focusedScreenId != null && String(state.focusedScreenId) === String(incoming)
+          ? null // toggle off
+          : incoming;
+
+      state.focusedScreenId = next;
+      // mutually exclusive
+      state.focusedGroupId = null;
+      state.reservedBlockforGroup = [];
+
+      if (next == null) {
+        state.reservedBlockforScreen = [];
+        log("setFocusedScreenAndCompute(null) → cleared screen focus");
+        return;
+      }
+
+      const numericId = Number(next);
+      const filtered = (state.items ?? []).filter((b) => blockHasScreen(b, numericId));
+      state.reservedBlockforScreen = filtered;
+
+      log(
+        "setFocusedScreenAndCompute(screenId):",
+        next,
+        "→ matches:",
+        filtered.length,
+        filtered.map((x) => String(x.id))
+      );
+    },
+
+    /**
+     * Focus a group:
+     * - Toggle if same as current (click again to unselect).
+     * - Clears screen focus.
+     * - Computes reservedBlockforGroup.
+     */
+    setFocusedGroupAndCompute(state, action: PayloadAction<Id | null>) {
+      const incoming = action.payload;
+      const next =
+        incoming != null && state.focusedGroupId != null && String(state.focusedGroupId) === String(incoming)
+          ? null // toggle off
+          : incoming;
+
+      state.focusedGroupId = next;
+      // mutually exclusive
+      state.focusedScreenId = null;
+      state.reservedBlockforScreen = [];
+
+      if (next == null) {
+        state.reservedBlockforGroup = [];
+        log("setFocusedGroupAndCompute(null) → cleared group focus");
+        return;
+      }
+
+      const numericId = Number(next);
+      const filtered = (state.items ?? []).filter((b) => blockHasGroup(b, numericId));
+      state.reservedBlockforGroup = filtered;
+
+      log(
+        "setFocusedGroupAndCompute(groupId):",
+        next,
+        "→ matches:",
+        filtered.length,
+        filtered.map((x) => String(x.id))
+      );
     },
   },
 });
@@ -142,15 +210,30 @@ export const {
   clearReservedSelection,
   upsertMany,
   setAll,
-  syncSelectionFromBlocks,
+  setFocusedScreenAndCompute,
+  setFocusedGroupAndCompute,
 } = reservedBlocksSlice.actions;
 
-/* selectors */
+/* -------------------------------- Selectors ----------------------------- */
 export const selectReservedSelectedGroups = (s: RootState) =>
   (s as any).ReservedBlocks.selectedGroups as Named[];
+
 export const selectReservedSelectedScreens = (s: RootState) =>
   (s as any).ReservedBlocks.selectedScreens as Named[];
+
 export const selectAllReservedBlocks = (s: RootState) =>
   (s as any).ReservedBlocks.items as ReservedBlock[];
+
+export const selectFocusedScreenId = (s: RootState) =>
+  (s as any).ReservedBlocks.focusedScreenId as Id | null;
+
+export const selectFocusedGroupId = (s: RootState) =>
+  (s as any).ReservedBlocks.focusedGroupId as Id | null;
+
+export const selectReservedBlockforScreen = (s: RootState) =>
+  (s as any).ReservedBlocks.reservedBlockforScreen as ReservedBlock[];
+
+export const selectReservedBlockforGroup = (s: RootState) =>
+  (s as any).ReservedBlocks.reservedBlockforGroup as ReservedBlock[];
 
 export default reservedBlocksSlice.reducer;

@@ -15,7 +15,8 @@ import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 import Media from "./Screens/UploadMedia/Media";
 import ScheduleItem from "./Screens/Schedule/ScheduleItem/ScheduleItem";
 import Schedule from "./Screens/Schedule/Schedule";
-
+import NewCalender from "./Screens/Schedule/Calender/NewCalender/NewCalender";
+import New from "./Screens/Schedule/Calender/NewCalender/New";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
@@ -70,6 +71,7 @@ export default function App() {
             <Route element={<PlainLayout />}>
               <Route path="/playlist" element={<PlayList />} />
               <Route path="/calender" element={<Schedule />} />
+              <Route path="/newcalender" element={<New />} />
             </Route>
           </Route>
 

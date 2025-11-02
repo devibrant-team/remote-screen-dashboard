@@ -13,7 +13,7 @@ import ScheduleTimingFields from "../../ScheduleTimingFields";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../../../store";
 import { UpdateReservedBlockApi } from "../../../../API/API";
-import { useDeleteReservedBlock } from "../../../../Redux/Block/DeleteBlock";
+
 
 import {
   clearSelectedBlock,
@@ -22,11 +22,11 @@ import {
   type Block,
 } from "../../../../Redux/Block/BlockSlice";
 
-import AssignNewModel from "../../ScheduleItem/AssignNewModel";
+
 import {
   selectScheduleItemId,
   addScheduleItemBlock,
-  removeScheduleItemBlock,
+  
 } from "../../../../Redux/ScheduleItem/ScheduleItemSlice";
 
 import {
@@ -41,6 +41,7 @@ import {
   type ReservedBlock,
   type Named as DeviceNamed,
 } from "../../../../Redux/ReservedBlocks/ReservedBlocks";
+import ReservedAssignNewModel from "./ReservedAssignNewModel";
 
 /* -------------------------------- Types ---------------------------------- */
 type Item = { id: number; name: string; duration?: number; media?: string };
@@ -91,6 +92,25 @@ const isPersistedId = (id: unknown) => {
   return s.startsWith("block-");
 };
 
+// ---- time helpers ----
+const toIsoDate = (dmyOrYmd?: string) => {
+  if (!dmyOrYmd) return "";
+  if (/^\d{2}-\d{2}-\d{4}$/.test(dmyOrYmd)) return dmyToYmd(dmyOrYmd);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dmyOrYmd)) return dmyOrYmd;
+  return "";
+};
+
+const toDateTime = (dateYmd?: string, time?: string) => {
+  if (!dateYmd || !time) return null;
+  const t =
+    /^\d{2}:\d{2}(:\d{2})?$/.test(time) ? (time.length === 5 ? `${time}:00` : time) : "00:00:00";
+  const d = new Date(`${dateYmd}T${t}`);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
+  aStart < bEnd && bStart < aEnd;
+
 /* -------- Reserved -> ScheduleBlock mapper (for the "normal" calendar) --- */
 function scheduleBlockFromReserved(
   rb: ReservedBlock,
@@ -122,11 +142,10 @@ function scheduleBlockFromReserved(
     })),
     playlistId: rb.playlistId,
     persisted: true,
-    // keep the chosen name here as well so other UI parts can read it
     playlistName: titleOverride ?? rb.title,
   };
 }
-/** Map API {schedule:{...}} to ScheduleBlock (normal layer) */
+
 function scheduleBlockFromApiSchedule(
   schedule: {
     id?: number | string;
@@ -144,19 +163,18 @@ function scheduleBlockFromApiSchedule(
   const id = Number(schedule?.id);
   const playlistId = Number(schedule?.playlist_id);
 
-  // Resolve names from devices lists
   const pickName = (list: DeviceNamed[], idNum: number, prefix: string) =>
     list.find((x) => Number(x.id) === idNum)?.name ?? `${prefix} #${idNum}`;
 
   const screenIds: number[] = Array.isArray(schedule?.screens)
-    ? schedule!
-        .screens!.map((s) => Number(s?.screenId))
+    ? schedule!.screens!
+        .map((s) => Number(s?.screenId))
         .filter((n) => Number.isFinite(n) && n > 0)
     : [];
 
   const groupIds: number[] = Array.isArray(schedule?.groups)
-    ? schedule!
-        .groups!.map((g) => Number(g?.groupId))
+    ? schedule!.groups!
+        .map((g) => Number(g?.groupId))
         .filter((n) => Number.isFinite(n) && n > 0)
     : [];
 
@@ -168,7 +186,7 @@ function scheduleBlockFromApiSchedule(
     start_day: schedule?.startDate,
     end_day: schedule?.endDate ?? schedule?.startDate,
     start_time: schedule?.startTime ?? "00:00:00",
-    end_time: schedule?.endTime ?? "00:10:00",
+    end_time: schedule?.endTime ?? schedule?.endTime ?? "00:10:00",
     screens: screenIds.map((n) => ({
       id: n,
       name: pickName(devices.screens, n, "Screen"),
@@ -315,7 +333,7 @@ export default function ReservedAssignSchedulebar({
 
   /* -------------------------- Block & Schedule Item ----------------------- */
   const selectedBlock = useSelector(selectSelectedBlock);
-  const scheduleItemId = useSelector(selectScheduleItemId); // used for POST
+  const scheduleItemId = useSelector(selectScheduleItemId);
 
   const allScreens = useSelector(
     (s: RootState) => s.ReservedBlocks.selectedScreens
@@ -323,6 +341,11 @@ export default function ReservedAssignSchedulebar({
   const allGroups = useSelector(
     (s: RootState) => s.ReservedBlocks.selectedGroups
   ) as DeviceNamed[];
+
+  // All reserved items to detect conflicts
+  const reservedItems = useSelector(
+    (s: RootState) => s.ReservedBlocks.items
+  ) as ReservedBlock[];
 
   /* --------------------------- Timing (state) ----------------------------- */
   const todayStr = toDDMMYYYY(new Date());
@@ -381,7 +404,6 @@ export default function ReservedAssignSchedulebar({
   /* -------------------------- Change handlers ---------------------------- */
   const onPickPlaylist = (type: PickType, it: Item) => {
     setSelected({ type, id: it.id });
-    // reflect name immediately in selectedBlock
     patchBlock({ playlistId: it.id, playlistName: it.name });
   };
   const onStartDateChange = (val: string) => {
@@ -424,11 +446,114 @@ export default function ReservedAssignSchedulebar({
   const persisted = isPersistedId(selectedBlock?.id);
   const isLocalDraft = !persisted;
 
-  /* ----------------------------- Mutations -------------------------------- */
+  /* ----------------------- Candidate interval ----------------------------- */
+  const candidate = useMemo(() => {
+    const sDateYmd =
+      toIsoDate(startDate) || selectedBlock?.start_day || undefined;
+    const eDateYmd =
+      toIsoDate(endDate) ||
+      selectedBlock?.end_day ||
+      selectedBlock?.start_day ||
+      undefined;
+    const sTime = startTime || selectedBlock?.start_time || "00:00:00";
+    const eTime = endTime || selectedBlock?.end_time || "00:10:00";
 
+    const start = toDateTime(sDateYmd, sTime);
+    const end = toDateTime(eDateYmd, eTime);
+
+    if (!start || !end || !(end > start)) return null;
+    return { start, end };
+  }, [startDate, endDate, startTime, endTime, selectedBlock]);
+
+  /* -------------------- Conflicting screens set --------------------------- */
+  const conflictingScreenIds = useMemo(() => {
+    if (!candidate) return new Set<number>();
+
+    const currentId =
+      selectedBlock?.id != null
+        ? (String(selectedBlock.id).startsWith("block-")
+            ? Number(String(selectedBlock.id).replace("block-", ""))
+            : Number(selectedBlock.id))
+        : NaN;
+
+    const out = new Set<number>();
+
+    for (const rb of reservedItems) {
+      const rbId = Number(rb.id);
+      if (
+        Number.isFinite(currentId) &&
+        Number.isFinite(rbId) &&
+        rbId === currentId
+      ) {
+        continue; // skip self
+      }
+
+      const sY = rb.startDate; // stored as YYYY-MM-DD
+      const eY = rb.endDate ?? rb.startDate;
+      const sT = rb.startTime ?? "00:00:00";
+      const eT = rb.endTime ?? "00:10:00";
+
+      const rbStart = toDateTime(sY, sT);
+      const rbEnd = toDateTime(eY, eT);
+      if (!rbStart || !rbEnd || !(rbEnd > rbStart)) continue;
+
+      if (overlaps(candidate.start, candidate.end, rbStart, rbEnd)) {
+        for (const s of rb.screens ?? []) {
+          const sid = Number(s.id);
+          if (Number.isFinite(sid)) out.add(sid);
+        }
+      }
+    }
+
+    return out;
+  }, [candidate, reservedItems, selectedBlock?.id]);
+
+  /* -------------------- Conflicting groups set (NEW) ---------------------- */
+  const conflictingGroupIds = useMemo(() => {
+    if (!candidate) return new Set<number>();
+
+    const currentId =
+      selectedBlock?.id != null
+        ? (String(selectedBlock.id).startsWith("block-")
+            ? Number(String(selectedBlock.id).replace("block-", ""))
+            : Number(selectedBlock.id))
+        : NaN;
+
+    const out = new Set<number>();
+
+    for (const rb of reservedItems) {
+      const rbId = Number(rb.id);
+      if (
+        Number.isFinite(currentId) &&
+        Number.isFinite(rbId) &&
+        rbId === currentId
+      ) {
+        continue; // skip self
+      }
+
+      const sY = rb.startDate;
+      const eY = rb.endDate ?? rb.startDate;
+      const sT = rb.startTime ?? "00:00:00";
+      const eT = rb.endTime ?? "00:10:00";
+
+      const rbStart = toDateTime(sY, sT);
+      const rbEnd = toDateTime(eY, eT);
+      if (!rbStart || !rbEnd || !(rbEnd > rbStart)) continue;
+
+      if (overlaps(candidate.start, candidate.end, rbStart, rbEnd)) {
+        for (const g of rb.groups ?? []) {
+          const gid = Number(g.id);
+          if (Number.isFinite(gid)) out.add(gid);
+        }
+      }
+    }
+
+    return out;
+  }, [candidate, reservedItems, selectedBlock?.id]);
+
+  /* ----------------------------- Mutations -------------------------------- */
   const { mutateAsync: postSchedule, isPending: posting } = usePostSchedule({
     onSuccess: (data, vars) => {
-      // 1) Reserved slice from response
       const rb = toReservedFromResponseOrPayload(data, null, vars.payload, {
         screens: allScreens,
         groups: allGroups,
@@ -436,23 +561,19 @@ export default function ReservedAssignSchedulebar({
 
       const localId = selectedBlock ? String(selectedBlock.id) : null;
 
-      // 2) Normal layer: build directly from API schedule (✅ your request)
       const apiSchedule = (data as any)?.schedule ?? (data as any) ?? {};
-      const titleOverride = selectedBlock?.playlistName; // keep picked name
+      const titleOverride = selectedBlock?.playlistName;
       const sbFromApi = scheduleBlockFromApiSchedule(
         apiSchedule,
         { screens: allScreens, groups: allGroups },
         titleOverride
       );
 
-      // 3) Keep both slices in sync
       if (rb) {
         dispatch(upsertReservedMany([rb]));
-
-        // 👇 keep the chosen playlist name
-        const titleOverride = selectedBlock?.playlistName;
+        const titleOverride2 = selectedBlock?.playlistName;
         dispatch(
-          addScheduleItemBlock(scheduleBlockFromReserved(rb, titleOverride))
+          addScheduleItemBlock(scheduleBlockFromReserved(rb, titleOverride2))
         );
 
         window.dispatchEvent(
@@ -463,7 +584,6 @@ export default function ReservedAssignSchedulebar({
       }
       if (sbFromApi?.id) dispatch(addScheduleItemBlock(sbFromApi));
 
-      // 4) Swap the local draft for the server block + mark persisted
       if (localId) {
         window.dispatchEvent(
           new CustomEvent("schedule/replace-local", {
@@ -477,7 +597,6 @@ export default function ReservedAssignSchedulebar({
         );
       }
 
-      // 5) Clear selection & close
       dispatch(clearSelectedBlock());
       onCancel?.();
     },
@@ -485,8 +604,6 @@ export default function ReservedAssignSchedulebar({
   });
 
   const [submitting, setSubmitting] = useState(false);
-
-
 
   /* -------------------------------- Apply --------------------------------- */
   const onApply = async () => {
@@ -534,7 +651,6 @@ export default function ReservedAssignSchedulebar({
       setSubmitting(true);
 
       if (isLocalDraft) {
-        // CREATE (POST /schedule/:scheduleItemId)
         if (!scheduleItemId) {
           console.error("[POST] Missing scheduleItemId from ScheduleItemSlice");
           setSubmitting(false);
@@ -546,11 +662,9 @@ export default function ReservedAssignSchedulebar({
           payload,
         });
 
-        // no manual removal; onSuccess swaps it
         return;
       }
 
-      // UPDATE (POST /reserved/:id)
       const token =
         (typeof window !== "undefined" && localStorage.getItem("token")) ||
         null;
@@ -754,30 +868,44 @@ export default function ReservedAssignSchedulebar({
                     {allScreens.map((s) => {
                       const sid = Number(s.id);
                       const picked = selectedScreenIds.includes(sid);
+                      const hasConflict = conflictingScreenIds.has(sid);
                       return (
                         <button
                           key={`screen-${s.id}`}
-                          onClick={() => toggleScreen(sid)}
+                          onClick={() => !hasConflict && toggleScreen(sid)}
+                          disabled={hasConflict}
                           className={`relative text-left rounded-lg border overflow-hidden transition-all
                           ${
                             picked
                               ? "border-red-500 ring-2 ring-red-500/40"
                               : "border-gray-200 hover:shadow-sm"
-                          }`}
+                          }
+                          ${hasConflict ? "opacity-60 cursor-not-allowed" : ""}`}
+                          title={hasConflict ? "Conflicts with another block in this time range" : undefined}
                         >
                           <div className="aspect-[4/3] bg-gray-100 relative">
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
                               <Monitor className="size-7" />
                             </div>
-                            {picked && (
+                            {picked && !hasConflict && (
                               <div className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full p-0.5">
                                 <Check className="size-3" />
                               </div>
                             )}
+                            {hasConflict && (
+                              <div className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                Conflict
+                              </div>
+                            )}
                           </div>
                           <div className="p-2">
-                            <div className="font-medium text-sm truncate">
+                            <div className="font-medium text-sm truncate flex items-center gap-2">
                               {s.name}
+                              {hasConflict && (
+                                <span className="text-[10px] text-red-600 font-medium">
+                                  (conflict)
+                                </span>
+                              )}
                             </div>
                           </div>
                         </button>
@@ -800,30 +928,44 @@ export default function ReservedAssignSchedulebar({
                     {allGroups.map((g) => {
                       const gid = Number(g.id);
                       const picked = selectedGroupIds.includes(gid);
+                      const hasConflict = conflictingGroupIds.has(gid);
                       return (
                         <button
                           key={`group-${g.id}`}
-                          onClick={() => toggleGroup(gid)}
+                          onClick={() => !hasConflict && toggleGroup(gid)}
+                          disabled={hasConflict}
                           className={`relative text-left rounded-lg border overflow-hidden transition-all
                           ${
                             picked
                               ? "border-red-500 ring-2 ring-red-500/40"
                               : "border-gray-200 hover:shadow-sm"
-                          }`}
+                          }
+                          ${hasConflict ? "opacity-60 cursor-not-allowed" : ""}`}
+                          title={hasConflict ? "Conflicts with another block in this time range" : undefined}
                         >
                           <div className="aspect-[4/3] bg-gray-100 relative">
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
                               <UsersRound className="size-6" />
                             </div>
-                            {picked && (
+                            {picked && !hasConflict && (
                               <div className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full p-0.5">
                                 <Check className="size-3" />
                               </div>
                             )}
+                            {hasConflict && (
+                              <div className="absolute top-1.5 left-1.5 bg-red-600 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                Conflict
+                              </div>
+                            )}
                           </div>
                           <div className="p-2">
-                            <div className="font-medium text-sm truncate">
+                            <div className="font-medium text-sm truncate flex items-center gap-2">
                               {g.name}
+                              {hasConflict && (
+                                <span className="text-[10px] text-red-600 font-medium">
+                                  (conflict)
+                                </span>
+                              )}
                             </div>
                           </div>
                         </button>
@@ -877,7 +1019,7 @@ export default function ReservedAssignSchedulebar({
       </div>
 
       {/* Device picker modal */}
-      <AssignNewModel
+      <ReservedAssignNewModel
         open={assignMoreOpen}
         onClose={() => setAssignMoreOpen(false)}
         primaryLabel="Apply"

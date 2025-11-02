@@ -1,3 +1,4 @@
+// GetDeviceSchedule.ts
 import { useMemo } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import axios from "axios";
@@ -14,59 +15,69 @@ export type GetScheduleDetailsPayload = {
   groups: GroupRef[];
 };
 
-/** Exact API response shape you provided */
-export type ScheduleEntry = {
-  id: number;
-  title: string;
-  playlistId: number;
-  scheduleItem: string;
-  groups: { groupId: number; groupName: string }[];
-  screens: { screenId: number; screenName: string }[];
-  startDate: string; // "YYYY-MM-DD"
-  endDate: string | null; // (can be null in other endpoints; here it's a date)
-  startTime: string; // "HH:mm:ss"
-  endTime: string;   // "HH:mm:ss"
+/** One schedule row returned by your backend */
+export type ApiScheduleRow = {
+  id: number | string;
+  title?: string;
+  scheduleItem?: string;
+  playlistId?: number;
+  startDate?: string;
+  endDate?: string | null;
+  startTime?: string;
+  endTime?: string;
+  groups?: Array<{ groupId: number; groupName?: string }>;
+  screens?: Array<{ screenId: number; screenName?: string }>;
 };
 
-export type ScheduleDetailsResponse = {
-  success: boolean;
-  from: string | null;
-  to: string | null;
-  count: number;
-  data: {
-    schedule: ScheduleEntry[];
-  };
-};
-
-export type ApiResponse = ScheduleDetailsResponse;
+/** Support `{ data: { schedule } }` *or* `{ schedule }` */
+export type ScheduleDetailsResponse =
+  | { data?: { schedule?: ApiScheduleRow[] } }
+  | { schedule?: ApiScheduleRow[] };
 
 /* =========================
-   API client (GET with CSV params + Bearer)
+   Helpers
    ========================= */
-export async function postGetScheduleDetails(
+function toBracketParams(payload: GetScheduleDetailsPayload) {
+  const params: Record<string, string | number> = {};
+
+  (payload.screens ?? []).forEach((s, i) => {
+    if (Number.isFinite(s.screenId)) {
+      params[`screens[${i}][screenId]`] = s.screenId;
+    }
+  });
+
+  (payload.groups ?? []).forEach((g, i) => {
+    if (Number.isFinite(g.groupId)) {
+      params[`groups[${i}][groupId]`] = g.groupId;
+    }
+  });
+
+  return params;
+}
+
+/* =========================
+   API client (GET with bracket params + Bearer)
+   ========================= */
+export async function getScheduleDetails(
   payload: GetScheduleDetailsPayload
-): Promise<ApiResponse> {
-  const screensCsv = (payload.screens ?? [])
-    .map((s) => s.screenId)
-    .filter((n) => Number.isFinite(n))
-    .join(",");
-
-  const groupsCsv = (payload.groups ?? [])
-    .map((g) => g.groupId)
-    .filter((n) => Number.isFinite(n))
-    .join(",");
-
+): Promise<ScheduleDetailsResponse> {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  const res = await axios.get<ApiResponse>(GetScheduleDetailsApi, {
+  const res = await axios.get<ScheduleDetailsResponse>(GetScheduleDetailsApi, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    params: {
-      groups: groupsCsv,  // e.g., "2,3"
-      screens: screensCsv // e.g., "62,63"
+    // Build query string like screens[0][screenId]=12&...
+    params: toBracketParams(payload),
+    // Keep axios from re-serializing; our keys already include brackets
+    paramsSerializer: {
+      serialize: (p) => {
+        const usp = new URLSearchParams();
+        Object.entries(p).forEach(([k, v]) => usp.append(k, String(v)));
+        return usp.toString();
+      },
     },
   });
 
@@ -81,11 +92,7 @@ type UseGetScheduleDetailsArgs = {
   groupIds: Array<string | number>;
 };
 
-export function useGetScheduleDetails({
-  screenIds,
-  groupIds,
-}: UseGetScheduleDetailsArgs) {
-  // Build stable, numeric payload
+export function useGetScheduleDetails({ screenIds, groupIds }: UseGetScheduleDetailsArgs) {
   const payload: GetScheduleDetailsPayload | null = useMemo(() => {
     const s: ScreenRef[] = (screenIds ?? [])
       .map((id) => Number(id))
@@ -105,12 +112,8 @@ export function useGetScheduleDetails({
     () => [
       "schedule-details",
       {
-        screens: (payload?.screens ?? [])
-          .map((x: ScreenRef) => x.screenId)
-          .sort((a: number, b: number) => a - b),
-        groups: (payload?.groups ?? [])
-          .map((x: GroupRef) => x.groupId)
-          .sort((a: number, b: number) => a - b),
+        screens: (payload?.screens ?? []).map((x) => x.screenId).sort((a, b) => a - b),
+        groups: (payload?.groups ?? []).map((x) => x.groupId).sort((a, b) => a - b),
       },
     ],
     [payload]
@@ -118,8 +121,8 @@ export function useGetScheduleDetails({
 
   const query = useQuery<ScheduleDetailsResponse>({
     queryKey,
-    queryFn: () => postGetScheduleDetails(payload as GetScheduleDetailsPayload),
-    enabled: !!payload, // only when we have selections
+    queryFn: () => getScheduleDetails(payload as GetScheduleDetailsPayload),
+    enabled: !!payload,           // only when we have at least one id
     placeholderData: keepPreviousData,
     staleTime: 30_000,
   });

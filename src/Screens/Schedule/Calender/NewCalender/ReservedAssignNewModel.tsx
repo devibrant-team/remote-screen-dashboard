@@ -1,84 +1,50 @@
-// src/Screens/Schedule/SelectDevicesModel.tsx
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+// src/Screens/Schedule/SelectDevices/AssignNewModel.tsx
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  UsersRound,
-  Monitor,
-  Layers,
-  Check,
-  X,
-  Search,
-  Tag,
-} from "lucide-react";
+import { UsersRound, Monitor, Layers, Check, X, Search } from "lucide-react";
 
 import {
   selectGroups,
-  selectSelectedGroups,
   setGroups,
   toggleSelectedGroup,
   type Group,
-} from "../../Redux/ScreenManagement/GroupSlice";
-
-import type { RootState } from "../../../store";
+  selectSelectedGroups,
+} from "../../../../Redux/ScreenManagement/GroupSlice";
+import { useGetGroups } from "../../../../ReactQuery/Group/GetGroup";
+import { useGetScreen } from "../../../../ReactQuery/Screen/GetScreen";
 import {
+  toggleSelectedDevice,
   selectSelectedDevices,
   setScreens,
-  toggleSelectedDevice,
-} from "../../Redux/ScreenManagement/ScreenSlice";
+} from "../../../../Redux/ScreenManagement/ScreenSlice";
+import type { RootState } from "../../../../../store";
 
-import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
-import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
-
+// Keep preselect from ScheduleItem so the modal opens with existing picks
 import {
-  getScheduleDetails,
-  type ApiScheduleRow,
-  type ScheduleDetailsResponse,
-} from "../../Redux/ReservedBlocks/GetDeviceSchedule";
+  selectScheduleItemGroups,
+  selectScheduleItemScreens,
+} from "../../../../Redux/ScheduleItem/ScheduleItemSlice";
 
-// NOTE: import Named type and alias it to avoid conflicts with other Nameds
+// ✅ NEW: save the final selection into ReservedBlocks slice
 import {
   setReservedSelection,
-  upsertMany,
   type Named as RBNamed,
-} from "../../Redux/ReservedBlocks/ReservedBlocks";
+} from "../../../../Redux/ReservedBlocks/ReservedBlocks";
 
-// ✅ Import clear + set for the ScheduleItem slice
-import {
-  clearScheduleItem,
-  setScheduleItem,
-} from "../../Redux/ScheduleItem/ScheduleItemSlice";
-
-import {
-  usePostScheduleItem,
-  type PostScheduleItemPayload,
-  type PostScheduleItemResponse,
-} from "../../Redux/ScheduleItem/PostScheduleItem";
-import { useNavigate } from "react-router-dom";
-
-/* ------------------------------------------------------------------ */
-/* Types                                                               */
-/* ------------------------------------------------------------------ */
+/* -------------------------------- Types -------------------------------- */
 type FilterMode = "all" | "groups" | "screens";
 
-type SelectDevicesModelProps = {
+export type AssignNewModelProps = {
   open: boolean;
   onClose: () => void;
-  onConfirm?: (payload: {
+  onApply?: (payload: {
     selectedGroups: Array<string | number>;
     selectedDevices: Array<string | number>;
-    scheduleItemName?: string;
   }) => void;
+  primaryLabel?: string; // default: "Apply"
 };
 
-/* ------------------------------------------------------------------ */
-/* Helpers                                                             */
-/* ------------------------------------------------------------------ */
+/* ------------------------------- Helpers ------------------------------- */
 function getDeviceKey(d: any): string | number | null {
   if (d == null) return null;
   if (typeof d === "string" || typeof d === "number") return d;
@@ -90,46 +56,17 @@ function getDeviceKey(d: any): string | number | null {
 function getScreenKey(s: any): string | number | null {
   const raw = s?.screenId ?? s?.id ?? s?._id;
   if (raw == null) return null;
-  // Attempt numeric where possible
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : (typeof raw === "string" ? raw : String(raw));
+  return typeof raw === "number" || typeof raw === "string" ? raw : String(raw);
 }
 
-// Keep your ReservedBlock type as-is. Then:
-export function mapApiToReservedBlocks(api: ScheduleDetailsResponse) {
-  const rows: ApiScheduleRow[] =
-    (api as any)?.data?.schedule ?? (api as any)?.schedule ?? [];
-
-  return rows.map((r) => ({
-    id: r.id,
-    title: r.title,
-    scheduleItemName: r.scheduleItem,
-    playlistId: r.playlistId,
-    startDate: r.startDate,
-    endDate: r.endDate ?? undefined,
-    startTime: r.startTime,
-    endTime: r.endTime,
-    groups: (r.groups ?? []).map((g) => ({
-      id: g.groupId,
-      name: g.groupName ?? `Group #${g.groupId}`,
-    })),
-    screens: (r.screens ?? []).map((s) => ({
-      id: s.screenId,
-      name: s.screenName ?? `Screen #${s.screenId}`,
-    })),
-  }));
-}
-
-/* ------------------------------------------------------------------ */
-/* Component                                                           */
-/* ------------------------------------------------------------------ */
-const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
+/* -------------------------------- Component ---------------------------- */
+const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
   open,
   onClose,
-  onConfirm,
+  onApply,
+  primaryLabel = "Apply",
 }) => {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
 
   // Redux state
   const groups = useSelector(selectGroups) as Group[];
@@ -137,13 +74,14 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
     (s: RootState) => (s as any).screens.items
   ) as any[];
 
-  const [scheduleItemName, setScheduleItemName] = useState("");
-
   const selectedDevicesRaw = useSelector(selectSelectedDevices) as any[];
-  const selectedGroups = useSelector(selectSelectedGroups) as Array<
-    string | number
-  >;
+  const selectedGroups = useSelector(selectSelectedGroups) as Array<string | number>;
 
+  // ScheduleItem (for preselect only)
+  const schedScreens = useSelector(selectScheduleItemScreens); // Array<{id,name}>
+  const schedGroups = useSelector(selectScheduleItemGroups);   // Array<{id,name}>
+
+  // Normalize selected device IDs from ScreenSlice
   const selectedDeviceIds = useMemo(() => {
     const out: Array<string | number> = [];
     for (const d of selectedDevicesRaw ?? []) {
@@ -153,7 +91,7 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
     return out;
   }, [selectedDevicesRaw]);
 
-  // Prefetch/hydrate lists if slice empty
+  // Prefetch lists if empty
   const { data: apiGroups, isLoading: loadingGroups } = useGetGroups();
   const { data: apiScreens, isLoading: loadingScreens } = useGetScreen();
 
@@ -171,13 +109,35 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
 
   // UI state
   const [mode, setMode] = useState<FilterMode>("all");
+  const [onlyActive, setOnlyActive] = useState(false);
   const [query, setQuery] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Mutation hook for creating a schedule item
-  const postScheduleItem = usePostScheduleItem();
+  // Preselect from ScheduleItem.screens/groups when modal opens
+  useEffect(() => {
+    if (!open) return;
 
-  /* ------------------------------ union view ------------------------------ */
+    // Screens
+    for (const s of schedScreens ?? []) {
+      const sid = String(s.id);
+      const isAlready = (selectedDeviceIds ?? []).some((id) => String(id) === sid);
+      if (!isAlready) {
+        dispatch(toggleSelectedDevice(s.id as number));
+      }
+    }
+
+    // Groups
+    for (const g of schedGroups ?? []) {
+      const gid = String(g.id);
+      const isAlready = (selectedGroups ?? []).some((id) => String(id) === gid);
+      if (!isAlready) {
+        dispatch(toggleSelectedGroup(g.id as number));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Union rows for list
   type Row =
     | {
         kind: "group";
@@ -224,21 +184,22 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
     let list = unionAll;
     if (mode === "groups") list = list.filter((r) => r.kind === "group");
     if (mode === "screens") list = list.filter((r) => r.kind === "screen");
+    if ((mode === "screens" || mode === "all") && onlyActive) {
+      list = list.filter((r) => (r.kind === "screen" ? !!r.active : true));
+    }
     if (q) {
       list = list.filter((r) => {
         const bag =
           r.kind === "group"
             ? `${r.name} ${r.branchName ?? ""} ${r.screenNumber ?? ""}`
-            : `${r.name} ${r.branch ?? ""} ${r.screenId ?? ""} ${
-                r.active ? "active" : "inactive"
-              }`;
+            : `${r.name} ${r.branch ?? ""} ${r.screenId ?? ""} ${r.active ? "active" : "inactive"}`;
         return bag.toLowerCase().includes(q);
       });
     }
     return list;
-  }, [unionAll, mode, query]);
+  }, [unionAll, mode, onlyActive, query]);
 
-  /* -------------------------- selection helpers --------------------------- */
+  // Selection handlers (use slices' toggles)
   const rowIsSelected = (row: Row) =>
     row.kind === "group"
       ? selectedGroups.some((gid) => String(gid) === String(row.id))
@@ -249,64 +210,40 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
     else dispatch(toggleSelectedDevice(row.id));
   };
 
-  const selectedChips: Array<{
-    label: string;
-    kind: Row["kind"];
-    id: string | number;
-  }> = useMemo(() => {
-    const chips: Array<{
-      label: string;
-      kind: Row["kind"];
-      id: string | number;
-    }> = [];
+  const selectedChips = useMemo(() => {
+    const chips: Array<{ label: string; kind: Row["kind"]; id: string | number }> = [];
     for (const gid of selectedGroups ?? []) {
       const g = groups.find((x) => String(x.id) === String(gid));
       if (g) chips.push({ label: g.name, kind: "group", id: gid });
     }
     for (const sid of selectedDeviceIds ?? []) {
-      const s = (screens ?? []).find(
-        (x: any) => String(getScreenKey(x)) === String(sid)
-      );
-      chips.push({
-        label: s?.name || `Screen #${sid}`,
-        kind: "screen",
-        id: sid,
-      });
+      const s = (screens ?? []).find((x: any) => String(getScreenKey(x)) === String(sid));
+      chips.push({ label: s?.name || `Screen #${sid}`, kind: "screen", id: sid });
     }
     return chips;
   }, [selectedGroups, selectedDeviceIds, groups, screens]);
 
-  const handleRemoveChip = (chip: {
-    kind: Row["kind"];
-    id: string | number;
-  }) => {
+  const handleRemoveChip = (chip: { kind: Row["kind"]; id: string | number }) => {
     if (chip.kind === "group") dispatch(toggleSelectedGroup(chip.id));
     else dispatch(toggleSelectedDevice(chip.id));
   };
 
   const clearAllSelected = () => {
     (selectedGroups ?? []).forEach((gid) => dispatch(toggleSelectedGroup(gid)));
-    (selectedDeviceIds ?? []).forEach((sid) =>
-      dispatch(toggleSelectedDevice(sid))
-    );
+    (selectedDeviceIds ?? []).forEach((sid) => dispatch(toggleSelectedDevice(sid)));
   };
 
   const isLoading = loadingGroups || loadingScreens;
 
-  /* --------------------------- modal wiring ------------------------------- */
+  // Modal wiring
   const panelRef = useRef<HTMLDivElement | null>(null);
-
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (panelRef.current && !panelRef.current.contains(e.target as Node))
-      onClose();
+    if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
   };
 
-  const onKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
+  const onKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -319,9 +256,51 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
     };
   }, [open, onKeyDown]);
 
+  // --- Apply handler ---
+  const nothingPicked =
+    (selectedDeviceIds?.length ?? 0) === 0 &&
+    (selectedGroups?.length ?? 0) === 0;
+
+  const handleApply = async () => {
+    try {
+      setSubmitting(true);
+
+      // Build [{id,name}] for screens
+      const pickedScreens: RBNamed[] = (selectedDeviceIds ?? [])
+        .map((sid) => {
+          const s = (screens ?? []).find(
+            (x: any) => String(getScreenKey(x)) === String(sid)
+          );
+          return { id: Number(sid), name: s?.name ?? `Screen #${sid}` };
+        })
+        .filter((x) => Number.isFinite(x.id));
+
+      // Build [{id,name}] for groups
+      const pickedGroups: RBNamed[] = (selectedGroups ?? [])
+        .map((gid) => {
+          const g = (groups ?? []).find((x: Group) => String(x.id) === String(gid));
+          return { id: Number(gid), name: g?.name ?? `Group #${gid}` };
+        })
+        .filter((x) => Number.isFinite(x.id));
+
+      // ✅ Save into ReservedBlocks slice (selection chips)
+      dispatch(setReservedSelection({ screens: pickedScreens, groups: pickedGroups }));
+
+      // (optional) keep callback for parent if needed
+      onApply?.({
+        selectedGroups,
+        selectedDevices: selectedDeviceIds,
+      });
+
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (!open) return null;
 
-  /* ------------------------------ render ---------------------------------- */
+  // Render
   return (
     <div
       className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4"
@@ -345,32 +324,12 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
 
         {/* Title */}
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-white/90 px-6 py-4 backdrop-blur">
-          <h2 className="text-base font-semibold text-gray-900">
-            Select Targets
-          </h2>
-        </div>
-
-        {/* Schedule item name (under title) */}
-        <div className="px-6 pt-3 pb-3 border-b border-gray-200 bg-white/90">
-          <label className="block text-xs font-medium text-gray-700 mb-1">
-            Schedule item name
-          </label>
-          <div className="relative">
-            <Tag className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              className="w-full md:w-[420px] rounded-md border border-gray-300 bg-white pl-9 pr-3 py-1.5 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-400"
-              placeholder="e.g., Morning Promo Loop"
-              value={scheduleItemName}
-              onChange={(e) => setScheduleItemName(e.target.value)}
-              aria-label="Schedule item name"
-            />
-          </div>
+          <h2 className="text-base font-semibold text-gray-900">Select Targets</h2>
         </div>
 
         {/* Controls */}
-        <div className="sticky top-0 z-10 mb-3 border-b border-gray-200 bg-white/90 px-6 py-3 backdrop-blur">
+        <div className="sticky top-0 z-10 -mx-6 mb-3 border-b border-gray-200 bg-white/90 px-6 py-3 backdrop-blur">
           <div className="grid gap-3 md:grid-cols-3 md:items-center">
-            {/* Mode buttons */}
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1">
                 {(["all", "groups", "screens"] as const).map((m) => (
@@ -380,9 +339,7 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                     onClick={() => setMode(m)}
                     className={[
                       "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm transition",
-                      mode === m
-                        ? "bg-red-500 text-white shadow-sm"
-                        : "text-gray-700 hover:bg-gray-50",
+                      mode === m ? "bg-red-500 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50",
                     ].join(" ")}
                     aria-pressed={mode === m}
                   >
@@ -393,9 +350,18 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                   </button>
                 ))}
               </div>
+
+              <label className="ml-2 inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={onlyActive}
+                  onChange={(e) => setOnlyActive(e.target.checked)}
+                />
+                Only active screens
+              </label>
             </div>
 
-            {/* Search */}
             <div className="md:col-span-2 md:justify-self-end">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -404,16 +370,15 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                   placeholder="Search by name, branch, ID…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  aria-label="Search"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Content area */}
-        <div className="max-h=[calc(90vh-56px-64px)] overflow-y-auto px-6 pb-6 pt-2">
-          {/* Selected chips */}
+        {/* Content */}
+        <div className="max-h-[calc(90vh-56px-64px)] overflow-y-auto px-6 pb-6 pt-2">
+          {/* Chips */}
           {selectedChips.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {selectedChips.map((chip) => (
@@ -421,16 +386,10 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                   key={`${chip.kind}-${chip.id}`}
                   className={[
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ring-1",
-                    chip.kind === "group"
-                      ? "bg-red-50 text-red-700 ring-red-200"
-                      : "bg-gray-50 text-gray-700 ring-gray-200",
+                    chip.kind === "group" ? "bg-red-50 text-red-700 ring-red-200" : "bg-gray-50 text-gray-700 ring-gray-200",
                   ].join(" ")}
                 >
-                  {chip.kind === "group" ? (
-                    <UsersRound className="h-3.5 w-3.5" />
-                  ) : (
-                    <Monitor className="h-3.5 w-3.5" />
-                  )}
+                  {chip.kind === "group" ? <UsersRound className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
                   <span className="max-w-[160px] truncate">{chip.label}</span>
                   <button
                     type="button"
@@ -455,10 +414,7 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
           {isLoading ? (
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 9 }).map((_, i) => (
-                <li
-                  key={i}
-                  className="rounded-xl border border-gray-200 bg-white p-3"
-                >
+                <li key={i} className="rounded-xl border border-gray-200 bg-white p-3">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-gray-200 animate-pulse" />
                     <div className="flex-1 space-y-2">
@@ -471,9 +427,7 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
             </ul>
           ) : filtered.length === 0 ? (
             <div className="grid place-items-center rounded-xl border border-dashed border-gray-300 bg-gray-50 py-16 text-center">
-              <p className="text-sm text-gray-600">
-                Nothing here. Try filters or search.
-              </p>
+              <p className="text-sm text-gray-600">Nothing here. Try filters or search.</p>
             </div>
           ) : (
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -497,17 +451,13 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                       onClick={() => handleToggleRow(r)}
                       className={[
                         "group relative w-full overflow-hidden rounded-xl border bg-white p-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400",
-                        isSelected
-                          ? "border-red-500 ring-1 ring-red-200"
-                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm",
+                        isSelected ? "border-red-500 ring-1 ring-red-200" : "border-gray-200 hover:border-gray-300 hover:shadow-sm",
                       ].join(" ")}
                     >
                       <span
                         className={[
                           "absolute right-3 top-3 inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs transition",
-                          isSelected
-                            ? "bg-red-500 border-red-600 text-white"
-                            : "bg-white border-gray-200 text-gray-400 group-hover:text-gray-600",
+                          isSelected ? "bg-red-500 border-red-600 text-white" : "bg-white border-gray-200 text-gray-400 group-hover:text-gray-600",
                         ].join(" ")}
                         aria-hidden
                       >
@@ -525,40 +475,26 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                               : "bg-gray-100 text-gray-600",
                           ].join(" ")}
                         >
-                          {r.kind === "group" ? (
-                            <UsersRound className="h-5 w-5" />
-                          ) : (
-                            <Monitor className="h-5 w-5" />
-                          )}
+                          {r.kind === "group" ? <UsersRound className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
                         </div>
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {statusDot}
-                            <div className="truncate text-sm font-medium text-gray-900">
-                              {r.name}
-                            </div>
+                            <div className="truncate text-sm font-medium text-gray-900">{r.name}</div>
                           </div>
                           <div className="mt-0.5 text-[11px] text-gray-500">
                             {r.kind === "group" ? (
                               <>
                                 ID: {r.id}
-                                {typeof (r as any).screenNumber !== "undefined"
-                                  ? ` · Screens: ${(r as any).screenNumber}`
-                                  : ""}
-                                {typeof (r as any).branchName !== "undefined"
-                                  ? ` · Branch: ${(r as any).branchName}`
-                                  : ""}
+                                {typeof (r as any).screenNumber !== "undefined" ? ` · Screens: ${(r as any).screenNumber}` : ""}
+                                {typeof (r as any).branchName !== "undefined" ? ` · Branch: ${(r as any).branchName}` : ""}
                               </>
                             ) : (
                               <>
                                 ID: {r.id}
-                                {typeof (r as any).screenId !== "undefined"
-                                  ? ` · HW: ${(r as any).screenId}`
-                                  : ""}
-                                {typeof (r as any).branch !== "undefined"
-                                  ? ` · Branch: ${(r as any).branch}`
-                                  : ""}
+                                {typeof (r as any).screenId !== "undefined" ? ` · HW: ${(r as any).screenId}` : ""}
+                                {typeof (r as any).branch !== "undefined" ? ` · Branch: ${(r as any).branch}` : ""}
                               </>
                             )}
                           </div>
@@ -583,6 +519,9 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
             <span className="rounded-full bg-red-50 ring-1 ring-red-100 px-2 py-0.5 text-red-700">
               {selectedGroups.length} group(s)
             </span>
+            <span className="ml-2 rounded-full bg-gray-50 ring-1 ring-gray-200 px-2 py-0.5 text-gray-700">
+              {selectedDeviceIds.length} screen(s)
+            </span>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -593,130 +532,18 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
               Cancel
             </button>
 
-            {onConfirm && (
-              <button
-                disabled={submitting}
-                onClick={async () => {
-                  try {
-                    setSubmitting(true);
-
-                    // 0) validate name
-                    const name = scheduleItemName.trim();
-                    if (!name) {
-                      alert("Please enter a schedule item name.");
-                      setSubmitting(false);
-                      return;
-                    }
-
-                    // 1) create schedule item
-                    const res: PostScheduleItemResponse =
-                      await postScheduleItem.mutateAsync({
-                        name,
-                      } as PostScheduleItemPayload);
-
-                    const createdId =
-                      res?.scheduleItemId ?? res?.schedule_item?.id ?? null;
-
-                    if (!createdId) {
-                      throw new Error(
-                        "Schedule item created but no ID returned."
-                      );
-                    }
-
-                    // ✅ 2) HARD RESET the previous item to avoid carry-over of blocks/screens/groups
-                    dispatch(clearScheduleItem());
-                    // then set fresh id + name (single action convenience)
-                    dispatch(setScheduleItem({ id: String(createdId), name }));
-
-                    // 3) keep chips selection in ReservedBlocks slice
-                    const groupObjs: RBNamed[] = (selectedGroups ?? [])
-                      .map((gid) => {
-                        const id = Number(gid);
-                        if (!Number.isFinite(id)) return null;
-                        const g = (groups ?? []).find(
-                          (x) => Number(x.id) === id
-                        );
-                        const gname = String(g?.name ?? id);
-                        return { id, name: gname };
-                      })
-                      .filter(Boolean) as RBNamed[];
-
-                    const screenObjs: RBNamed[] = (selectedDeviceIds ?? [])
-                      .map((sid) => {
-                        const id = Number(sid);
-                        if (!Number.isFinite(id)) return null;
-                        const s = (screens ?? []).find(
-                          (x: any) => Number(getScreenKey(x)) === id
-                        );
-                        const sname = String(s?.name ?? `Screen #${id}`);
-                        return { id, name: sname };
-                      })
-                      .filter(Boolean) as RBNamed[];
-
-                    dispatch(
-                      setReservedSelection({
-                        groups: groupObjs,
-                        screens: screenObjs,
-                      })
-                    );
-
-                    // 4) build payload & fetch schedule details for the selected devices
-                    const payload = {
-                      screens: (selectedDeviceIds ?? [])
-                        .map((id) => Number(id))
-                        .filter((n) => Number.isFinite(n))
-                        .map((screenId) => ({ screenId })),
-                      groups: (selectedGroups ?? [])
-                        .map((id) => Number(id))
-                        .filter((n) => Number.isFinite(n))
-                        .map((groupId) => ({ groupId })),
-                    };
-
-                    const apiRes = await getScheduleDetails(payload);
-
-                    // 5) upsert blocks (optionally stamp name if API omitted it)
-                    const rawBlocks = mapApiToReservedBlocks(apiRes);
-                    const finalBlocks = name
-                      ? rawBlocks.map((b) => ({
-                          ...b,
-                          scheduleItemName: b.scheduleItemName ?? name,
-                        }))
-                      : rawBlocks;
-
-                    if (finalBlocks.length) dispatch(upsertMany(finalBlocks));
-
-                    // 6) parent callback
-                    onConfirm({
-                      selectedGroups,
-                      selectedDevices: selectedDeviceIds,
-                      scheduleItemName: name,
-                    });
-
-                    // 7) navigate to new calendar
-                    navigate("/newcalender");
-
-                    // 8) close
-                    onClose();
-                  } catch (err) {
-                    console.error(
-                      "[SelectDevicesModel] create + fetch flow failed:",
-                      err
-                    );
-                    alert("Failed to finish the step. Please try again.");
-                  } finally {
-                    setSubmitting(false);
-                  }
-                }}
-                className={[
-                  "text-sm font-semibold px-4 py-2 rounded-md transition",
-                  submitting
-                    ? "bg-red-300 text-white cursor-not-allowed"
-                    : "bg-red-500 text-white hover:opacity-90",
-                ].join(" ")}
-              >
-                {submitting ? "Loading…" : "Done"}
-              </button>
-            )}
+            <button
+              disabled={submitting || nothingPicked}
+              onClick={handleApply}
+              className={[
+                "text-sm font-semibold px-4 py-2 rounded-md transition",
+                submitting || nothingPicked
+                  ? "bg-red-300 text-white cursor-not-allowed"
+                  : "bg-red-500 text-white hover:opacity-90",
+              ].join(" ")}
+            >
+              {submitting ? "Applying…" : primaryLabel}
+            </button>
           </div>
         </div>
       </div>
@@ -724,4 +551,4 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
   );
 };
 
-export default SelectDevicesModel;
+export default ReservedAssignNewModel;
