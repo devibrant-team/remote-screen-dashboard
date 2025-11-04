@@ -23,6 +23,10 @@ import {
   type Block,
 } from "../../../Redux/Block/BlockSlice";
 
+// NEW 👇
+import { removeScheduleItemBlock } from "../../../Redux/ScheduleItem/ScheduleItemSlice";
+import { useDeleteReservedBlock } from "../../../Redux/Block/DeleteBlock";
+
 declare global {
   interface Window {
     __draggingPlaylist?: boolean;
@@ -104,7 +108,7 @@ const fmtDay = (d: Date) =>
 const fmtTime = (d: Date) =>
   `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
-/* ------------------------------- component ------------------------------- */
+/* -------------------------------- component ------------------------------- */
 const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   initialView = "timeGridWeek",
   events,
@@ -223,6 +227,51 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     [filteredBackendEvents, evts]
   );
 
+  // NEW 👇 delete hook and helpers
+  const { mutateAsync: deleteBlock } = useDeleteReservedBlock();
+
+  const toServerId = (eventId: string): number | null => {
+    if (!eventId) return null;
+    if (eventId.startsWith("block-")) {
+      const n = Number(eventId.replace("block-", ""));
+      return Number.isFinite(n) ? n : null;
+    }
+    const n = Number(eventId);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    const idNum = toServerId(eventId);
+    if (!idNum) return;
+    if (!window.confirm("Delete this block?")) return;
+    try {
+      await deleteBlock(idNum); // ← DB delete
+      // Redux + local cleanup
+      dispatch(removeScheduleItemBlock(idNum));
+      setEvts((prev) =>
+        prev.filter((x) => x.id !== String(idNum) && x.id !== `block-${idNum}`)
+      );
+      window.dispatchEvent(
+        new CustomEvent("schedule/removed", { detail: { id: String(idNum) } })
+      );
+    } catch (err) {
+      console.error("[CalenderForScheduleItem delete] error:", err);
+    }
+  };
+
+  // Listen for external removals (keep local evts in sync)
+  useEffect(() => {
+    const onRemoved = (e: Event) => {
+      const { id } = (e as CustomEvent<{ id?: string }>).detail ?? {};
+      if (!id) return;
+      setEvts((prev) => prev.filter((x) => x.id !== id && x.id !== `block-${id}`));
+    };
+    window.addEventListener("schedule/removed", onRemoved as EventListener);
+    return () => {
+      window.removeEventListener("schedule/removed", onRemoved as EventListener);
+    };
+  }, []);
+
   const renderEvent = (content: EventContentArg) => {
     const { borderClass, isLocal } =
       (content.event.extendedProps as {
@@ -231,7 +280,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
       }) || {};
     const stripeBg = toBg(borderClass || DEFAULT_BORDER);
 
-    const onRemove = (e: React.MouseEvent) => {
+    const onRemoveLocal = (e: React.MouseEvent) => {
       e.stopPropagation();
       e.preventDefault();
       const id = content.event.id;
@@ -259,14 +308,15 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
             stripeBg,
           ].join(" ")}
         />
+
+        {/* Local drafts: show × to remove locally */}
         {isLocal && (
           <button
-            aria-label="Remove"
-            onClick={onRemove}
+            aria-label="Remove local"
+            onClick={onRemoveLocal}
             className={[
               "absolute right-1 top-1",
-              "h-5 w-5",
-              "flex items-center justify-center",
+              "h-5 w-5 flex items-center justify-center",
               "rounded-full border border-neutral-300 bg-white/90",
               "text-[11px] leading-none text-neutral-500",
               "hover:text-red-600 hover:border-red-300",
@@ -276,6 +326,29 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
             ×
           </button>
         )}
+
+        {/* Persisted events: show × to delete from DB */}
+        {!isLocal && (
+          <button
+            aria-label="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              handleDeleteEvent(content.event.id as string);
+            }}
+            className={[
+              "absolute right-1 top-1",
+              "h-5 w-5 flex items-center justify-center",
+              "rounded-full border border-neutral-300 bg-white/90",
+              "text-[11px] leading-none text-neutral-500",
+              "hover:text-red-600 hover:border-red-300",
+              "transition-colors",
+            ].join(" ")}
+          >
+            ×
+          </button>
+        )}
+
         <div className="text-[11px] leading-none text-neutral-600">
           {content.timeText}
         </div>
@@ -384,7 +457,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     };
   }
 
-  // ✅ add optional 'extras' (e.g., { playlistId, isInteractive, durationSec })
   function selectedFromLocal(
     evt: { id: string; title: string; start: Date; end?: Date },
     extras?: {
@@ -398,24 +470,15 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
 
     return {
       id: evt.id,
-      // keep the name from the list item
       playlistName: evt.title || "New Block",
-      // 👇 carry the playlistId into the Block
       playlistId:
         extras?.playlistId != null ? Number(extras.playlistId) : undefined,
-
       start_day: fmtDay(start),
       start_time: fmtTime(start),
       end_day: fmtDay(end),
       end_time: fmtTime(end),
-
-      // relations will be chosen in the drawer
       screens: [] as { screenId: number }[],
       groups: [] as { groupId: number }[],
-
-      // (optional) if you want to keep these around:
-      // created_at: new Date().toISOString(),
-      // updated_at: new Date().toISOString(),
     };
   }
 
@@ -549,7 +612,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                   end,
                   allDay: false,
                   extendedProps: {
-                    ...ext, // 👈 keep playlistId, isInteractive, durationSec, etc.
+                    ...ext, // keep playlistId, isInteractive, durationSec, etc.
                     borderClass: DEFAULT_BORDER,
                     isLocal: true,
                   },
@@ -560,7 +623,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                 setAssignOpen(true);
                 dispatch(
                   setSelectedBlock(
-                    // 👇 pass ext so playlistId is preserved
                     selectedFromLocal(
                       { id: localEvt.id, title: localEvt.title, start, end },
                       {
@@ -584,7 +646,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                 const id = arg.event.id;
 
                 if (id.startsWith("block-")) {
-                  // backend block (unchanged)
+                  // backend block
                   const numericId = Number(id.replace("block-", ""));
                   const raw = (ScheduleItemblocks ?? []).find((b: any) => {
                     const bid =
@@ -593,7 +655,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                   });
                   if (raw) dispatch(setSelectedBlock(selectedFromBackend(raw)));
                 } else {
-                  // ✅ local event → include extendedProps.playlistId
+                  // local event → include extendedProps.playlistId
                   const start = arg.event.start ?? new Date();
                   const end =
                     arg.event.end ?? new Date(start.getTime() + 30 * 60000);
