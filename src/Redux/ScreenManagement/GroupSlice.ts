@@ -9,18 +9,24 @@ export type Group = {
   ratio?: string | null;
   branchName?: string | null;
   screenNumber?: number | null;
+  branchId?: number | null;
+  ratioId?: number | null;
+  defaultPlaylistId?: number | null;
+  defaultPlaylistName?: string | null;
 };
 
 type GroupsState = {
   items: Group[];
   lastSyncedAt?: string | null;
   selectedGroups: Array<number | string>; // <-- NEW
+  selectedGroup: Group | null;
 };
 
 const initialState: GroupsState = {
   items: [],
   lastSyncedAt: null,
-  selectedGroups: [], // <-- NEW
+  selectedGroups: [],
+  selectedGroup: null,
 };
 
 const groupSlice = createSlice({
@@ -64,9 +70,7 @@ const groupSlice = createSlice({
     // toggle a group in/out of the selectedGroups array
     toggleSelectedGroup(state, action: PayloadAction<number | string>) {
       const id = action.payload;
-      const exists = state.selectedGroups.some(
-        (g) => String(g) === String(id)
-      );
+      const exists = state.selectedGroups.some((g) => String(g) === String(id));
 
       if (exists) {
         // remove it
@@ -80,16 +84,16 @@ const groupSlice = createSlice({
     },
 
     // set all selected groups at once (optional helper)
-    setSelectedGroups(
-      state,
-      action: PayloadAction<Array<number | string>>
-    ) {
+    setSelectedGroups(state, action: PayloadAction<Array<number | string>>) {
       state.selectedGroups = action.payload ?? [];
     },
 
     // clear just the selection (keep items)
     clearSelectedGroups(state) {
       state.selectedGroups = [];
+    },
+    setSelectedGroup(state, action: PayloadAction<Group | null>) {
+      state.selectedGroup = action.payload;
     },
   },
 });
@@ -99,9 +103,10 @@ export const {
   upsertGroup,
   removeGroup,
   clearGroups,
-  toggleSelectedGroup,      // <-- export
-  setSelectedGroups,       // <-- export (optional)
-  clearSelectedGroups,     // <-- export
+  toggleSelectedGroup, // <-- export
+  setSelectedGroups, // <-- export (optional)
+  clearSelectedGroups, 
+  setSelectedGroup,
 } = groupSlice.actions;
 
 // selectors
@@ -109,5 +114,7 @@ export const selectGroups = (state: RootState) => state.groups.items;
 
 export const selectSelectedGroups = (state: RootState) =>
   state.groups.selectedGroups; // <-- NEW selector
+export const selectSelectedGroup = (state: RootState) =>
+  state.groups.selectedGroup; // <-- NEW selector
 
 export default groupSlice.reducer;

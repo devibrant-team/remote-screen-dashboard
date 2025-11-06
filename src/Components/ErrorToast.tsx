@@ -25,7 +25,111 @@ const posMap: Record<NonNullable<ErrorToastProps["anchor"]>, string> = {
 // Hide generic axios/transport messages
 const HIDE_PATTERNS = [/^request failed with status code/i, /^network error$/i];
 
+// ---------- Helpers for schedule conflict formatting ----------
+
+type ScheduleConflictUi = {
+  title: string;
+  items: string[];
+};
+
+function findConflictsNode(obj: any): any | null {
+  if (!obj || typeof obj !== "object") return null;
+
+  // Direct shape: { conflicts: { conflicts: [...], raw: [...] } }
+  if (
+    obj.conflicts &&
+    (Array.isArray(obj.conflicts.raw) || Array.isArray(obj.conflicts.conflicts))
+  ) {
+    return obj.conflicts;
+  }
+
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const res = findConflictsNode(item);
+      if (res) return res;
+    }
+  } else {
+    for (const key of Object.keys(obj)) {
+      const res = findConflictsNode(obj[key]);
+      if (res) return res;
+    }
+  }
+
+  return null;
+}
+
+function extractScheduleConflictsFromRaw(raw: any): ScheduleConflictUi | null {
+  const conflictsNode = findConflictsNode(raw);
+  if (!conflictsNode) return null;
+
+  const rawArr = conflictsNode.raw;
+  if (!Array.isArray(rawArr) || rawArr.length === 0) return null;
+
+  const items: string[] = [
+    "Schedule conflicts detected for one or more screens:",
+  ];
+
+  rawArr.forEach((entry: any) => {
+    const details0 = entry.details?.[0] ?? {};
+    const screenName =
+      details0.screen?.name ??
+      (details0.screen_id ? `Screen #${details0.screen_id}` : "Unknown screen");
+
+    const playlistName =
+      entry.playlist?.name ??
+      (entry.playlist_id ? `Playlist #${entry.playlist_id}` : "Unknown playlist");
+
+    const scheduleName =
+      entry.schedule_item?.name ??
+      (entry.schedule_item_id
+        ? `Schedule #${entry.schedule_item_id}`
+        : "Unknown schedule");
+
+    const startDay = entry.start_day ?? "";
+    const endDay = entry.end_day ?? "";
+    const startTime =
+      typeof entry.start_time === "string"
+        ? entry.start_time.slice(0, 5)
+        : "";
+    const endTime =
+      typeof entry.end_time === "string" ? entry.end_time.slice(0, 5) : "";
+
+    const timePart =
+      startDay && endDay
+        ? `${startDay} ${startTime} → ${endDay} ${endTime}`
+        : "";
+
+    items.push(
+      [
+        `Screen: ${screenName}`,
+        `Playlist: ${playlistName}`,
+        `Schedule: ${scheduleName}`,
+        timePart && `Time: ${timePart}`,
+      ]
+        .filter(Boolean)
+        .join(" – ")
+    );
+  });
+
+  return {
+    title: "Schedule conflict",
+    items,
+  };
+}
+
 function sanitize(parsed: ParsedApiError) {
+  // Special handling: schedule conflicts
+  const conflictUi = extractScheduleConflictsFromRaw(parsed.raw);
+  if (conflictUi) {
+    return {
+      ...parsed,
+      title: conflictUi.title,
+      items: conflictUi.items,
+      code: undefined,
+    };
+  }
+
+  // Generic behavior for all other errors
   const items = (parsed.items ?? []).filter(
     (m) => !HIDE_PATTERNS.some((rx) => rx.test(m))
   );
@@ -46,7 +150,7 @@ const Card: React.FC<{
 
   const copy = async () => {
     const text = [
-      parsed.title, // always "Error"
+      parsed.title, // e.g. "Error" or "Schedule conflict"
       ...(parsed.items ?? []),
       parsed.requestId ? `Request-Id: ${parsed.requestId}` : "",
     ]
@@ -59,7 +163,8 @@ const Card: React.FC<{
     }
   };
 
-  const displayItems = parsed.items.length ? parsed.items : ["Unknown error"];
+  const displayItems =
+    parsed.items && parsed.items.length ? parsed.items : ["Unknown error"];
 
   return (
     <div
@@ -73,7 +178,7 @@ const Card: React.FC<{
           <AlertTriangle className="h-3.5 w-3.5" />
         </div>
         <div className="flex-1 text-sm font-semibold text-red-700">
-          {parsed.title /* "Error" */}
+          {parsed.title}
         </div>
         <button
           onClick={copy}

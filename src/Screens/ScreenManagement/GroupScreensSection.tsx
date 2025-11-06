@@ -10,18 +10,24 @@ import {
   FileStack,
   ChevronDown,
   ChevronUp,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import BaseModal from "../../Components/Models/BaseModal";
 import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
 import { useGetGroupScreens } from "../../ReactQuery/Group/GetGroupScreen";
 import AddGroupModal from "../../Components/Models/AddGroupModal";
-
+import { setSelectedGroup } from "../../Redux/ScreenManagement/GroupSlice";
+import { useDispatch } from "react-redux";
+import { useDeleteGroup } from "../../ReactQuery/Group/DeleteGroup";
 type Group = {
   id: string | number;
   name: string;
   ratio?: string | null;
   branchName?: string | null;
   screenNumber?: number | null;
+  defaultPlaylistId?: number | null;
+  defaultPlaylistName?: string | null;
 };
 
 const CHUNK = 10;
@@ -67,40 +73,63 @@ const EmptyState: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
 
 const GroupScreensSection: React.FC = () => {
   const [openCreate, setOpenCreate] = useState(false);
-
-  // Which group was clicked
+  const dispatch = useDispatch();
+  // Add/Edit modal state
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [uiError, setUiError] = useState<unknown | null>(null);
+  // Which group to show screens for
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [openScreensModal, setOpenScreensModal] = useState(false);
 
-  // Show-more state
   const [visible, setVisible] = useState(CHUNK);
 
   const { data: groups, isLoading, isError, refetch } = useGetGroups();
-console.log(groups)
-  // Fetch screens for the selected group id
+  const { mutate: deleteGroup, isPending: deleting } = useDeleteGroup();
+  console.log("LL", groups);
   const {
     data: groupScreens,
     isLoading: isScreensLoading,
     isError: isScreensError,
     refetch: refetchScreens,
   } = useGetGroupScreens(selectedGroupId);
-console.log(groupScreens)
-  // Close "create" on global event
+  const handleDeleteGroup = (
+    g: Group,
+    e: React.MouseEvent<HTMLButtonElement>
+  ) => {
+    e.stopPropagation();
+
+    if (!window.confirm(`Are you sure you want to delete group "${g.name}"?`)) {
+      return;
+    }
+
+    deleteGroup(Number(g.id), {
+      onSuccess: () => {
+        refetch();
+      },
+    });
+  };
+
+  // Close create modal on global "close-add-screen-modal" event (same pattern as screens)
   useEffect(() => {
     const handleClose = () => setOpenCreate(false);
-    window.addEventListener("close-add-screen-modal", handleClose as EventListener);
+    window.addEventListener(
+      "close-add-screen-modal",
+      handleClose as EventListener
+    );
     return () =>
-      window.removeEventListener("close-add-screen-modal", handleClose as EventListener);
+      window.removeEventListener(
+        "close-add-screen-modal",
+        handleClose as EventListener
+      );
   }, []);
 
   const handleOpenGroup = (id: number) => {
     setSelectedGroupId(id);
-    setOpenScreensModal(true); // hook auto-fetches because enabled = !!id
+    setOpenScreensModal(true);
   };
 
   const total = groups?.length ?? 0;
 
-  // Keep visible within bounds & reset when list changes
   useEffect(() => {
     if (total === 0) setVisible(CHUNK);
     else setVisible((v) => Math.min(Math.max(MIN_VISIBLE, v), total));
@@ -134,14 +163,17 @@ console.log(groupScreens)
           </div>
 
           <button
-            onClick={() => setOpenCreate(true)}
+            onClick={() => {
+              setIsEditMode(false);
+              setOpenCreate(true);
+            }}
             className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
           >
             <Plus size={18} /> Add Group
           </button>
         </header>
 
-        {/* Loading skeleton */}
+        {/* Loading */}
         {isLoading && (
           <div className="flex flex-col gap-3">
             <SkeletonRow />
@@ -150,13 +182,15 @@ console.log(groupScreens)
           </div>
         )}
 
-        {/* Error state */}
+        {/* Error */}
         {isError && <ErrorBlock onRetry={() => refetch()} />}
 
-        {/* Empty state */}
-        {!isLoading && !isError && total === 0 && <EmptyState onAdd={() => setOpenCreate(true)} />}
+        {/* Empty */}
+        {!isLoading && !isError && total === 0 && (
+          <EmptyState onAdd={() => setOpenCreate(true)} />
+        )}
 
-        {/* Groups list (fixed-height scroll + show more/less) */}
+        {/* List */}
         {!isLoading && !isError && total > 0 && (
           <>
             <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1">
@@ -166,7 +200,7 @@ console.log(groupScreens)
                     key={g.id}
                     type="button"
                     onClick={() => handleOpenGroup(Number(g.id))}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                    className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
                     aria-label={`Open group ${g.name}`}
                   >
                     <div className="flex items-start gap-3">
@@ -187,7 +221,11 @@ console.log(groupScreens)
                                 ? "bg-neutral-100 text-neutral-700"
                                 : "bg-red-100 text-red-700",
                             ].join(" ")}
-                            title={g.ratio ? `Ratio: ${g.ratio}` : "Ratio not assigned"}
+                            title={
+                              g.ratio
+                                ? `Ratio: ${g.ratio}`
+                                : "Ratio not assigned"
+                            }
                           >
                             {g.ratio || "Unassigned ratio"}
                           </span>
@@ -203,15 +241,47 @@ console.log(groupScreens)
                             <Monitor size={12} />
                             {g.screenNumber ?? 0}
                           </span>
+
+                          {/* Default playlist */}
+                          {g.defaultPlaylistName && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                              🎵 {g.defaultPlaylistName}
+                            </span>
+                          )}
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {/* Edit icon */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsEditMode(true);
+                          dispatch(setSelectedGroup(g));
+                          setOpenCreate(true);
+                        }}
+                        className="rounded p-1 text-neutral-500 hover:bg-neutral-100"
+                        title="Edit group"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteGroup(g, e)}
+                        disabled={deleting}
+                        className="rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-50"
+                        title="Delete group"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Controls (outside scroll area) */}
+            {/* Controls */}
             <div className="mt-4 flex flex-col items-center justify-between gap-3 sm:flex-row">
               <p className="text-xs text-neutral-500">
                 Showing {Math.min(visible, total)} of {total}
@@ -245,23 +315,32 @@ console.log(groupScreens)
         )}
       </section>
 
-      {/* Create Group Modal */}
-      <BaseModal open={openCreate} onClose={() => setOpenCreate(false)} title="Add Group">
-        <AddGroupModal />
+      {/* Add/Edit Group Modal */}
+      <BaseModal
+        open={openCreate}
+        onClose={() => setOpenCreate(false)}
+        title=""
+      >
+        <AddGroupModal
+          onClose={() => setOpenCreate(false)}
+          isEdit={isEditMode}
+        />
       </BaseModal>
 
-      {/* Group Screens Modal (opens when a group is clicked) */}
+      {/* Group Screens Modal */}
       <BaseModal
         open={openScreensModal}
         onClose={() => setOpenScreensModal(false)}
         title="Group Screens"
       >
-        {/* Prevent tall modal; scroll contents if many screens */}
         <div className="max-h-[70vh] overflow-y-auto">
           {isScreensLoading && (
             <div className="space-y-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-6 w-full animate-pulse rounded bg-neutral-200" />
+                <div
+                  key={i}
+                  className="h-6 w-full animate-pulse rounded bg-neutral-200"
+                />
               ))}
             </div>
           )}
@@ -278,7 +357,9 @@ console.log(groupScreens)
           {!isScreensLoading && !isScreensError && (
             <>
               {(groupScreens?.length ?? 0) === 0 ? (
-                <p className="text-sm text-neutral-600">No screens in this group.</p>
+                <p className="text-sm text-neutral-600">
+                  No screens in this group.
+                </p>
               ) : (
                 <ul className="space-y-2">
                   {groupScreens!.map((sc) => (

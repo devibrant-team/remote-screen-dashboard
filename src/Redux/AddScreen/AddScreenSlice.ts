@@ -3,7 +3,6 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store";
 
-
 export type IdLike = number | string;
 
 export type ScreenFormState = {
@@ -31,6 +30,7 @@ const screenFormSlice = createSlice({
     setScreenGroupId: (s, a: PayloadAction<IdLike | null>) => {
       s.groupId = a.payload;
     },
+
     // Optional bulk setter
     setScreenFormMany: (s, a: PayloadAction<Partial<ScreenFormState>>) => {
       Object.assign(s, a.payload);
@@ -52,6 +52,6 @@ export default screenFormSlice.reducer;
 // Selectors
 export const selectScreenForm = (state: RootState) => state.screenForm;
 export const selectScreenFormPayload = (state: RootState) => {
-  const { name, code,  groupId } = state.screenForm;
+  const { name, code, groupId } = state.screenForm;
   return { name, code, group_id: groupId };
 };

@@ -31,3 +31,6 @@ export const GetScheduleItem= `${http}getscheduleitem`
 export const EditScheduleItem = `${http}updatescheduleitem`
 export const DeleteScheduleItem = `${http}deletescheduleitem`
 export const GetScheduleItemBlocks = `${http}scheduleofitem`
+export const UpdateScreen = `${http}updateuser/screen`
+export const UpdateGroupApi = `${http}updategroup`
+export const DeleteGroupApi = `${http}deletegroup`

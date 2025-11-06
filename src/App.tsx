@@ -17,6 +17,7 @@ import ScheduleItem from "./Screens/Schedule/ScheduleItem/ScheduleItem";
 import Schedule from "./Screens/Schedule/Schedule";
 import NewCalender from "./Screens/Schedule/Calender/NewCalender/NewCalender";
 import New from "./Screens/Schedule/Calender/NewCalender/New";
+import AccountSettingsDashboard from "./Screens/Profile/AccountSettingsDashboard";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
@@ -29,12 +30,16 @@ function RequireAuth() {
 // Shown on authenticated pages that should have the Tabbar
 function AppLayoutWithTabbar() {
   return (
-    <div className="flex">
-      <ToolBar />
-      {/* LicenseKey only where you need it; move it here if appropriate */}
-      <div className="flex-1">
+    <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <aside className="h-screen sticky top-0">
+        <ToolBar />
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
         <Outlet />
-      </div>
+      </main>
     </div>
   );
 }
@@ -82,6 +87,7 @@ export default function App() {
               <Route path="/screenmanagement" element={<ScreenManagement />} />
               <Route path="/mediaupload" element={<Media />} />
               <Route path="/schedule" element={<ScheduleItem />} />
+              <Route path="/profile" element={<AccountSettingsDashboard />} />
             </Route>
           </Route>
 

@@ -18,7 +18,7 @@ const menuItems = [
   { label: "Media", icon: UploadCloudIcon, path: "/mediaupload" },
   { label: "Schedule", icon: CalendarDays, path: "/schedule" },
   { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
-  { label: "Account", icon: User, path: "/account" },
+  { label: "Account", icon: User, path: "/profile" },
   { label: "Support", icon: LifeBuoy, path: "/support" },
 ];
 

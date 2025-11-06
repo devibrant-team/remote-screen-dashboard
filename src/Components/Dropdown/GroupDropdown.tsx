@@ -1,6 +1,6 @@
 // src/Screens/Schedule/GroupDropdown.tsx
 import { ChevronDown } from "lucide-react";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
@@ -11,16 +11,6 @@ const GroupDropdown: React.FC = () => {
   const dispatch = useDispatch();
   const selectedGroupId = useSelector((s: RootState) => s.screenForm.groupId);
 
-  // Run the "default to first group" only once (don’t override Unassigned later)
-  const initialized = useRef(false);
-  useEffect(() => {
-    if (initialized.current) return;
-    if ((selectedGroupId === null || selectedGroupId === undefined || selectedGroupId === "") && groups.length) {
-      dispatch(setScreenGroupId(String(groups[0].id)));
-      initialized.current = true;
-    }
-  }, [selectedGroupId, groups, dispatch]);
-
   const value = useMemo(
     () => (selectedGroupId == null ? "" : String(selectedGroupId)),
     [selectedGroupId]
@@ -28,8 +18,7 @@ const GroupDropdown: React.FC = () => {
 
   const onChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const v = e.target.value;
-    // If your slice expects empty string instead of null, use "" here.
-    dispatch(setScreenGroupId(v === "" ? null : v));
+    dispatch(setScreenGroupId(v === "" ? null : v)); // "" => Unassigned
   };
 
   const disabled = (isLoading || isError) && groups.length === 0;
@@ -42,13 +31,12 @@ const GroupDropdown: React.FC = () => {
         disabled={disabled}
         className="w-full appearance-none rounded-lg border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm font-medium text-neutral-800 shadow-sm outline-none transition focus:border-neutral-400 disabled:opacity-50"
       >
-        {/* Unassigned option */}
+        {/* Default = Unassigned */}
         <option value="">— Unassigned —</option>
 
         {isLoading && groups.length === 0 && <option>Loading...</option>}
         {isError && groups.length === 0 && <option>Failed to load</option>}
 
-        {/* Loaded groups */}
         {!isLoading &&
           groups.map((g) => (
             <option key={g.id} value={String(g.id)}>

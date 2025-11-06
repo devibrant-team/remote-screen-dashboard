@@ -15,16 +15,23 @@ import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
 import { setScreens } from "../../Redux/ScreenManagement/ScreenSlice";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
-
+import {
+  setSelectedBranchId,
+  setSelectedRatio,
+  setDefaultPlaylist,
+} from "../../Redux/ScreenManagement/ScreenManagementSlice";
+import { setScreenGroupId } from "../../Redux/AddScreen/AddScreenSlice";
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
 
 const SingleScreensSection: React.FC = () => {
   const [open, setOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingScreen, setEditingScreen] = useState<any | null>(null);
   const [visible, setVisible] = useState(CHUNK);
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
-
+  console.log("LALA", screens);
   // Fill Redux with screens
   useEffect(() => {
     if (!isLoading && !isError && Array.isArray(screens)) {
@@ -83,10 +90,14 @@ const SingleScreensSection: React.FC = () => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
+              onClick={() => {
+                setIsEditMode(false);
+                setEditingScreen(null);
+                setOpen(true);
+              }}
+              className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600"
             >
-              <Plus size={18} /> Add Screen
+              <Plus size={16} /> Add Screen
             </button>
           </div>
         </header>
@@ -205,15 +216,36 @@ const SingleScreensSection: React.FC = () => {
                             className="rounded p-1 hover:bg-neutral-100"
                             title="Edit"
                             aria-label={`Edit ${sc.name || "screen"}`}
+                            onClick={() => {
+                              setIsEditMode(true);
+                              setEditingScreen(sc);
+
+                              // ✅ pre-select branch
+                              if (sc.branchId != null) {
+                                dispatch(setSelectedBranchId(sc.branchId));
+                              }
+
+                              // ✅ pre-select ratio
+                              if (sc.ratioId != null) {
+                                dispatch(
+                                  setSelectedRatio({
+                                    id: sc.ratioId,
+                                    name: sc.ratio ?? null,
+                                  })
+                                );
+                              }
+                              // ✅ pre-select playlist
+                              if (sc.PlaylistId != null) {
+                                // DefaultPlaylistDropdown reads screenManagement.playlist_id
+                                dispatch(
+                                  setDefaultPlaylist(String(sc.PlaylistId))
+                                );
+                              }
+
+                              setOpen(true);
+                            }}
                           >
                             <Pencil size={16} />
-                          </button>
-                          <button
-                            className="rounded p-1 hover:bg-neutral-100"
-                            title="Delete"
-                            aria-label={`Delete ${sc.name || "screen"}`}
-                          >
-                            <Trash2 size={16} />
                           </button>
                         </div>
                       </article>
@@ -258,8 +290,13 @@ const SingleScreensSection: React.FC = () => {
         )}
       </section>
 
-      <BaseModal open={open} onClose={() => setOpen(false)} title="Add Screen">
-        <AddScreenModal />
+      <BaseModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="" // 👈 dynamic title
+      >
+        <AddScreenModal isEdit={isEditMode} editingScreen={editingScreen} />{" "}
+        {/* 👈 pass screen */}
       </BaseModal>
     </>
   );

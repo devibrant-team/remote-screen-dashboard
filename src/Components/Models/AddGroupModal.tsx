@@ -1,15 +1,34 @@
 // Components/Models/AddGroupModal.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useForm, type Resolver } from "react-hook-form";
+import { useForm, type Resolver, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import type { RootState } from "../../../store";
+
 import { setGroupName } from "../../Redux/AddGroup/AddGroupSlice";
 import ScreenRatioDropdown from "../Dropdown/ScreenRatioDropdown";
+import BranchDropdown from "../Dropdown/BranchDropdown";
+import AddBranchModal from "../../Screens/ScreenManagement/AddBranchModal";
+
 import { useAddGroup } from "../../ReactQuery/Group/useAddGroup";
 import type { AddGroupPayload } from "../../ReactQuery/Group/PostGroup";
-import { ChevronDown, ChevronUp } from "lucide-react";
+
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
+import DefaultPlaylistDropdown from "../../Screens/ScreenManagement/DefaultPlaylistModal";
+import {
+  selectedDefaultPlaylistId,
+  setDefaultPlaylist,
+} from "../../Redux/ScreenManagement/ScreenManagementSlice";
+import { selectSelectedGroup } from "../../Redux/ScreenManagement/GroupSlice";
+import type { UpdateGroupPayload } from "../../ReactQuery/Group/UpdateGroup";
+import { useUpdateGroup } from "../../ReactQuery/Group/useUpdateGroup";
+import {
+  useGetGroupScreens,
+  GROUP_SCREENS_QK,
+} from "../../ReactQuery/Group/GetGroupScreen";
+import ErrorToast from "../ErrorToast";
 
 const toNullableNumber = z.preprocess((v) => {
   if (v === "" || v == null) return null;
@@ -21,28 +40,32 @@ const schema = z.object({
   name: z.string().trim().min(2, "Group name must be at least 2 characters"),
   ratioId: toNullableNumber,
   branchId: z.coerce.number().int().positive("Please select a branch"),
-  screenIds: z
-    .array(z.coerce.number().int())
-    .min(2, "Select at least 2 screens"),
+  // no min here – "at least 2 screens" is enforced only in Add mode
+  screenIds: z.array(z.coerce.number().int()),
 });
 type FormValues = z.infer<typeof schema>;
-
-// Fix resolver typing mismatch across versions
 const resolver = zodResolver(schema) as Resolver<FormValues, any, FormValues>;
 
-type Props = { onClose?: () => void };
+type Props = {
+  onClose?: () => void;
+  isEdit?: boolean;
+  editingGroup?: any | null;
+};
 
-const AddGroupModal = ({ onClose }: Props) => {
+const AddGroupModal = ({ onClose, isEdit = false }: Props) => {
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+  const selectedGroup = useSelector(selectSelectedGroup);
+  const [uiError, setUiError] = useState<unknown | null>(null);
+  const [visible, setVisible] = useState(15);
+  const [screensLoading] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
-  // Show list in chunks of 5
-  const [visible, setVisible] = useState(5);
-  const [screensLoading] = useState(false); // if you wire a loader, set this accordingly
+  const selectedPlaylistId = useSelector(selectedDefaultPlaylistId);
 
-  // Read screens from Redux
-  const screens = useSelector((state: RootState) => state.screens.items);
+  // Screens from slice
+  const screensFromSlice = useSelector((s: RootState) => s.screens.items);
 
-  // From Redux (dropdowns) — used to populate form values and filter lists
   const selectedRatioId = useSelector(
     (s: RootState) => s.screenManagement.selectedRatioId
   );
@@ -53,7 +76,8 @@ const AddGroupModal = ({ onClose }: Props) => {
     (s: RootState) => s.screenManagement.selectedBranchId
   );
 
-  const { mutate: addGroup, isPending } = useAddGroup();
+  const { mutate: addGroup, isPending: isAddPending } = useAddGroup();
+  const { mutate: updateGroup, isPending: isUpdatePending } = useUpdateGroup();
 
   const {
     register,
@@ -63,19 +87,108 @@ const AddGroupModal = ({ onClose }: Props) => {
     formState: { errors, isSubmitting, isValid },
     watch,
     reset,
+    control,
   } = useForm<FormValues>({
     resolver,
     mode: "onChange",
-    defaultValues: {} as Partial<FormValues>,
+    defaultValues: {
+      name: "",
+      ratioId: null,
+      branchId: undefined as any,
+      screenIds: [],
+    } as Partial<FormValues>,
   });
 
-  // Keep form in sync with Redux dropdowns (ratio/branch)
+  // Screens already assigned to this group (API)
+  const { data: groupScreens } = useGetGroupScreens(
+    isEdit && selectedGroup ? Number(selectedGroup.id) : null
+  );
+
+  // ✅ Build "group-first" merged array
+  const mergedScreens = useMemo(() => {
+    const normalizedGroupScreens =
+      (groupScreens ?? []).map((gs: any) => {
+        const backendId = Number(gs.id);
+        return {
+          id: backendId,
+          screenId: backendId,
+          name: gs.name,
+          branch: gs.branchName,
+          ratio: gs.ratio,
+        };
+      }) ?? [];
+
+    const groupIds = new Set(
+      normalizedGroupScreens.map((gs: any) => Number(gs.screenId))
+    );
+
+    const normalizedSliceScreens = (screensFromSlice ?? [])
+      .map((sc: any) => {
+        const backendId = Number(sc.screenId ?? sc.id);
+        if (!backendId) return null;
+        return {
+          id: backendId,
+          screenId: backendId,
+          name: sc.name,
+          branch: sc.branch ?? sc.branchName ?? null,
+          ratio: sc.ratio ?? null,
+        };
+      })
+      .filter(Boolean) as any[];
+
+    // Only add slice screens that are NOT already in the group
+    const sliceOnly = normalizedSliceScreens.filter(
+      (sc: any) => !groupIds.has(Number(sc.screenId))
+    );
+
+    // Group screens FIRST, then the rest
+    return [...normalizedGroupScreens, ...sliceOnly];
+  }, [screensFromSlice, groupScreens]);
+
+  // Prefill name + playlist when editing
   useEffect(() => {
-    if (selectedRatioId == null) {
-      setValue("ratioId", null as any, { shouldValidate: true });
-    } else {
-      setValue("ratioId", Number(selectedRatioId), { shouldValidate: true });
+    if (isEdit && selectedGroup) {
+      reset((prev) => ({
+        ...prev,
+        name: selectedGroup.name || "",
+      }));
+
+      if (selectedGroup.name) {
+        dispatch(setGroupName(selectedGroup.name));
+      }
+
+      if (selectedGroup.defaultPlaylistId) {
+        dispatch(setDefaultPlaylist(selectedGroup.defaultPlaylistId));
+      }
     }
+  }, [isEdit, selectedGroup, reset, dispatch]);
+
+  // ✅ Preselect screens from the group (checked by default)
+  useEffect(() => {
+    if (!isEdit || !groupScreens) return;
+
+    const apiIds = groupScreens.map((sc: any) => Number(sc.id)); // [28, 29, 30, ...]
+    setValue("screenIds", apiIds, { shouldValidate: true });
+  }, [isEdit, groupScreens, setValue]);
+
+  // Clear when switching back to Add mode
+  useEffect(() => {
+    if (!isEdit && !selectedGroup) {
+      reset({
+        name: "",
+        ratioId: null,
+        branchId: undefined as any,
+        screenIds: [],
+      });
+      dispatch(setGroupName(""));
+    }
+  }, [isEdit, selectedGroup, reset, dispatch]);
+
+  // Keep form in sync with ratio / branch from Redux
+  useEffect(() => {
+    setValue("ratioId", selectedRatioId ? Number(selectedRatioId) : null, {
+      shouldValidate: true,
+    });
   }, [selectedRatioId, setValue]);
 
   useEffect(() => {
@@ -84,117 +197,191 @@ const AddGroupModal = ({ onClose }: Props) => {
     }
   }, [selectedBranchId, setValue]);
 
-  // ---- Filtering by selectedRatioName (e.g., "16:9") ----
+  // Filtering screens by selected ratio (on merged list)
   const norm = (s?: string | null) =>
     (s ?? "").trim().replace(/\s+/g, "").toLowerCase();
 
-  const allScreens = screens ?? [];
+  const allScreens = mergedScreens ?? [];
   const shouldFilterByRatio =
     selectedRatioId != null && !!selectedRatioName?.trim();
 
   const filteredScreens = shouldFilterByRatio
-    ? allScreens.filter((sc) => norm(sc.ratio) === norm(selectedRatioName))
+    ? allScreens.filter((sc: any) => norm(sc.ratio) === norm(selectedRatioName))
     : allScreens;
+
   const totalScreens = filteredScreens.length;
   const visibleScreens = filteredScreens.slice(0, visible);
 
-  // Reset visible chunk when data or filter changes
+  // Reset visible when list or filter changes
   useEffect(() => {
-    setVisible(5);
+    setVisible(15);
   }, [totalScreens, selectedRatioName, selectedRatioId, shouldFilterByRatio]);
 
-  // ------- Submit -------
+  const selectedIds = watch("screenIds") as number[] | undefined;
+
+  // ⛔ central close handler – resets form + clears query cache + closes modal
+  const handleClose = () => {
+    reset({
+      name: "",
+      ratioId: null,
+      branchId: undefined as any,
+      screenIds: [],
+    });
+    dispatch(setGroupName(""));
+
+    // Clear all cached group-screens queries -> next open has fresh mergedScreens
+    queryClient.removeQueries({ queryKey: GROUP_SCREENS_QK, exact: false });
+
+    onClose?.();
+  };
+
   const onSubmit = (values: FormValues) => {
-    const payload: AddGroupPayload = {
+    // Only enforce "at least 2 screens" when ADDING a group
+    if (!isEdit && (!values.screenIds || values.screenIds.length < 2)) {
+      setError("screenIds", {
+        type: "manual",
+        message: "Select at least 2 screens",
+      });
+      return;
+    }
+
+    const basePayload = {
       name: values.name.trim(),
       branchId: values.branchId,
       assignScreens: values.screenIds.map((id) => ({ screenId: id })),
       ...(values.ratioId != null ? { ratioId: values.ratioId } : {}),
+      playlistId: selectedPlaylistId ? Number(selectedPlaylistId) : null,
     };
 
-    addGroup(payload, {
-      onSuccess: () => {
-        reset();
-        onClose?.();
-      },
-      onError: (err: any) => {
-        const msg =
-          err?.response?.data?.errors?.branchId?.[0] ??
-          err?.response?.data?.errors?.ratioId?.[0] ??
-          err?.response?.data?.message;
-        if (msg?.toLowerCase().includes("branch")) {
-          setError("branchId", { type: "server", message: msg });
-        } else if (msg?.toLowerCase().includes("ratio")) {
-          setError("ratioId", { type: "server", message: msg });
-        }
-      },
-    });
+const handleError = (err: any) => {
+  const msg =
+    err?.response?.data?.errors?.branchId?.[0] ??
+    err?.response?.data?.errors?.ratioId?.[0] ??
+    err?.response?.data?.errors?.screenIds?.[0] ??
+    err?.response?.data?.error ?? // 👈 will catch: "You must assign at least two screens..."
+    err?.response?.data?.message;
+
+  if (msg?.toLowerCase().includes("branch")) {
+    setError("branchId", { type: "server", message: msg });
+  } else if (msg?.toLowerCase().includes("ratio")) {
+    setError("ratioId", { type: "server", message: msg });
+  } else if (msg?.toLowerCase().includes("screen")) {
+    setError("screenIds", { type: "server", message: msg });
+  }
+
+  // 👇 show toast with full error (your ErrorToast will render the message)
+  setUiError(err);
+};
+
+
+    if (isEdit && selectedGroup) {
+      // UPDATE EXISTING GROUP
+      const payload: UpdateGroupPayload = {
+        id: Number(selectedGroup.id),
+        ...basePayload,
+      };
+
+      updateGroup(payload, {
+        onSuccess: () => {
+          handleClose(); // ✅ clear + close
+        },
+        onError: handleError,
+      });
+    } else {
+      // ADD NEW GROUP
+      const payload: AddGroupPayload = basePayload;
+
+      addGroup(payload, {
+        onSuccess: () => {
+          handleClose(); // ✅ clear + close
+        },
+        onError: handleError,
+      });
+    }
   };
 
-  const selectedIds = watch("screenIds");
-
   return (
-    <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
-      {/* Header */}
-      <div className="mb-4">
-        <p className="mt-1 text-sm text-neutral-600">
-          Name your group and configure its display ratio, branch, and assigned
-          screens.
-        </p>
-      </div>
+    <>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-6">
+        {/* Header */}
+        <div className="border-b pb-2">
+          <h3 className="text-base font-semibold text-neutral-900">
+            {isEdit ? "Edit Group" : "Add New Group"}
+          </h3>
+          <p className="text-sm text-neutral-500">
+            {isEdit
+              ? "Update this group’s settings and assigned screens."
+              : "Configure your group’s name, branch, ratio, and assigned screens."}
+          </p>
+        </div>
 
-      {/* Form Card */}
-      <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Form */}
+        <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm space-y-5">
           {/* Group Name */}
-          <div className="md:col-span-2">
-            <label
-              htmlFor="group-name"
-              className="mb-1 block text-sm font-medium text-neutral-700"
-            >
+          <div>
+            <label className="text-sm font-medium text-neutral-700 mb-1 block">
               Group Name <span className="text-red-500">*</span>
             </label>
             <input
-              id="group-name"
-              placeholder="e.g., Front Window TV"
               {...register("name", {
                 onChange: (e) => dispatch(setGroupName(e.target.value)),
               })}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none transition focus:border-neutral-400"
+              placeholder="e.g., Front Window Group"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
             />
             {errors.name ? (
-              <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
+              <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>
             ) : (
-              <p className="mt-1 text-xs text-neutral-500">
-                Give this group a short, recognizable name.
+              <p className="text-xs text-neutral-500 mt-1">
+                Give this group a clear and recognizable name.
               </p>
             )}
           </div>
 
-          {/* Ratio (kept for form value; also drives filtering by name) */}
+          {/* Branch + Add branch */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-neutral-700 mb-1 block">
+                Branch
+              </label>
+              <BranchDropdown />
+              {errors.branchId && (
+                <p className="text-xs text-red-600 mt-1">
+                  {errors.branchId.message}
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAddOpen(true)}
+              className="inline-flex items-center justify-center gap-2 mt-5 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-600"
+            >
+              <Plus size={16} /> Add Branch
+            </button>
+          </div>
+
+          {/* Ratio */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-neutral-700">
+            <label className="text-sm font-medium text-neutral-700 mb-1 block">
               Group Ratio <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center gap-2">
-              <ScreenRatioDropdown allowNone noneLabel="None" />
-            </div>
-            {/* Hidden field to keep RHF value in the form model */}
+            <ScreenRatioDropdown allowNone noneLabel="None" />
             <input
               type="hidden"
               {...register("ratioId", { valueAsNumber: true })}
             />
             {errors.ratioId && (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="text-xs text-red-600 mt-1">
                 {errors.ratioId.message}
               </p>
             )}
           </div>
 
-          {/* Assign Screens (checkboxes) — 5 by 5 with controls (filtered by selectedRatioName) */}
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-sm font-medium text-neutral-700">
-              Assign Screens <span className="text-red-500">*</span>
+          {/* Screens */}
+          <div>
+            <label className="text-sm font-medium text-neutral-700 mb-2 block">
+              Assign Screens{" "}
+              {!isEdit && <span className="text-red-500">*</span>}
             </label>
 
             <div className="rounded-lg border border-neutral-200 p-3">
@@ -202,7 +389,7 @@ const AddGroupModal = ({ onClose }: Props) => {
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div
-                      key={`skeleton-${i}`}
+                      key={i}
                       className="h-5 w-2/3 animate-pulse rounded bg-neutral-200"
                     />
                   ))}
@@ -216,23 +403,46 @@ const AddGroupModal = ({ onClose }: Props) => {
               ) : (
                 <>
                   <ul className="space-y-2">
-                    {visibleScreens.map((sc) => (
-                      <li key={sc.id}>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 hover:bg-neutral-50">
-                          <input
-                            type="checkbox"
-                            value={sc.screenId}
-                            {...register("screenIds")}
-                            className="h-4 w-4 accent-red-500"
-                          />
-                          <span className="text-sm text-neutral-800">
-                            {sc.name || `Screen #${sc.screenId}`}
-                          </span>
-                          <span className="ml-auto text-xs text-neutral-500">
-                            {(sc as any).branch ?? "No branch"} •{" "}
-                            {(sc as any).ratio ?? "—"}
-                          </span>
-                        </label>
+                    {visibleScreens.map((sc: any) => (
+                      <li key={sc.screenId}>
+                        <Controller
+                          name="screenIds"
+                          control={control}
+                          render={({ field }) => {
+                            const value = (field.value || []) as number[];
+                            const checked = value.includes(Number(sc.screenId));
+
+                            return (
+                              <label className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 hover:bg-neutral-50 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-red-500"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      field.onChange([
+                                        ...value,
+                                        Number(sc.screenId),
+                                      ]);
+                                    } else {
+                                      field.onChange(
+                                        value.filter(
+                                          (id) => id !== Number(sc.screenId)
+                                        )
+                                      );
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm text-neutral-800">
+                                  {sc.name || `Screen #${sc.screenId}`}
+                                </span>
+                                <span className="ml-auto text-xs text-neutral-500">
+                                  {sc.branch ?? "No branch"} • {sc.ratio ?? "—"}
+                                </span>
+                              </label>
+                            );
+                          }}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -248,10 +458,8 @@ const AddGroupModal = ({ onClose }: Props) => {
                           type="button"
                           onClick={() => setVisible((v) => Math.max(5, v - 5))}
                           className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
-                          title="Show less"
                         >
-                          <ChevronUp size={14} />
-                          Show less
+                          <ChevronUp size={14} /> Show less
                         </button>
                       )}
                       {visible < totalScreens && (
@@ -261,10 +469,8 @@ const AddGroupModal = ({ onClose }: Props) => {
                             setVisible((v) => Math.min(totalScreens, v + 5))
                           }
                           className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
-                          title="Show 5 more"
                         >
-                          <ChevronDown size={14} />
-                          Show 5 more
+                          <ChevronDown size={14} /> Show 5 more
                         </button>
                       )}
                     </div>
@@ -284,20 +490,49 @@ const AddGroupModal = ({ onClose }: Props) => {
               )}
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Footer */}
-      <div className="mt-4 flex items-center justify-end gap-3">
-        <button
-          type="submit"
-          disabled={!isValid || isSubmitting || isPending}
-          className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isPending ? "Saving..." : "Save"}
-        </button>
-      </div>
-    </form>
+          <div>
+            <DefaultPlaylistDropdown />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={
+              !isValid || isSubmitting || isAddPending || isUpdatePending
+            }
+            className="rounded-lg bg-red-500 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+          >
+            {isAddPending || isUpdatePending
+              ? isEdit
+                ? "Updating..."
+                : "Saving..."
+              : isEdit
+              ? "Save Changes"
+              : "Save Group"}
+          </button>
+        </div>
+      </form>
+
+      <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
+      {uiError && (
+        <ErrorToast
+          error={uiError}
+          onClose={() => setUiError(null)}
+          autoHideMs={8000}
+          anchor="top-right"
+        />
+      )}
+    </>
   );
 };
 

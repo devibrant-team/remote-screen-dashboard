@@ -241,7 +241,15 @@ export default function AssignSchedulebar({
   });
 
   const [submitting, setSubmitting] = useState(false);
+  const hasPlaylist = Boolean(selectedBlock?.playlistId);
+  const hasDevices =
+    selectedScreenIds.length > 0 ||
+    selectedGroupIds.length > 0 ||
+    (selectedBlock?.screens?.length ?? 0) > 0 ||
+    (selectedBlock?.groups?.length ?? 0) > 0;
 
+  const isApplyDisabled =
+    submitting || posting || !selectedBlock || !hasPlaylist || !hasDevices;
   /* ------------------------------ Apply ---------------------------------- */
   const onApply = async () => {
     if (!selectedBlock) {
@@ -609,19 +617,14 @@ export default function AssignSchedulebar({
           <button
             type="button"
             onClick={onApply}
-            disabled={
-              submitting ||
-              posting ||
-              !selectedBlock ||
-              !selectedBlock.playlistId
-            }
+            disabled={isApplyDisabled}
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium
-            ${
-              submitting || posting
-                ? "bg-gray-300 text-gray-600"
-                : "bg-red-500 text-white hover:bg-red-600"
-            }
-          `}
+    ${
+      isApplyDisabled
+        ? "bg-gray-300 text-gray-600 cursor-not-allowed"
+        : "bg-red-500 text-white hover:bg-red-600"
+    }
+  `}
           >
             {submitting || posting ? (
               <Loader2 className="size-4 animate-spin" />

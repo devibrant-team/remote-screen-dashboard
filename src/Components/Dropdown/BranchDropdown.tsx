@@ -4,6 +4,7 @@ import { setSelectedBranchId } from "../../Redux/ScreenManagement/ScreenManageme
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import { useEffect, useMemo } from "react";
+
 const BranchDropdown = () => {
   const { data: branches, isLoading, isError } = useGetBranches();
   const selectedBranchId = useSelector(
@@ -11,7 +12,7 @@ const BranchDropdown = () => {
   );
   console.log("Branch", selectedBranchId);
   const dispatch = useDispatch();
-  // initialize once when groups arrive
+
   useEffect(() => {
     if (!selectedBranchId && branches?.length) {
       dispatch(setSelectedBranchId(String(branches[0].id)));
@@ -30,7 +31,8 @@ const BranchDropdown = () => {
   const disabled = (isLoading || isError) && branches?.length === 0;
 
   return (
-    <div className="relative w-full sm:w-auto">
+    // 👇 make it behave like ScreenRatioDropdown: full width + flex grow
+    <div className="relative w-full flex-1">
       <select
         value={value}
         onChange={onChange}

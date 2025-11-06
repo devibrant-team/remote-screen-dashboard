@@ -1,18 +1,15 @@
 // ScreenHeader.tsx
 import { useState } from "react";
 import { Plus, Search } from "lucide-react";
-import AddBranchModal from "./AddBranchModal";
-import BranchDropdown from "../../Components/Dropdown/BranchDropdown";
 
 const ScreenHeader = () => {
-  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [, setIsAddOpen] = useState(false);
 
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col  sm:flex-row sm:items-center sm:justify-between">
         {/* Left side: Branch Selector + Add Button */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <BranchDropdown />
+        <div className="flex flex-col m:flex-row sm:items-center ">
           <button
             type="button"
             onClick={() => setIsAddOpen(true)}
@@ -36,9 +33,6 @@ const ScreenHeader = () => {
           />
         </div>
       </div>
-
-      {/* Modal (opens only from the button) */}
-      <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
     </>
   );
 };

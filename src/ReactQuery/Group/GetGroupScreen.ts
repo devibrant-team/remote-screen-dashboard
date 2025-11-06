@@ -8,7 +8,10 @@ export type GroupScreen = {
   name: string;
   branchId: number;
   branchName: string;
-  ratio: string; // or string | null if backend can return null
+  ratio: string;
+  ratioId: number | null;
+  defaultPlaylistId: number | null;
+  defaultPlaylistName: string | null;
 };
 
 export const GROUP_SCREENS_QK = ["group-screens"] as const;

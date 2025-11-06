@@ -1,8 +1,8 @@
-// src/ReactQuery/Group/PostGroup.ts
 import axios from "axios";
-import { AddGroupApi } from "../../API/API";
+import { UpdateGroupApi } from "../../API/API";
 
-export type AddGroupPayload = {
+export type UpdateGroupPayload = {
+  id: number | null;
   name: string;
   ratioId?: number | null;
   branchId: number;
@@ -10,9 +10,10 @@ export type AddGroupPayload = {
   playlistId:number | null;
 };
 
-export async function AddGroup(payload: AddGroupPayload) {
+export async function UpdateGroup(payload: UpdateGroupPayload) {
   const token = localStorage.getItem("token");
-  const res = await axios.post(AddGroupApi, payload, {
+  const { id, ...body } = payload;
+  const res = await axios.put(`${UpdateGroupApi}/${id}`, body, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;

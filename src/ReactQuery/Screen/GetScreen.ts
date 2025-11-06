@@ -12,6 +12,9 @@ export type Screen = {
   ratioId: number | null;
   active: boolean;
   lastSeen: string | null;
+  PlaylistId: number | null;
+  PlaylistName: string | null;
+  branchId: number | null;
 };
 
 export const SCREEN_OK = ["screens"] as const;
@@ -26,7 +29,7 @@ async function fetchScreens(): Promise<Screen[]> {
   });
 
   const raw = res.data?.screens ?? [];
-
+  console.log("EHE", raw);
   return raw.map((r: any) => ({
     id: r.id,
     screenId: r.screenId,
@@ -34,8 +37,11 @@ async function fetchScreens(): Promise<Screen[]> {
     branch: r.branchName ?? null,
     ratio: r.ratio ?? null,
     ratioId: r.ratioId,
-    active: Boolean(r.active), // 0/1 -> boolean
+    active: Boolean(r.active),
     lastSeen: r.lastSeen ?? null,
+    PlaylistId: r.PlaylistId ?? null,
+    PlaylistName: r.PlaylistName ?? null,
+    branchId: r.branchId ?? null,
   }));
 }
 
