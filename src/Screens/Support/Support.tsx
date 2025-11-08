@@ -1,5 +1,6 @@
 // src/Pages/Support.tsx
 
+import React, { useState } from "react";
 import {
   Headset,
   MonitorSmartphone,
@@ -7,8 +8,25 @@ import {
   CreditCard,
   Mail,
 } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { resetSupportForm, setSupportCategory, type SupportCategory } from "../../Redux/Support/SupportSlice";
+import SupportModal from "../../Components/Models/SupportModal";
 
-const Support = () => {
+
+const Support: React.FC = () => {
+  const dispatch = useDispatch();
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+
+  const openModalWithCategory = (category: SupportCategory) => {
+    dispatch(resetSupportForm());
+    dispatch(setSupportCategory(category));
+    setIsSupportOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsSupportOpen(false);
+  };
+
   return (
     <div className="px-4 md:px-6 py-8 md:py-10 bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -44,6 +62,7 @@ const Support = () => {
               {/* Screen issue */}
               <button
                 type="button"
+                onClick={() => openModalWithCategory("screen")}
                 className="group flex flex-col items-start rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-left hover:border-red-200 hover:bg-red-50 hover:shadow-sm transition-all"
               >
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-500 mb-2 group-hover:bg-red-100">
@@ -60,6 +79,7 @@ const Support = () => {
               {/* Content issue */}
               <button
                 type="button"
+                onClick={() => openModalWithCategory("content")}
                 className="group flex flex-col items-start rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-left hover:border-red-200 hover:bg-red-50 hover:shadow-sm transition-all"
               >
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-500 mb-2 group-hover:bg-red-100">
@@ -76,6 +96,7 @@ const Support = () => {
               {/* Billing issue */}
               <button
                 type="button"
+                onClick={() => openModalWithCategory("billing")}
                 className="group flex flex-col items-start rounded-2xl border border-gray-200 bg-gray-50 px-4 py-4 text-left hover:border-red-200 hover:bg-red-50 hover:shadow-sm transition-all"
               >
                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-red-50 text-red-500 mb-2 group-hover:bg-red-100">
@@ -130,13 +151,14 @@ const Support = () => {
               </div>
 
               <p className="text-[11px] text-gray-500">
-                Please include screen name, location, and a short description of
-                the problem. Screenshots are very helpful.
+                Please include screen name and a short description of the
+                problem. Screenshots are very helpful.
               </p>
             </div>
 
             <button
               type="button"
+              onClick={() => openModalWithCategory("general")}
               className="mt-4 inline-flex items-center justify-center rounded-lg bg-red-500 px-4 py-2 text-xs font-semibold text-white hover:bg-red-600 transition"
             >
               Open email app
@@ -144,6 +166,9 @@ const Support = () => {
           </section>
         </div>
       </div>
+
+      {/* Inline overlay modal (no BaseModal) */}
+      <SupportModal open={isSupportOpen} onClose={handleClose} />
     </div>
   );
 };
