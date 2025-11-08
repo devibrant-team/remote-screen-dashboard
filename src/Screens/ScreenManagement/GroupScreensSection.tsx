@@ -17,18 +17,18 @@ import BaseModal from "../../Components/Models/BaseModal";
 import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
 import { useGetGroupScreens } from "../../ReactQuery/Group/GetGroupScreen";
 import AddGroupModal from "../../Components/Models/AddGroupModal";
-import { setSelectedGroup } from "../../Redux/ScreenManagement/GroupSlice";
+import {
+  clearSelectedGroup,
+  setSelectedGroup,
+} from "../../Redux/ScreenManagement/GroupSlice";
+import type { Group } from "../../Redux/ScreenManagement/GroupSlice";
 import { useDispatch } from "react-redux";
 import { useDeleteGroup } from "../../ReactQuery/Group/DeleteGroup";
-type Group = {
-  id: string | number;
-  name: string;
-  ratio?: string | null;
-  branchName?: string | null;
-  screenNumber?: number | null;
-  defaultPlaylistId?: number | null;
-  defaultPlaylistName?: string | null;
-};
+import {
+  resetScreenManagement,
+  setSelectedBranchId,
+  setSelectedRatio,
+} from "../../Redux/ScreenManagement/ScreenManagementSlice";
 
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
@@ -193,7 +193,7 @@ const GroupScreensSection: React.FC = () => {
         {/* List */}
         {!isLoading && !isError && total > 0 && (
           <>
-            <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1">
+            <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1 scrollbar-hide ">
               <div className="flex flex-col gap-3">
                 {visibleGroups.map((g: Group) => (
                   <button
@@ -258,8 +258,23 @@ const GroupScreensSection: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           setIsEditMode(true);
+                          dispatch(clearSelectedGroup());
+                          dispatch(resetScreenManagement())
                           dispatch(setSelectedGroup(g));
                           setOpenCreate(true);
+                          if (g.branchId != null) {
+                            dispatch(setSelectedBranchId(g.branchId));
+                          } else {
+                            dispatch(setSelectedBranchId(null));
+                          }
+                          if (g.ratioId != null) {
+                            dispatch(
+                              setSelectedRatio({
+                                id: g.ratioId ?? null,
+                                name: g.ratio ?? null,
+                              })
+                            );
+                          }
                         }}
                         className="rounded p-1 text-neutral-500 hover:bg-neutral-100"
                         title="Edit group"
@@ -322,6 +337,7 @@ const GroupScreensSection: React.FC = () => {
         title=""
       >
         <AddGroupModal
+          open={openCreate}
           onClose={() => setOpenCreate(false)}
           isEdit={isEditMode}
         />

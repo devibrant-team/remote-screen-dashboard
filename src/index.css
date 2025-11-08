@@ -75,3 +75,22 @@
 .wheel-hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome/Safari/Edge */
 }
+/* Swiper navigation arrows */
+.swiper-button-next,
+.swiper-button-prev {
+  color: #ef4444 !important; /* Tailwind red-500 */
+}
+
+.swiper-button-next::after,
+.swiper-button-prev::after {
+  font-size: 24px;   /* a bit bigger */
+  font-weight: 600;
+}
+.swiper-pagination-bullet {
+  background: #fecaca!important; /* red-100 */
+  opacity: 1;
+}
+
+.swiper-pagination-bullet-active {
+  background: #ef4444!important; /* red-500 */
+}

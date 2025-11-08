@@ -230,7 +230,7 @@ const MediaPage: React.FC = () => {
   };
 
   return (
-    <div className="mx-10 max-w-7xl px-4 py-6">
+    <div className="mx-10 max-w-9xl px-4 py-6">
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>

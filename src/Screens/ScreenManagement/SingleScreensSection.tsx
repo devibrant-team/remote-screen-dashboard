@@ -4,7 +4,6 @@ import {
   Plus,
   Monitor,
   Pencil,
-  Trash2,
   RefreshCw,
   ChevronDown,
   ChevronUp,
@@ -13,14 +12,13 @@ import BaseModal from "../../Components/Models/BaseModal";
 import AddScreenModal from "../../Components/Models/AddScreenModal";
 import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
 import { setScreens } from "../../Redux/ScreenManagement/ScreenSlice";
-import { useDispatch, useSelector } from "react-redux";
-import type { RootState } from "../../../store";
+import { useDispatch } from "react-redux";
 import {
   setSelectedBranchId,
   setSelectedRatio,
   setDefaultPlaylist,
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
-import { setScreenGroupId } from "../../Redux/AddScreen/AddScreenSlice";
+import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
 
@@ -169,7 +167,7 @@ const SingleScreensSection: React.FC = () => {
             ) : (
               <>
                 {/* FIXED HEIGHT SCROLL AREA */}
-                <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1">
+                <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1 scrollbar-hide">
                   <div className="flex flex-col gap-3">
                     {visibleScreens.map((sc) => (
                       <article
@@ -197,7 +195,7 @@ const SingleScreensSection: React.FC = () => {
                               <span className="mx-2">•</span>
                               {sc.branch ?? "No branch"}
                               <span className="mx-2">•</span>
-                              {sc.active ? "Online" : "Offline"}
+                              {sc.PlaylistName ? sc.PlaylistName  : ""}
                               {(() => {
                                 const ls = sc.lastSeen ?? "—";
                                 return (
@@ -217,6 +215,7 @@ const SingleScreensSection: React.FC = () => {
                             title="Edit"
                             aria-label={`Edit ${sc.name || "screen"}`}
                             onClick={() => {
+                              dispatch(resetScreenForm())
                               setIsEditMode(true);
                               setEditingScreen(sc);
 
@@ -234,6 +233,7 @@ const SingleScreensSection: React.FC = () => {
                                   })
                                 );
                               }
+                              console.log(sc.PlaylistId)
                               // ✅ pre-select playlist
                               if (sc.PlaylistId != null) {
                                 // DefaultPlaylistDropdown reads screenManagement.playlist_id

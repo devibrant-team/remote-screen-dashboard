@@ -15,9 +15,11 @@ import ScreenManagement from "./Screens/ScreenManagement/ScreenManagement";
 import Media from "./Screens/UploadMedia/Media";
 import ScheduleItem from "./Screens/Schedule/ScheduleItem/ScheduleItem";
 import Schedule from "./Screens/Schedule/Schedule";
-import NewCalender from "./Screens/Schedule/Calender/NewCalender/NewCalender";
+
 import New from "./Screens/Schedule/Calender/NewCalender/New";
 import AccountSettingsDashboard from "./Screens/Profile/AccountSettingsDashboard";
+import Dashboard from "./Screens/Dashboard/Dashboard";
+import Support from "./Screens/Support/Support";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
@@ -88,6 +90,8 @@ export default function App() {
               <Route path="/mediaupload" element={<Media />} />
               <Route path="/schedule" element={<ScheduleItem />} />
               <Route path="/profile" element={<AccountSettingsDashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+               <Route path="/support" element={<Support />} />
             </Route>
           </Route>
 

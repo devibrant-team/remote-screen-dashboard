@@ -10,7 +10,7 @@ export type Group = {
   branchName?: string | null;
   screenNumber?: number | null;
   branchId?: number | null;
-  ratioId?: number | null;
+  ratioId?: number | string |null;
   defaultPlaylistId?: number | null;
   defaultPlaylistName?: string | null;
 };
@@ -18,7 +18,7 @@ export type Group = {
 type GroupsState = {
   items: Group[];
   lastSyncedAt?: string | null;
-  selectedGroups: Array<number | string>; // <-- NEW
+  selectedGroups: Array<number | string>;
   selectedGroup: Group | null;
 };
 
@@ -33,13 +33,11 @@ const groupSlice = createSlice({
   name: "groups",
   initialState,
   reducers: {
-    // hydrate/replace the groups list from API
     setGroups(state, action: PayloadAction<Group[]>) {
       state.items = action.payload ?? [];
       state.lastSyncedAt = new Date().toISOString();
     },
 
-    // create or update a single group in items
     upsertGroup(state, action: PayloadAction<Group>) {
       const idx = state.items.findIndex(
         (g) => String(g.id) === String(action.payload.id)
@@ -51,49 +49,55 @@ const groupSlice = createSlice({
       }
     },
 
-    // remove a group from items
     removeGroup(state, action: PayloadAction<number | string>) {
       state.items = state.items.filter(
         (g) => String(g.id) !== String(action.payload)
       );
+
+      // OPTIONAL: if the removed group was the selected one, clear it
+      if (
+        state.selectedGroup &&
+        String(state.selectedGroup.id) === String(action.payload)
+      ) {
+        state.selectedGroup = null;
+      }
     },
 
-    // wipe items list
     clearGroups(state) {
       state.items = [];
       state.lastSyncedAt = null;
-      state.selectedGroups = []; // also clear selection for safety
+      state.selectedGroups = [];
+      state.selectedGroup = null; // <--- clear selectedGroup too
     },
 
-    // ---------- NEW STUFF BELOW ----------
-
-    // toggle a group in/out of the selectedGroups array
     toggleSelectedGroup(state, action: PayloadAction<number | string>) {
       const id = action.payload;
       const exists = state.selectedGroups.some((g) => String(g) === String(id));
 
       if (exists) {
-        // remove it
         state.selectedGroups = state.selectedGroups.filter(
           (g) => String(g) !== String(id)
         );
       } else {
-        // add it
         state.selectedGroups.push(id);
       }
     },
 
-    // set all selected groups at once (optional helper)
     setSelectedGroups(state, action: PayloadAction<Array<number | string>>) {
       state.selectedGroups = action.payload ?? [];
     },
 
-    // clear just the selection (keep items)
     clearSelectedGroups(state) {
       state.selectedGroups = [];
     },
+
     setSelectedGroup(state, action: PayloadAction<Group | null>) {
       state.selectedGroup = action.payload;
+    },
+
+
+    clearSelectedGroup(state) {
+      state.selectedGroup = null;
     },
   },
 });
@@ -103,18 +107,17 @@ export const {
   upsertGroup,
   removeGroup,
   clearGroups,
-  toggleSelectedGroup, // <-- export
-  setSelectedGroups, // <-- export (optional)
-  clearSelectedGroups, 
+  toggleSelectedGroup,
+  setSelectedGroups,
+  clearSelectedGroups,
   setSelectedGroup,
+  clearSelectedGroup, // <--- export it
 } = groupSlice.actions;
 
-// selectors
 export const selectGroups = (state: RootState) => state.groups.items;
-
 export const selectSelectedGroups = (state: RootState) =>
-  state.groups.selectedGroups; // <-- NEW selector
+  state.groups.selectedGroups;
 export const selectSelectedGroup = (state: RootState) =>
-  state.groups.selectedGroup; // <-- NEW selector
+  state.groups.selectedGroup;
 
 export default groupSlice.reducer;

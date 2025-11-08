@@ -34,3 +34,5 @@ export const GetScheduleItemBlocks = `${http}scheduleofitem`
 export const UpdateScreen = `${http}updateuser/screen`
 export const UpdateGroupApi = `${http}updategroup`
 export const DeleteGroupApi = `${http}deletegroup`
+export const GetProfileApi = `${http}getuserprofile`
+export const GetAdsApi = `${http}getads`

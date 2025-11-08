@@ -5,6 +5,8 @@ import { useForm, type Resolver, Controller } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
+import { X, ChevronDown, ChevronUp, Plus } from "lucide-react";
+
 import type { RootState } from "../../../store";
 
 import { setGroupName } from "../../Redux/AddGroup/AddGroupSlice";
@@ -15,7 +17,6 @@ import AddBranchModal from "../../Screens/ScreenManagement/AddBranchModal";
 import { useAddGroup } from "../../ReactQuery/Group/useAddGroup";
 import type { AddGroupPayload } from "../../ReactQuery/Group/PostGroup";
 
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import DefaultPlaylistDropdown from "../../Screens/ScreenManagement/DefaultPlaylistModal";
 import {
   selectedDefaultPlaylistId,
@@ -47,12 +48,13 @@ type FormValues = z.infer<typeof schema>;
 const resolver = zodResolver(schema) as Resolver<FormValues, any, FormValues>;
 
 type Props = {
-  onClose?: () => void;
+  open: boolean;
+  onClose: () => void;
   isEdit?: boolean;
   editingGroup?: any | null;
 };
 
-const AddGroupModal = ({ onClose, isEdit = false }: Props) => {
+const AddGroupModal = ({ open, onClose, isEdit = false }: Props) => {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const selectedGroup = useSelector(selectSelectedGroup);
@@ -167,7 +169,7 @@ const AddGroupModal = ({ onClose, isEdit = false }: Props) => {
   useEffect(() => {
     if (!isEdit || !groupScreens) return;
 
-    const apiIds = groupScreens.map((sc: any) => Number(sc.id)); // [28, 29, 30, ...]
+    const apiIds = groupScreens.map((sc: any) => Number(sc.id));
     setValue("screenIds", apiIds, { shouldValidate: true });
   }, [isEdit, groupScreens, setValue]);
 
@@ -229,10 +231,9 @@ const AddGroupModal = ({ onClose, isEdit = false }: Props) => {
     });
     dispatch(setGroupName(""));
 
-    // Clear all cached group-screens queries -> next open has fresh mergedScreens
     queryClient.removeQueries({ queryKey: GROUP_SCREENS_QK, exact: false });
 
-    onClose?.();
+    onClose();
   };
 
   const onSubmit = (values: FormValues) => {
@@ -253,29 +254,26 @@ const AddGroupModal = ({ onClose, isEdit = false }: Props) => {
       playlistId: selectedPlaylistId ? Number(selectedPlaylistId) : null,
     };
 
-const handleError = (err: any) => {
-  const msg =
-    err?.response?.data?.errors?.branchId?.[0] ??
-    err?.response?.data?.errors?.ratioId?.[0] ??
-    err?.response?.data?.errors?.screenIds?.[0] ??
-    err?.response?.data?.error ?? // 👈 will catch: "You must assign at least two screens..."
-    err?.response?.data?.message;
+    const handleError = (err: any) => {
+      const msg =
+        err?.response?.data?.errors?.branchId?.[0] ??
+        err?.response?.data?.errors?.ratioId?.[0] ??
+        err?.response?.data?.errors?.screenIds?.[0] ??
+        err?.response?.data?.error ??
+        err?.response?.data?.message;
 
-  if (msg?.toLowerCase().includes("branch")) {
-    setError("branchId", { type: "server", message: msg });
-  } else if (msg?.toLowerCase().includes("ratio")) {
-    setError("ratioId", { type: "server", message: msg });
-  } else if (msg?.toLowerCase().includes("screen")) {
-    setError("screenIds", { type: "server", message: msg });
-  }
+      if (msg?.toLowerCase().includes("branch")) {
+        setError("branchId", { type: "server", message: msg });
+      } else if (msg?.toLowerCase().includes("ratio")) {
+        setError("ratioId", { type: "server", message: msg });
+      } else if (msg?.toLowerCase().includes("screen")) {
+        setError("screenIds", { type: "server", message: msg });
+      }
 
-  // 👇 show toast with full error (your ErrorToast will render the message)
-  setUiError(err);
-};
-
+      setUiError(err);
+    };
 
     if (isEdit && selectedGroup) {
-      // UPDATE EXISTING GROUP
       const payload: UpdateGroupPayload = {
         id: Number(selectedGroup.id),
         ...basePayload,
@@ -283,246 +281,272 @@ const handleError = (err: any) => {
 
       updateGroup(payload, {
         onSuccess: () => {
-          handleClose(); // ✅ clear + close
+          handleClose();
         },
         onError: handleError,
       });
     } else {
-      // ADD NEW GROUP
       const payload: AddGroupPayload = basePayload;
 
       addGroup(payload, {
         onSuccess: () => {
-          handleClose(); // ✅ clear + close
+          handleClose();
         },
         onError: handleError,
       });
     }
   };
 
+  if (!open) return null;
+
   return (
     <>
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-6">
-        {/* Header */}
-        <div className="border-b pb-2">
-          <h3 className="text-base font-semibold text-neutral-900">
-            {isEdit ? "Edit Group" : "Add New Group"}
-          </h3>
-          <p className="text-sm text-neutral-500">
-            {isEdit
-              ? "Update this group’s settings and assigned screens."
-              : "Configure your group’s name, branch, ratio, and assigned screens."}
-          </p>
-        </div>
-
-        {/* Form */}
-        <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm space-y-5">
-          {/* Group Name */}
-          <div>
-            <label className="text-sm font-medium text-neutral-700 mb-1 block">
-              Group Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              {...register("name", {
-                onChange: (e) => dispatch(setGroupName(e.target.value)),
-              })}
-              placeholder="e.g., Front Window Group"
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-            />
-            {errors.name ? (
-              <p className="text-xs text-red-600 mt-1">{errors.name.message}</p>
-            ) : (
-              <p className="text-xs text-neutral-500 mt-1">
-                Give this group a clear and recognizable name.
-              </p>
-            )}
-          </div>
-
-          {/* Branch + Add branch */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-neutral-700 mb-1 block">
-                Branch
-              </label>
-              <BranchDropdown />
-              {errors.branchId && (
-                <p className="text-xs text-red-600 mt-1">
-                  {errors.branchId.message}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => setIsAddOpen(true)}
-              className="inline-flex items-center justify-center gap-2 mt-5 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-600"
-            >
-              <Plus size={16} /> Add Branch
-            </button>
-          </div>
-
-          {/* Ratio */}
-          <div>
-            <label className="text-sm font-medium text-neutral-700 mb-1 block">
-              Group Ratio <span className="text-red-500">*</span>
-            </label>
-            <ScreenRatioDropdown allowNone noneLabel="None" />
-            <input
-              type="hidden"
-              {...register("ratioId", { valueAsNumber: true })}
-            />
-            {errors.ratioId && (
-              <p className="text-xs text-red-600 mt-1">
-                {errors.ratioId.message}
-              </p>
-            )}
-          </div>
-
-          {/* Screens */}
-          <div>
-            <label className="text-sm font-medium text-neutral-700 mb-2 block">
-              Assign Screens{" "}
-              {!isEdit && <span className="text-red-500">*</span>}
-            </label>
-
-            <div className="rounded-lg border border-neutral-200 p-3">
-              {screensLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="h-5 w-2/3 animate-pulse rounded bg-neutral-200"
-                    />
-                  ))}
-                </div>
-              ) : totalScreens === 0 ? (
-                <p className="text-sm text-neutral-500">
-                  {shouldFilterByRatio
-                    ? `No screens match the selected ratio (${selectedRatioName}).`
-                    : "No screens available."}
-                </p>
-              ) : (
-                <>
-                  <ul className="space-y-2">
-                    {visibleScreens.map((sc: any) => (
-                      <li key={sc.screenId}>
-                        <Controller
-                          name="screenIds"
-                          control={control}
-                          render={({ field }) => {
-                            const value = (field.value || []) as number[];
-                            const checked = value.includes(Number(sc.screenId));
-
-                            return (
-                              <label className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 hover:bg-neutral-50 cursor-pointer">
-                                <input
-                                  type="checkbox"
-                                  className="h-4 w-4 accent-red-500"
-                                  checked={checked}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      field.onChange([
-                                        ...value,
-                                        Number(sc.screenId),
-                                      ]);
-                                    } else {
-                                      field.onChange(
-                                        value.filter(
-                                          (id) => id !== Number(sc.screenId)
-                                        )
-                                      );
-                                    }
-                                  }}
-                                />
-                                <span className="text-sm text-neutral-800">
-                                  {sc.name || `Screen #${sc.screenId}`}
-                                </span>
-                                <span className="ml-auto text-xs text-neutral-500">
-                                  {sc.branch ?? "No branch"} • {sc.ratio ?? "—"}
-                                </span>
-                              </label>
-                            );
-                          }}
-                        />
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-3 flex items-center justify-between">
-                    <p className="text-xs text-neutral-500">
-                      Showing {Math.min(visible, totalScreens)} of{" "}
-                      {totalScreens}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      {visible > 5 && (
-                        <button
-                          type="button"
-                          onClick={() => setVisible((v) => Math.max(5, v - 5))}
-                          className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
-                        >
-                          <ChevronUp size={14} /> Show less
-                        </button>
-                      )}
-                      {visible < totalScreens && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setVisible((v) => Math.min(totalScreens, v + 5))
-                          }
-                          className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
-                        >
-                          <ChevronDown size={14} /> Show 5 more
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="mt-1 flex items-center justify-between">
-              <p className="text-xs text-neutral-500">
-                Selected: {selectedIds?.length ?? 0}
-              </p>
-              {errors.screenIds && (
-                <p className="text-xs text-red-600">
-                  {errors.screenIds.message as string}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <DefaultPlaylistDropdown />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 pt-2">
+      {/* Modal overlay & panel */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-lg relative max-h-[90vh] overflow-y-auto">
+          {/* Close button */}
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+            className="absolute right-4 top-4 text-neutral-500 hover:text-neutral-800"
+            aria-label="Close"
           >
-            Cancel
+            <X size={20} />
           </button>
-          <button
-            type="submit"
-            disabled={
-              !isValid || isSubmitting || isAddPending || isUpdatePending
-            }
-            className="rounded-lg bg-red-500 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
-          >
-            {isAddPending || isUpdatePending
-              ? isEdit
-                ? "Updating..."
-                : "Saving..."
-              : isEdit
-              ? "Save Changes"
-              : "Save Group"}
-          </button>
-        </div>
-      </form>
 
+          <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-6">
+            {/* Header */}
+            <div className="border-b pb-3 pr-6">
+              <h3 className="text-lg font-semibold text-neutral-900">
+                {isEdit ? "Edit Group" : "Add New Group"}
+              </h3>
+              <p className="text-sm text-neutral-500">
+                {isEdit
+                  ? "Update this group’s settings and assigned screens."
+                  : "Configure your group’s name, branch, ratio, and assigned screens."}
+              </p>
+            </div>
+
+            {/* Form */}
+            <div className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm space-y-5">
+              {/* Group Name */}
+              <div>
+                <label className="text-sm font-medium text-neutral-700 mb-1 block">
+                  Group Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("name", {
+                    onChange: (e) => dispatch(setGroupName(e.target.value)),
+                  })}
+                  placeholder="e.g., Front Window Group"
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
+                />
+                {errors.name ? (
+                  <p className="text-xs text-red-600 mt-1">
+                    {errors.name.message}
+                  </p>
+                ) : (
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Give this group a clear and recognizable name.
+                  </p>
+                )}
+              </div>
+
+              {/* Branch + Add branch */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-neutral-700 mb-1 block">
+                    Branch
+                  </label>
+                  <BranchDropdown />
+                  {errors.branchId && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {errors.branchId.message}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAddOpen(true)}
+                  className="inline-flex items-center justify-center gap-2 mt-1 sm:mt-5 rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-600"
+                >
+                  <Plus size={16} /> Add Branch
+                </button>
+              </div>
+
+              {/* Ratio */}
+              <div>
+                <label className="text-sm font-medium text-neutral-700 mb-1 block">
+                  Group Ratio <span className="text-red-500">*</span>
+                </label>
+                <ScreenRatioDropdown allowNone noneLabel="None" />
+                <input
+                  type="hidden"
+                  {...register("ratioId", { valueAsNumber: true })}
+                />
+                {errors.ratioId && (
+                  <p className="text-xs text-red-600 mt-1">
+                    {errors.ratioId.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Screens */}
+              <div>
+                <label className="text-sm font-medium text-neutral-700 mb-2 block">
+                  Assign Screens{" "}
+                  {!isEdit && <span className="text-red-500">*</span>}
+                </label>
+
+                <div className="rounded-lg border border-neutral-200 p-3">
+                  {screensLoading ? (
+                    <div className="space-y-2">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="h-5 w-2/3 animate-pulse rounded bg-neutral-200"
+                        />
+                      ))}
+                    </div>
+                  ) : totalScreens === 0 ? (
+                    <p className="text-sm text-neutral-500">
+                      {shouldFilterByRatio
+                        ? `No screens match the selected ratio (${selectedRatioName}).`
+                        : "No screens available."}
+                    </p>
+                  ) : (
+                    <>
+                      <ul className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                        {visibleScreens.map((sc: any) => (
+                          <li key={sc.screenId}>
+                            <Controller
+                              name="screenIds"
+                              control={control}
+                              render={({ field }) => {
+                                const value = (field.value || []) as number[];
+                                const checked = value.includes(
+                                  Number(sc.screenId)
+                                );
+
+                                return (
+                                  <label className="flex items-center gap-2 rounded-md border border-neutral-200 px-3 py-2 hover:bg-neutral-50 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      className="h-4 w-4 accent-red-500"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          field.onChange([
+                                            ...value,
+                                            Number(sc.screenId),
+                                          ]);
+                                        } else {
+                                          field.onChange(
+                                            value.filter(
+                                              (id) => id !== Number(sc.screenId)
+                                            )
+                                          );
+                                        }
+                                      }}
+                                    />
+                                    <span className="text-sm text-neutral-800">
+                                      {sc.name || `Screen #${sc.screenId}`}
+                                    </span>
+                                    <span className="ml-auto text-xs text-neutral-500">
+                                      {sc.branch ?? "No branch"} •{" "}
+                                      {sc.ratio ?? "—"}
+                                    </span>
+                                  </label>
+                                );
+                              }}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mt-3 flex items-center justify-between">
+                        <p className="text-xs text-neutral-500">
+                          Showing {Math.min(visible, totalScreens)} of{" "}
+                          {totalScreens}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {visible > 5 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVisible((v) => Math.max(5, v - 5))
+                              }
+                              className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                            >
+                              <ChevronUp size={14} /> Show less
+                            </button>
+                          )}
+                          {visible < totalScreens && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setVisible((v) =>
+                                  Math.min(totalScreens, v + 5)
+                                )
+                              }
+                              className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
+                            >
+                              <ChevronDown size={14} /> Show 5 more
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-1 flex items-center justify-between">
+                  <p className="text-xs text-neutral-500">
+                    Selected: {selectedIds?.length ?? 0}
+                  </p>
+                  {errors.screenIds && (
+                    <p className="text-xs text-red-600">
+                      {errors.screenIds.message as string}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <DefaultPlaylistDropdown />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={
+                  !isValid || isSubmitting || isAddPending || isUpdatePending
+                }
+                className="rounded-lg bg-red-500 px-5 py-2 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-60"
+              >
+                {isAddPending || isUpdatePending
+                  ? isEdit
+                    ? "Updating..."
+                    : "Saving..."
+                  : isEdit
+                  ? "Save Changes"
+                  : "Save Group"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* Nested modals / toasts */}
       <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
       {uiError && (
         <ErrorToast
