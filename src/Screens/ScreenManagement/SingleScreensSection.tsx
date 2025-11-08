@@ -195,7 +195,7 @@ const SingleScreensSection: React.FC = () => {
                               <span className="mx-2">•</span>
                               {sc.branch ?? "No branch"}
                               <span className="mx-2">•</span>
-                              {sc.PlaylistName ? sc.PlaylistName  : ""}
+                              🎵  {sc.PlaylistName ? sc.PlaylistName  : ""}
                               {(() => {
                                 const ls = sc.lastSeen ?? "—";
                                 return (

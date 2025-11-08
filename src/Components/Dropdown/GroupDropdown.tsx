@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
 import { setScreenGroupId } from "../../Redux/AddScreen/AddScreenSlice";
-
+import { setDefaultPlaylist } from "../../Redux/ScreenManagement/ScreenManagementSlice";
 const GroupDropdown: React.FC = () => {
   const { data: groups = [], isLoading, isError } = useGetGroups();
   const dispatch = useDispatch();
@@ -16,10 +16,19 @@ const GroupDropdown: React.FC = () => {
     [selectedGroupId]
   );
 
-  const onChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const v = e.target.value;
-    dispatch(setScreenGroupId(v === "" ? null : v)); // "" => Unassigned
-  };
+const onChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const v = e.target.value;
+  const isUnassigned = v === "";
+
+  // Update group in screen form
+  dispatch(setScreenGroupId(isUnassigned ? null : v));
+
+  // If a group is selected → clear default playlist
+  if (!isUnassigned) {
+    dispatch(setDefaultPlaylist(null));
+  }
+};
+
 
   const disabled = (isLoading || isError) && groups.length === 0;
 

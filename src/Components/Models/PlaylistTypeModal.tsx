@@ -23,11 +23,11 @@ const playlistTypes = [
     type: "Interactive",
     description: "Touch-enabled interactive playlist",
   },
-  {
-    id: 3,
-    type: "Website",
-    description: "Displays a website or external URL",
-  },
+  // {
+  //   id: 3,
+  //   type: "Website",
+  //   description: "Displays a website or external URL",
+  // },
 ];
 
 // Icon mapping for each type

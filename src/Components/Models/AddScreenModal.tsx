@@ -289,9 +289,11 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
             </div>
           </div>
 
-          <div>
-            <DefaultPlaylistDropdown />
-          </div>
+          {groupId == null && (
+            <div>
+              <DefaultPlaylistDropdown />
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
