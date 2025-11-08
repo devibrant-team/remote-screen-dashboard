@@ -1,8 +1,8 @@
 {
-  "name": "userdashboard",
+  "name": "iguanadashboard",
   "version": "1.1.1",
   "private": true,
-  "description": "User Dashboard -application",
+  "description": "Iguana Dashboard - application",
   "author": "Devibrant",
   "main": "electron/main.cjs",
   "scripts": {
@@ -58,24 +58,20 @@
     "wait-on": "^8.0.3"
   },
   "build": {
-    "appId": "com.devibrant.userdashboard",
-    "productName": "User Dashboard",
-    "executableName": "Electron",
+    "appId": "com.devibrant.iguanadashboard",
+    "productName": "Iguana Dashboard",
+    "executableName": "IguanaDashboard",
     "files": [
       "electron/**/*",
       "**/*.js",
       {
         "from": "dist",
         "to": "dist",
-        "filter": [
-          "**/*"
-        ]
+        "filter": ["**/*"]
       }
     ],
     "asar": true,
-    "asarUnpack": [
-      "dist/**"
-    ],
+    "asarUnpack": ["dist/**"],
     "directories": {
       "buildResources": "assets"
     },
@@ -83,14 +79,17 @@
       "main": "electron/main.cjs"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "src/assets/Logo.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "shortcutName": "User Dashboard",
+      "shortcutName": "Iguana Dashboard",
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "src/assets/Logo.ico",
+      "uninstallerIcon": "src/assets/Logo.ico"
     }
   }
 }
