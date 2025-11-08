@@ -10,22 +10,20 @@ import { useUpdatePlaylistInteractive } from "../../../ReactQuery/PlaylistInterA
 import {
   selectSelectedMedia,
   removeSelectedMediaById,
-  clearSelectedMedia,                 // 👈 NEW
+  clearSelectedMedia, // 👈 NEW
 } from "../../../Redux/Media/MediaSlice";
 import {
+  selectInteractiveLayoutId,
   setIsEditing,
 } from "../../../Redux/Playlist/interactivePlaylist/interactiveSlice";
 import {
-  clearPlaylist,                      // 👈 NEW
+  clearPlaylist, // 👈 NEW
 } from "../../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-import {
-  useSharedSlides,
-  isValidImageFile,
-} from "../shared/useSharedSlides";
+import { useSharedSlides, isValidImageFile } from "../shared/useSharedSlides";
 import type { SlideItem } from "../shared/SharedSlides";
 
 import UploadDropzone from "./UploadDropzone";
@@ -44,10 +42,24 @@ const HEADER = {
   edit: "Edit Interactive Playlist",
 };
 
-// Example PDF links per layout (replace with real links later)
-const LAYOUT_PDF: Record<number, { url: string; label: string }> = {
-  2: { url: "https://example.com/layout-2-example.pdf", label: "Layout 2 – Example PDF" },
-  3: { url: "https://example.com/layout-3-example.pdf", label: "Layout 3 – Example PDF" },
+// Put these at the top of CreateInteractivePlaylist.tsx (or keep where your const was)
+const IGUANA_BASE = "https://devibrant.com/iguana/";
+
+type LayoutPdfInfo = { url: string; label: string; filename: string };
+
+const LAYOUT_PDF: Record<number, LayoutPdfInfo> = {
+  // layoutId === 2  -> “button positions” (4 slides)
+  2: {
+    url: IGUANA_BASE + "Iguana_Interactive_Button_Position_Guide.pdf",
+    label: "Guide – Button Positions (PDF)",
+    filename: "Iguana_Interactive_Button_Position_Guide.pdf",
+  },
+  // layoutId === 3  -> “interactive playlist (5 slides)”
+  3: {
+    url: IGUANA_BASE + "Iguana_Interactive_Playlist_5Slides.pdf",
+    label: "Guide – 5-Slide Playlist (PDF)",
+    filename: "Iguana_Interactive_Playlist_5Slides.pdf",
+  },
 };
 
 export default function CreateInteractivePlaylist({
@@ -74,30 +86,41 @@ export default function CreateInteractivePlaylist({
 
   const sliderRef = useRef<HTMLDivElement | null>(null);
 
-  const layoutId = useSelector(
-    (s: RootState) => s.playlistInteractive.playlistData?.layoutId
-  );
+  const layoutId = useSelector((s: RootState) => {
+    // 1️⃣ Try layoutId from stored playlist data (if loaded)
+    const fromData = s.playlistInteractive.playlistData?.layoutId;
+    if (fromData !== undefined && fromData !== null) return fromData;
+
+    // 2️⃣ Fallback to derived selector if available
+    return selectInteractiveLayoutId(s as any);
+  });
   const selectedMedia = useSelector(selectSelectedMedia);
 
-  const { isEditing, details: editDetails, selectedId } = useSelector(
-    (s: RootState) => s.interactive
-  );
+  const {
+    isEditing,
+    details: editDetails,
+    selectedId,
+  } = useSelector((s: RootState) => s.interactive);
 
-  const { mutate: createPlaylist, isPending: isCreating } = usePostPlaylistInteractive();
-  const { mutate: updatePlaylist, isPending: isUpdating } = useUpdatePlaylistInteractive();
+  const { mutate: createPlaylist, isPending: isCreating } =
+    usePostPlaylistInteractive();
+  const { mutate: updatePlaylist, isPending: isUpdating } =
+    useUpdatePlaylistInteractive();
 
   // ---- derived UI states
   const hasExactCap = Number.isFinite(max);
   const requiredCount = hasExactCap ? (max as number) : undefined;
   const currentCount = slides.length;
-  const remaining = hasExactCap ? Math.max(0, (max as number) - currentCount) : undefined;
+  const remaining = hasExactCap
+    ? Math.max(0, (max as number) - currentCount)
+    : undefined;
 
   const saveDisabledForCount = useMemo(() => {
     if (hasExactCap) return currentCount !== requiredCount; // exact match required
     return currentCount === 0; // at least one when uncapped
   }, [hasExactCap, currentCount, requiredCount]);
 
-  // ---- hydrate from edit details
+  // ---- hydrate from edit details (robust on reopen)
   useEffect(() => {
     if (!isEditing || !editDetails) return;
 
@@ -107,7 +130,8 @@ export default function CreateInteractivePlaylist({
       .slice()
       .sort((a, b) => a.index - b.index)
       .filter(
-        (s) => !!s?.media && !/\.(ico|mp4|webm|mov|m4v|avi|mkv|3gp)$/i.test(s.media)
+        (s) =>
+          !!s?.media && !/\.(ico|mp4|webm|mov|m4v|avi|mkv|3gp)$/i.test(s.media)
       )
       .map((s) => ({
         source: "library",
@@ -116,9 +140,11 @@ export default function CreateInteractivePlaylist({
         type: "image",
       }));
 
-    reorder(mapped);
+    // Clear THEN set, so reopening always shows images
+    reorder([]); // clear previous local slides
+    requestAnimationFrame(() => reorder(mapped));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isEditing, editDetails?.id]);
+  }, [isEditing, editDetails]); // <-- depend on the whole details object
 
   // ---- sync with Redux-selected media
   useEffect(() => {
@@ -154,7 +180,9 @@ export default function CreateInteractivePlaylist({
   const handleReplaceImage = (index: number, file: File) => {
     const res = replaceAt(index, file);
     if (!res.ok) {
-      alert("This file type is not allowed. Please choose a JPG/PNG/WEBP (no .ico, no video).");
+      alert(
+        "This file type is not allowed. Please choose a JPG/PNG/WEBP (no .ico, no video)."
+      );
       return;
     }
     if (res.removedLibraryMediaId) {
@@ -185,8 +213,8 @@ export default function CreateInteractivePlaylist({
 
     // redux
     dispatch(clearSelectedMedia()); // clear selected media ids/urls
-    dispatch(clearPlaylist());      // clear layout/playlistInteractive state
-    dispatch(setIsEditing(false));  // exit edit mode
+    dispatch(clearPlaylist()); // clear layout/playlistInteractive state
+    dispatch(setIsEditing(false)); // exit edit mode
   };
 
   // ---- strict save rule
@@ -199,8 +227,12 @@ export default function CreateInteractivePlaylist({
       const diff = (requiredCount ?? 0) - slides.length;
       const msg =
         diff > 0
-          ? `❌ You need ${diff} more slide${diff === 1 ? "" : "s"} (required: ${requiredCount}).`
-          : `❌ Remove ${Math.abs(diff)} slide${Math.abs(diff) === 1 ? "" : "s"} (required: ${requiredCount}).`;
+          ? `❌ You need ${diff} more slide${
+              diff === 1 ? "" : "s"
+            } (required: ${requiredCount}).`
+          : `❌ Remove ${Math.abs(diff)} slide${
+              Math.abs(diff) === 1 ? "" : "s"
+            } (required: ${requiredCount}).`;
       alert(msg);
       return;
     }
@@ -212,10 +244,14 @@ export default function CreateInteractivePlaylist({
         { id: selectedId, payload: formData, useMethodOverride: true },
         {
           onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["interactiveplaylist"] });
-            queryClient.invalidateQueries({ queryKey: ["interactiveplaylist", "details", selectedId] });
+            queryClient.invalidateQueries({
+              queryKey: ["interactiveplaylist"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["interactiveplaylist", "details", selectedId],
+            });
             alert("✅ Playlist updated!");
-            resetAll();            // 👈 clear UI + Redux
+            resetAll(); // 👈 clear UI + Redux
             onCloseAll?.();
             navigate("/mediacontent");
           },
@@ -231,7 +267,7 @@ export default function CreateInteractivePlaylist({
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["interactiveplaylist"] });
           alert("✅ Playlist uploaded successfully!");
-          resetAll();              // 👈 clear UI + Redux
+          resetAll(); // 👈 clear UI + Redux
           onCloseAll?.();
           navigate("/mediacontent");
         },
@@ -253,7 +289,13 @@ export default function CreateInteractivePlaylist({
         <header className="sticky top-0 z-10 bg-white/95 backdrop-blur border-b border-slate-200">
           <div className="px-5 sm:px-8 py-4 flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-red-50 ring-1 ring-red-100 flex items-center justify-center">
-              <svg viewBox="0 0 24 24" className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M3 7h18M5 7v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7" />
                 <path d="M9 7V5a3 3 0 0 1 3-3 3 3 0 0 1 3 3v2" />
               </svg>
@@ -263,15 +305,25 @@ export default function CreateInteractivePlaylist({
                 {isEditing ? HEADER.edit : HEADER.create}
               </h2>
               <p className="text-[12px] text-slate-500 leading-4 mt-0.5">
-                Choose a layout, add images, then save. Clear progress indicators guide you.
+                Choose a layout, add images, then save. Clear progress
+                indicators guide you.
               </p>
             </div>
 
             {/* Header stats */}
             <div className="hidden md:flex items-center gap-2">
               <StatPill label="Layout" value={`#${layoutId ?? "—"}`} />
-              <StatPill label="Slides" value={hasExactCap ? `${currentCount} / ${requiredCount}` : `${currentCount} / ∞`} />
-              {hasExactCap && <StatPill label="Remaining" value={remaining ?? 0} />}
+              <StatPill
+                label="Slides"
+                value={
+                  hasExactCap
+                    ? `${currentCount} / ${requiredCount}`
+                    : `${currentCount} / ∞`
+                }
+              />
+              {hasExactCap && (
+                <StatPill label="Remaining" value={remaining ?? 0} />
+              )}
               {pdfForLayout && (
                 <a
                   href={pdfForLayout.url}
@@ -281,7 +333,14 @@ export default function CreateInteractivePlaylist({
                   title={pdfForLayout.label}
                   className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[12px] font-medium text-red-700 ring-1 ring-red-200 bg-red-50 hover:bg-red-100 active:scale-[0.99] transition"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <path d="M14 2v6h6" />
                     <path d="M12 18v-6" />
@@ -303,8 +362,16 @@ export default function CreateInteractivePlaylist({
             <div className="px-5 sm:px-8 pb-3">
               <div className="rounded-lg border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
                 {currentCount < (requiredCount ?? 0)
-                  ? `You need ${(requiredCount ?? 0) - currentCount} more slide${(requiredCount ?? 0) - currentCount === 1 ? "" : "s"} to reach the required ${requiredCount}.`
-                  : `You have ${currentCount - (requiredCount ?? 0)} extra slide${currentCount - (requiredCount ?? 0) === 1 ? "" : "s"}. Remove to reach exactly ${requiredCount}.`}
+                  ? `You need ${
+                      (requiredCount ?? 0) - currentCount
+                    } more slide${
+                      (requiredCount ?? 0) - currentCount === 1 ? "" : "s"
+                    } to reach the required ${requiredCount}.`
+                  : `You have ${
+                      currentCount - (requiredCount ?? 0)
+                    } extra slide${
+                      currentCount - (requiredCount ?? 0) === 1 ? "" : "s"
+                    }. Remove to reach exactly ${requiredCount}.`}
               </div>
             </div>
           )}
@@ -340,11 +407,24 @@ export default function CreateInteractivePlaylist({
             <Section
               title="Uploads"
               subtitle="Add new images from your device (JPG, PNG, WEBP). No video or .ico."
-              right={<span className="text-xs text-slate-500">{hasExactCap ? `${currentCount}/${requiredCount} slides` : `${currentCount}/∞ slides`}</span>}
+              right={
+                <span className="text-xs text-slate-500">
+                  {hasExactCap
+                    ? `${currentCount}/${requiredCount} slides`
+                    : `${currentCount}/∞ slides`}
+                </span>
+              }
             >
               <UploadDropzone
-                caption={hasExactCap ? `Exactly ${requiredCount} slides required` : "No strict limit"}
+                caption={
+                  hasExactCap
+                    ? `Exactly ${requiredCount} slides required`
+                    : "No strict limit"
+                }
                 onFiles={onUploadFiles}
+                currentSlidesCount={currentCount}
+                maxSelectable={max as number | undefined}
+                onCloseAll={onCloseAll} // 👈 pass it here
               />
             </Section>
           )}
@@ -353,9 +433,17 @@ export default function CreateInteractivePlaylist({
           <Section
             title="Media Library"
             subtitle="Select existing images from your library. Videos are hidden for this layout."
-            right={<span className="text-xs text-slate-500">{currentCount}{hasExactCap ? ` / ${requiredCount}` : " / ∞"} slides</span>}
+            right={
+              <span className="text-xs text-slate-500">
+                {currentCount}
+                {hasExactCap ? ` / ${requiredCount}` : " / ∞"} slides
+              </span>
+            }
           >
-            <UserMediaGrid currentSlidesCount={currentCount} maxSelectable={max as number | undefined} />
+            <UserMediaGrid
+              currentSlidesCount={currentCount}
+              maxSelectable={max as number | undefined}
+            />
           </Section>
 
           {/* Preview & Arrange */}
@@ -379,16 +467,26 @@ export default function CreateInteractivePlaylist({
           <FooterActions
             summary={
               hasExactCap
-                ? `Required: ${requiredCount} • Current: ${currentCount}${(remaining ?? 0) > 0 ? ` • Remaining: ${remaining}` : ""}`
+                ? `Required: ${requiredCount} • Current: ${currentCount}${
+                    (remaining ?? 0) > 0 ? ` • Remaining: ${remaining}` : ""
+                  }`
                 : `Current: ${currentCount} slides`
             }
             onCancel={() => {
-              resetAll();         // 👈 clear UI + Redux on cancel
+              resetAll(); // 👈 clear UI + Redux on cancel
               onCloseAll();
             }}
             onSave={handleSave}
             disabled={isSaving || saveDisabledForCount}
-            label={isSaving ? (isEditing ? "Updating…" : "Saving…") : isEditing ? "Update Playlist" : "Save Playlist"}
+            label={
+              isSaving
+                ? isEditing
+                  ? "Updating…"
+                  : "Saving…"
+                : isEditing
+                ? "Update khara"
+                : "Save Playlist"
+            }
           />
         </footer>
       </div>

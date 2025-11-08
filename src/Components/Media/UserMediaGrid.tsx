@@ -10,6 +10,7 @@ import {
   selectSelectedMediaIds,
 } from "../../Redux/Media/MediaSlice";
 import type { RootState } from "../../../store";
+import { selectInteractiveLayoutId } from "../../Redux/Playlist/interactivePlaylist/interactiveSlice";
 
 type Props = {
   className?: string;
@@ -34,18 +35,48 @@ const getCapForLayout = (layoutId?: number): number | undefined =>
 const cx = (...a: Array<string | false | null | undefined>) =>
   a.filter(Boolean).join(" ");
 
-export default function UserMediaGrid({ className, currentSlidesCount, maxSelectable }: Props) {
+export default function UserMediaGrid({
+  className,
+  currentSlidesCount,
+  maxSelectable,
+}: Props) {
   const dispatch = useDispatch();
   const selectedIds = useSelector(selectSelectedMediaIds);
 
-  // ✅ Read layoutId directly from the correct reducer key
-  const layoutId = useSelector(
-    (s: RootState) => s.playlistInteractive.playlistData?.layoutId
+  // -------- Layout source (create vs. edit) ----------
+  // Read both sources in a single selector to avoid conditional hooks
+  const { isEditing, editLayoutIdRaw, createLayoutIdRaw } = useSelector(
+    (s: RootState) => ({
+      // If you already have a selector like selectIsEditing, use it here
+      isEditing:
+        (s as any).playlistInteractive?.isEditing === true,
+      // layout id coming from edit flow (playlistData)
+      editLayoutIdRaw: (s as any).playlistInteractive?.playlistData?.layoutId,
+      // layout id coming from create flow (controlled field)
+      createLayoutIdRaw: selectInteractiveLayoutId(s as any),
+    })
   );
+
+  // Normalize any string/number to a finite number or undefined
+  const toNum = (v: unknown): number | undefined => {
+    const n =
+      typeof v === "string" ? Number(v) : typeof v === "number" ? v : undefined;
+    return Number.isFinite(n) ? (n as number) : undefined;
+  };
+
+  // Prefer edit value when editing, otherwise use create value.
+  // When edit isn't ready yet, we fall back to the create value to keep UX responsive.
+  const layoutId = toNum(
+    isEditing ? editLayoutIdRaw ?? createLayoutIdRaw : createLayoutIdRaw
+  );
+
   const sliceCap = getCapForLayout(layoutId);
 
   // 👉 Use the passed max if provided; otherwise fall back to local cap (keeps backward compatibility)
-  const cap = typeof maxSelectable === "number" ? maxSelectable : sliceCap ?? Number.POSITIVE_INFINITY;
+  const cap =
+    typeof maxSelectable === "number"
+      ? maxSelectable
+      : sliceCap ?? Number.POSITIVE_INFINITY;
   const layoutMissing = layoutId == null;
 
   // ---- pagination
@@ -57,10 +88,7 @@ export default function UserMediaGrid({ className, currentSlidesCount, maxSelect
 
   const media: MediaItem[] = data?.media ?? [];
   const items = useMemo(
-    () =>
-      media
-        .slice(0, PER_PAGE)
-        .filter((m) => m.type === "image" || !m.type),
+    () => media.slice(0, PER_PAGE).filter((m) => m.type === "image" || !m.type),
     [media]
   );
 
@@ -251,7 +279,14 @@ export default function UserMediaGrid({ className, currentSlidesCount, maxSelect
               style={{ width: ARROW_DIAM, height: ARROW_DIAM }}
               aria-label="Previous"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
@@ -269,7 +304,14 @@ export default function UserMediaGrid({ className, currentSlidesCount, maxSelect
               style={{ width: ARROW_DIAM, height: ARROW_DIAM }}
               aria-label="Next"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>

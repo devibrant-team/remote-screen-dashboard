@@ -1,4 +1,3 @@
-// src/Redux/Interactive/interactiveSlice.ts
 import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 
 export interface PlaylistSlide {
@@ -14,6 +13,7 @@ export interface PlaylistDetails {
   slide_number: number;
   style: string;
   slides: PlaylistSlide[];
+  layoutId: number | null;
 }
 
 interface InteractiveState {
@@ -21,8 +21,8 @@ interface InteractiveState {
   details: PlaylistDetails | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  /** NEW: whether the UI is in editing mode for the selected playlist */
-  isEditing: boolean;            // 👈 add this
+  isEditing: boolean;
+  layoutId: number | null;
 }
 
 const initialState: InteractiveState = {
@@ -30,7 +30,8 @@ const initialState: InteractiveState = {
   details: null,
   status: "idle",
   error: null,
-  isEditing: false, 
+  isEditing: false,
+  layoutId: null,
 };
 
 export const fetchInteractiveDetails = createAsyncThunk<
@@ -59,8 +60,22 @@ export const fetchInteractiveDetails = createAsyncThunk<
       return thunkAPI.rejectWithValue("Malformed response: missing playlist");
     }
 
-    data.playlist.slides = Array.isArray(data.playlist.slides) ? data.playlist.slides : [];
-    return data.playlist as PlaylistDetails;
+    const p = data.playlist;
+
+    // Normalize fields here
+    const layoutId =
+      p.layoutId ?? p.style_id ?? p.styleId ?? null;
+
+    const normalized: PlaylistDetails = {
+      id: Number(p.id),
+      name: String(p.name ?? ""),
+      slide_number: Number(p.slide_number ?? 0),
+      style: String(p.style ?? ""),
+      layoutId,
+      slides: Array.isArray(p.slides) ? p.slides : [],
+    };
+
+    return normalized;
   } catch (err: any) {
     if (err?.name === "AbortError") throw err;
     return thunkAPI.rejectWithValue(err?.message || "Network error");
@@ -74,8 +89,7 @@ const interactiveSlice = createSlice({
     setSelectedId: (state, action: PayloadAction<number>) => {
       state.selectedId = action.payload;
     },
-    /** NEW: toggle edit mode */
-    setIsEditing: (state, action: PayloadAction<boolean>) => {  // 👈 add this
+    setIsEditing: (state, action: PayloadAction<boolean>) => {
       state.isEditing = action.payload;
     },
   },
@@ -88,7 +102,11 @@ const interactiveSlice = createSlice({
       .addCase(fetchInteractiveDetails.fulfilled, (state, action) => {
         state.status = "succeeded";
         state.details = action.payload;
-        console.log("Fetched playlist details:", action.payload);
+        // Ensure slides array exists
+        state.details.slides = Array.isArray(state.details.slides)
+          ? state.details.slides
+          : [];
+        console.log("Fetched playlist details:", state.details);
       })
       .addCase(fetchInteractiveDetails.rejected, (state, action) => {
         state.status = "failed";
@@ -98,5 +116,8 @@ const interactiveSlice = createSlice({
   },
 });
 
-export const { setSelectedId, setIsEditing } = interactiveSlice.actions; // 👈 export it
+export const selectInteractiveLayoutId = (s: { interactive: InteractiveState }) =>
+  s.interactive.details?.layoutId ?? s.interactive.layoutId ?? null;
+
+export const { setSelectedId, setIsEditing } = interactiveSlice.actions;
 export default interactiveSlice.reducer;

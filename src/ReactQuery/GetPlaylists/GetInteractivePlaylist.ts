@@ -10,6 +10,7 @@ const InteractivePlaylistSchema = z.object({
   duration: z.coerce.number(),
   slide_number: z.coerce.number(),
   media: z.string(), // keep plain; URLs may include spaces
+    layoutId: z.coerce.number().optional(),
 });
 
 const PaginationSchema = z.object({
@@ -38,6 +39,7 @@ export type InteractivePlaylist = {
   duration: number;
   slideNumber: number;
   media: string;
+  layoutId?: number;
 };
 
 type PageResult = {
@@ -95,6 +97,7 @@ export function useGetInteractiveplaylist() {
           duration: r.duration,
           slideNumber: r.slide_number,
           media: r.media,
+          layoutId: r.layoutId, 
         }))
       ),
   });

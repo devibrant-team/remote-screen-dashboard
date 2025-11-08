@@ -1,14 +1,10 @@
-// src/components/Playlist/Interactive/ImageSlider.tsx
 import React, { useMemo, useRef, useState } from "react";
 
-/** Base preview type that also allows (optional) source,
- *  so SlideItem { source: 'library'|'upload' } still conforms. */
 export type ImagePreview = {
   url: string;
   type?: "image" | "video";
-  mediaId?: number; // from library
-  file?: File;      // from upload
-  /** optional: lets stricter callers pass it through */
+  mediaId?: number;
+  file?: File;
   source?: "library" | "upload";
 };
 
@@ -64,7 +60,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
 
   return (
     <div className="relative">
-      {/* Strip with exactly 4 tiles per page (or fewer if not enough images) */}
+      {/* 4 tiles per page */}
       <div
         ref={listRef}
         className="mb-6 grid grid-cols-2 sm:grid-cols-4 gap-4"
@@ -74,7 +70,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({
 
           return (
             <div
-              key={`${img.mediaId ?? "f"}-${globalIndex}`}
+              key={`${img.mediaId ?? img.url ?? "f"}-${globalIndex}`}
               className="flex flex-col items-center relative group"
               draggable
               onDragStart={(e) => onDragStart(e, globalIndex)}
