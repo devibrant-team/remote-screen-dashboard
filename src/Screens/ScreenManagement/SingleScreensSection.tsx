@@ -191,6 +191,8 @@ const SingleScreensSection: React.FC = () => {
                               {sc.name || "Unnamed screen"}
                             </h3>
                             <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
+                              ID:{sc.id}
+                              <span className="mx-2">•</span>
                               {sc.ratio ?? "—"}
                               <span className="mx-2">•</span>
                               {sc.branch ?? "No branch"}

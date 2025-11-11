@@ -106,10 +106,7 @@ export default function NormalContent() {
             data-duration={Number(p.duration || 0)}
             className="fc-draggable group relative flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-2 hover:border-red-500 hover:shadow-sm transition cursor-grab"
             title={p.name || `Playlist #${p.id}`}
-            // Optional: belt-and-suspenders flag (the hook already sets this on mousedown at container level)
-            onMouseDown={() => {
-              window.__draggingPlaylist = true;
-            }}
+
           >
             <MediaPreview
               src={p.media}

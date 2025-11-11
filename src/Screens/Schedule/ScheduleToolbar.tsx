@@ -26,7 +26,7 @@ const ScheduleToolBar: React.FC = () => {
     [interactiveData]
   );
 
-  useExternalDraggable(listRef.current, ".fc-draggable");
+  useExternalDraggable(listRef, ".fc-draggable");
 
   return (
     <div className="h-full min-h-0 flex flex-col space-y-3">

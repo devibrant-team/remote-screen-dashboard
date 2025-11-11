@@ -88,8 +88,6 @@ export default function InteractiveContent() {
             data-duration={Number(p.duration || 0)}  // seconds
             className="fc-draggable group relative flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-2 hover:border-red-500 hover:shadow-sm transition cursor-grab"
             title={p.name || `Interactive #${p.id}`}
-            // optional: belt-and-suspenders (hook also sets this at container level)
-            onMouseDown={() => { window.__draggingPlaylist = true; }}
           >
             <img
               src={p.media}
