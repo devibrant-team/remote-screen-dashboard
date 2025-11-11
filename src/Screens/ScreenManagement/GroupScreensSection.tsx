@@ -85,7 +85,7 @@ const GroupScreensSection: React.FC = () => {
 
   const { data: groups, isLoading, isError, refetch } = useGetGroups();
   const { mutate: deleteGroup, isPending: deleting } = useDeleteGroup();
-  console.log("LL", groups);
+
   const {
     data: groupScreens,
     isLoading: isScreensLoading,
@@ -259,7 +259,7 @@ const GroupScreensSection: React.FC = () => {
                           e.stopPropagation();
                           setIsEditMode(true);
                           dispatch(clearSelectedGroup());
-                          dispatch(resetScreenManagement())
+                          dispatch(resetScreenManagement());
                           dispatch(setSelectedGroup(g));
                           setOpenCreate(true);
                           if (g.branchId != null) {

@@ -111,8 +111,6 @@ export const loadPlaylistForEdit = createAsyncThunk(
 
     // API may return { success, playlist } or the playlist directly
     const playlist = data?.playlist ?? data;
-    console.log("[THUNK] API payload:", playlist);
-    console.log("[THUNK] API playlist.id:", playlist?.id);
     if (!playlist) throw new Error("Invalid playlist payload");
 
     // Reset current editor state
@@ -138,7 +136,7 @@ export const loadPlaylistForEdit = createAsyncThunk(
         dispatch(setSelectedSlideIndex(0));
       }
     }
-    console.log("FFF", playlist);
+
     return playlist; // optional for callers
   }
 );

@@ -18,7 +18,6 @@ const PlayList = () => {
   const dispatch = useDispatch();
 
   const playlist = useSelector((state: RootState) => state.playlist);
-console.log("EHE",playlist)
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );

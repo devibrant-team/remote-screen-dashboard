@@ -195,9 +195,6 @@ const NewCalender: React.FC<CalenderProps> = ({
   const scheduleItemBlocks = useSelector(selectScheduleItemBlocks);
 
   const selectedBlock = useSelector(selectSelectedBlock);
-  useEffect(() => {
-    console.log("[Redux:selectedBlock] ->", selectedBlock ?? null);
-  }, [selectedBlock]);
 
   const [evts, setEvts] = useState<LocalEvt[]>(
     colorize((events ?? []).map((e, i) => ({ ...e, id: e.id ?? `seed-${i}` })))
@@ -629,17 +626,7 @@ const NewCalender: React.FC<CalenderProps> = ({
     onEventClick?.(arg);
   };
 
-  /* Optional: visibility debug */
-  useEffect(() => {
-    console.log(
-      "[Calendar] hasAnySelection:",
-      hasAnySelection,
-      "focused count:",
-      focusedBlocksRaw?.length ?? 0,
-      "scheduleItem count:",
-      scheduleItemBlocks?.length ?? 0
-    );
-  }, [hasAnySelection, focusedBlocksRaw, scheduleItemBlocks]);
+
 
   return (
     <>

@@ -29,7 +29,7 @@ const SingleScreensSection: React.FC = () => {
   const [visible, setVisible] = useState(CHUNK);
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
-  console.log("LALA", screens);
+
   // Fill Redux with screens
   useEffect(() => {
     if (!isLoading && !isError && Array.isArray(screens)) {
@@ -195,7 +195,7 @@ const SingleScreensSection: React.FC = () => {
                               <span className="mx-2">•</span>
                               {sc.branch ?? "No branch"}
                               <span className="mx-2">•</span>
-                              🎵  {sc.PlaylistName ? sc.PlaylistName  : ""}
+                              🎵 {sc.PlaylistName ? sc.PlaylistName : ""}
                               {(() => {
                                 const ls = sc.lastSeen ?? "—";
                                 return (
@@ -215,7 +215,7 @@ const SingleScreensSection: React.FC = () => {
                             title="Edit"
                             aria-label={`Edit ${sc.name || "screen"}`}
                             onClick={() => {
-                              dispatch(resetScreenForm())
+                              dispatch(resetScreenForm());
                               setIsEditMode(true);
                               setEditingScreen(sc);
 
@@ -233,7 +233,7 @@ const SingleScreensSection: React.FC = () => {
                                   })
                                 );
                               }
-                              console.log(sc.PlaylistId)
+
                               // ✅ pre-select playlist
                               if (sc.PlaylistId != null) {
                                 // DefaultPlaylistDropdown reads screenManagement.playlist_id

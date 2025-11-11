@@ -1,56 +1,63 @@
+// CountryCitySelect.tsx
 import React, { useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useCountriesCities } from "../ReactQuery/Country/useCountriesCities";
 
-import { OneImageGridConfig } from "../Config/GridConfig/DefaultGridConfig";
-import type { RootState } from "../../store";
-import {
-  addSlide,
-  setSelectedSlideIndex,
-} from "../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
-const Test = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const [firstSlideCreated, setFirstSlideCreated] = useState(false);
+const CountryCitySelect: React.FC = () => {
+  const { data, isLoading, isError, error } = useCountriesCities();
+  const [country, setCountry] = useState("");
+  const [city, setCity] = useState("");
 
-  const slides = useSelector((state: RootState) => state.playlist.slides);
+  if (isLoading) return <p>Loading countries...</p>;
+  if (isError) return <p>Error: {(error as Error).message}</p>;
 
-  const handleCreateAndNavigate = () => {
-    if (!firstSlideCreated) {
-      const defaultSlide = {
-        name: "",
-        id: crypto.randomUUID(),
-        duration: 10,
-        scale: "Original Scale",
-        selectedGrid: "default",
-        slots: OneImageGridConfig.slots.map((slot) => ({
-          ...slot,
-          media: null,
-          mediaType: undefined,
-        })),
-      };
+  const countries = data ?? [];
+  const selectedCountry = countries.find((c) => c.country === country);
+  const cities = selectedCountry?.cities ?? [];
 
-      dispatch(addSlide(defaultSlide));
-      dispatch(setSelectedSlideIndex(0));
-      setFirstSlideCreated(true); // ✅ prevent duplicate
-    } else {
-      dispatch(setSelectedSlideIndex(0)); // Just select and go
-    }
-
-    navigate("/playlist");
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCountry = e.target.value;
+    setCountry(newCountry);
+    setCity(""); // reset city when country changes
   };
 
   return (
-    <div className="p-10">
-      <button
-        onClick={handleCreateAndNavigate}
-        className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-      >
-        Go to Playlist & Create First Slide
-      </button>
+    <div style={{ display: "flex", gap: "1rem", flexDirection: "column", maxWidth: 400 }}>
+      <label>
+        Country:
+        <select value={country} onChange={handleCountryChange}>
+          <option value="">-- Select country --</option>
+          {countries.map((c) => (
+            <option key={c.country} value={c.country}>
+              {c.country}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label>
+        City:
+        <select
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          disabled={!country}
+        >
+          <option value="">-- Select city --</option>
+          {cities.map((ct) => (
+            <option key={ct} value={ct}>
+              {ct}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {country && city && (
+        <p>
+          Selected: <b>{country}</b> / <b>{city}</b>
+        </p>
+      )}
     </div>
   );
 };
 
-export default Test;
+export default CountryCitySelect;

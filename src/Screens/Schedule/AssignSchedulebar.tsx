@@ -233,7 +233,7 @@ export default function AssignSchedulebar({
         // Insert into ScheduleItem slice so it appears in calendar/dev lists
         dispatch(addScheduleItemBlock(created));
       }
-      console.log("[POST success]", data);
+
     },
     onError: (err) => {
       setUiError(err);

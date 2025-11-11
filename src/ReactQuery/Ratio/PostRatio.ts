@@ -39,8 +39,6 @@ export function useInsertRatio(opts?: {
 
       // Be lenient: support many possible shapes and don’t hard-fail on missing id
       const data = res.data ?? {};
-      console.log("[useInsertRatio] response status:", res.status);
-      console.log("[useInsertRatio] response data:", data);
 
       const id =
         data?.id ??

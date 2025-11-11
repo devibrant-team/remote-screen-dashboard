@@ -29,7 +29,7 @@ async function fetchScreens(): Promise<Screen[]> {
   });
 
   const raw = res.data?.screens ?? [];
-  console.log("EHE", raw);
+
   return raw.map((r: any) => ({
     id: r.id,
     screenId: r.screenId,

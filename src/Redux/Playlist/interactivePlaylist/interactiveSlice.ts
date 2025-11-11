@@ -109,7 +109,7 @@ const interactiveSlice = createSlice({
         state.details.slides = Array.isArray(state.details.slides)
           ? state.details.slides
           : [];
-        console.log("Fetched playlist details:", state.details);
+
       })
       .addCase(fetchInteractiveDetails.rejected, (state, action) => {
         state.status = "failed";

@@ -46,7 +46,6 @@ const screenSlice = createSlice({
   initialState,
   reducers: {
     setScreens(state, action: PayloadAction<Screen[]>) {
-      console.log("[ScreenSlice] setScreens items count:", action.payload?.length ?? 0);
       state.items = action.payload ?? [];
       state.lastSyncedAt = new Date().toISOString();
 
@@ -59,11 +58,11 @@ const screenSlice = createSlice({
           name: nmFromItems || d.name || "", // keep previous if items has none
         };
       });
-      console.log("[ScreenSlice] selectedDevices after rehydrate via items (no placeholders):", state.selectedDevices);
+ 
     },
 
     upsertScreen(state, action: PayloadAction<Screen>) {
-      console.log("[ScreenSlice] upsertScreen:", action.payload);
+    
       const idx = state.items.findIndex(
         (s) => String(s.id) === String(action.payload.id)
       );
@@ -78,7 +77,7 @@ const screenSlice = createSlice({
           id,
           name: findNameInItems(state.items, id) || state.selectedDevices[selIdx].name || "",
         };
-        console.log("[ScreenSlice] updated selectedDevices entry:", state.selectedDevices[selIdx]);
+       
       }
     },
 
@@ -90,12 +89,12 @@ const screenSlice = createSlice({
 
     /** Replace the whole selection with objects {id,name}. (No placeholders added) */
     setSelectedDevices(state, action: PayloadAction<Array<SelectedDevice>>) {
-      console.log("[ScreenSlice] setSelectedDevices payload:", action.payload);
+
       state.selectedDevices = (action.payload ?? []).map((d) => ({
         id: Number(d.id),
         name: (d.name ?? "").toString(), // keep exactly what caller provided (or empty)
       }));
-      console.log("[ScreenSlice] selectedDevices after setSelectedDevices:", state.selectedDevices);
+   
     },
 
     clearScreens(state) {

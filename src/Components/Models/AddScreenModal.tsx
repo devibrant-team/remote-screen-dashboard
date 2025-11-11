@@ -172,7 +172,7 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
         playlist_id: selectedPlaylistId ? Number(selectedPlaylistId) : null,
       };
 
-      console.log("🔧 Edit screen payload:", payload);
+
 
       updateScreen(payload, {
         onSuccess: () => {
@@ -185,7 +185,7 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
     } else {
       const payload = basePayload;
 
-      console.log("🆕 Create screen payload:", payload);
+
 
       createScreen(payload, {
         onSuccess: () => {

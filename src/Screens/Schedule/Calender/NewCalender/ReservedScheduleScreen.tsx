@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Monitor, Layers, Hash } from "lucide-react";
 import {
@@ -7,17 +7,11 @@ import {
   selectReservedSelectedGroups,
   selectFocusedScreenId,
   selectFocusedGroupId,
-  selectReservedBlockforScreen,
-  selectReservedBlockforGroup,
   setFocusedScreenAndCompute,
   setFocusedGroupAndCompute,
 } from "../../../../Redux/ReservedBlocks/ReservedBlocks";
 
 /* ------------------------------- Debug ---------------------------------- */
-const DEBUG = true; // ← set false to mute logs
-const log = (...args: any[]) => {
-  if (DEBUG) console.log("%c[ScheduleScreen]", "color:#2563eb", ...args);
-};
 
 /* ------------------------------- Types ---------------------------------- */
 type SimpleNamed = { id: number; name: string };
@@ -89,8 +83,6 @@ const ReservedScheduleScreen: React.FC = () => {
 
   const focusedScreenId = useSelector(selectFocusedScreenId);
   const focusedGroupId = useSelector(selectFocusedGroupId);
-  const focusedScreenBlocks = useSelector(selectReservedBlockforScreen);
-  const focusedGroupBlocks = useSelector(selectReservedBlockforGroup);
 
   // normalize selected lists (display only)
   const screens: SimpleNamed[] = useMemo(
@@ -140,33 +132,6 @@ const ReservedScheduleScreen: React.FC = () => {
     return m;
   }, [blocks]);
 
-  // lifecycle logs
-  useEffect(() => {
-    log("mount");
-    return () => log("unmount");
-  }, []);
-  useEffect(() => {
-    log("selected devices changed:", {
-      screens: selectedScreensRaw,
-      groups: selectedGroupsRaw,
-    });
-  }, [selectedScreensRaw, selectedGroupsRaw]);
-  useEffect(() => {
-    log(
-      "focus:",
-      { focusedScreenId, focusedGroupId },
-      {
-        screenBlocks: focusedScreenBlocks?.length ?? 0,
-        groupBlocks: focusedGroupBlocks?.length ?? 0,
-      }
-    );
-  }, [
-    focusedScreenId,
-    focusedGroupId,
-    focusedScreenBlocks,
-    focusedGroupBlocks,
-  ]);
-
   return (
     <div className="space-y-8 mt-5 overflow-y-auto scrollbar-hide ">
       {/* Selected Screens (click to focus/toggle) */}
@@ -191,10 +156,6 @@ const ReservedScheduleScreen: React.FC = () => {
                   key={s.id}
                   active={active}
                   onClick={() => {
-                    log(
-                      "click screen → dispatch setFocusedScreenAndCompute:",
-                      s.id
-                    );
                     // toggling handled in reducer (same id → unselect)
                     dispatch(setFocusedScreenAndCompute(String(s.id)));
                   }}
@@ -243,10 +204,6 @@ const ReservedScheduleScreen: React.FC = () => {
                   key={g.id}
                   active={active}
                   onClick={() => {
-                    log(
-                      "click group → dispatch setFocusedGroupAndCompute:",
-                      g.id
-                    );
                     // toggling handled in reducer (same id → unselect)
                     dispatch(setFocusedGroupAndCompute(String(g.id)));
                   }}

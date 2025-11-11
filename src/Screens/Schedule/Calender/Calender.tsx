@@ -19,7 +19,6 @@ import type { RootState } from "../../../../store";
 import {
   setSelectedBlock,
   clearSelectedBlock,
-  selectSelectedBlock,
   type Block,
 } from "../../../Redux/Block/BlockSlice";
 
@@ -135,10 +134,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   const selectedGroupId =
     selectedGroupStr != null ? Number(selectedGroupStr) : null;
 
-  const selectedBlock = useSelector(selectSelectedBlock);
-  useEffect(() => {
-    console.log("[Redux:selectedBlock] ->", selectedBlock ?? null);
-  }, [selectedBlock]);
+
 
   const [evts, setEvts] = useState<LocalEvt[]>(
     colorize((events ?? []).map((e, i) => ({ ...e, id: e.id ?? `seed-${i}` })))

@@ -31,7 +31,6 @@ const Tabbarplaylist = () => {
   const [, setError] = useState("");
   const isEdit = useSelector((s: RootState) => s.playlist.isEdit);
   const playlistId = useSelector((s: RootState) => s.playlist.id);
-  console.log("ID", playlistId);
   const handleSavePlaylist = async () => {
     if (!playlist.name || playlist.name.trim() === "") {
       window.alert("❌ Please enter a playlist name.");

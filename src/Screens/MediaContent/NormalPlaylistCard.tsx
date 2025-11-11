@@ -29,8 +29,7 @@ function guessTypeFromUrl(url: string): "video" | "image" {
 export default function NormalPlaylistCard() {
   const { data, isLoading, isError, error } = useGetNormalPlaylist();
   const playlists = data ?? [];
-  const E = useSelector((s: RootState) => s.playlist.id);
-  console.log(E);
+
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
   const items = playlists.slice(0, 4);
@@ -80,13 +79,24 @@ export default function NormalPlaylistCard() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-4 xl:grid-cols-4">
       {items.map((p) => (
-        <button
+        <div
           key={p.id}
           onClick={() => {
             dispatch(loadPlaylistForEdit(p.id));
             navigate(`/playlist`);
             dispatch(setIsEdit(true));
             dispatch(setPlaylistName(p.name));
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              dispatch(loadPlaylistForEdit(p.id));
+              navigate(`/playlist`);
+              dispatch(setIsEdit(true));
+              dispatch(setPlaylistName(p.name));
+            }
           }}
           className={`
           group relative overflow-hidden rounded-2xl border border-gray-200 bg-white text-left
@@ -97,13 +107,13 @@ export default function NormalPlaylistCard() {
           <button
             type="button"
             onClick={(e) => {
-              e.stopPropagation();
+              e.stopPropagation(); // ⬅ prevent card click
               if (confirm(`Delete "${p.name || `Playlist #${p.id}`}"?`)) {
                 deletePlaylist(p.id);
               }
             }}
             className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90
-             text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 z-3 shadow-sm"
+           text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 z-3 shadow-sm"
           >
             {deletingId === p.id ? (
               <span className="h-3 w-3 animate-ping rounded-full bg-red-500" />
@@ -111,16 +121,16 @@ export default function NormalPlaylistCard() {
               <X size={16} />
             )}
           </button>
+
           {/* Media */}
           <div className="relative aspect-[16/9] w-full overflow-hidden ">
-         <MediaPreview
-  src={p.media}
-  type={guessTypeFromUrl(p.media)}
-  alt={p.name || `Playlist #${p.id}`}
-  className="h-full w-full transition-transform duration-300 group-hover:scale-[1.03]"
-/>
+            <MediaPreview
+              src={p.media}
+              type={guessTypeFromUrl(p.media)}
+              alt={p.name || `Playlist #${p.id}`}
+              className="h-full w-full transition-transform duration-300 group-hover:scale-[1.03]"
+            />
 
-            {/* Top badges */}
             <div className="pointer-events-none absolute left-3 top-3 flex gap-2">
               <span className="rounded-full bg-red-500 px-2.5 py-1 text-xs font-medium text-white shadow-sm ring-1 ring-black/5">
                 {p.slideNumber ?? "—"} Slides
@@ -130,7 +140,6 @@ export default function NormalPlaylistCard() {
               </span>
             </div>
 
-            {/* Subtle gradient for readability */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
           </div>
 
@@ -145,7 +154,6 @@ export default function NormalPlaylistCard() {
               </p>
             </div>
 
-            {/* Chevron */}
             <div
               aria-hidden
               className="mt-0.5 grid h-8 w-8 place-items-center rounded-full border border-gray-200 bg-white text-gray-500 transition group-hover:border-gray-300 group-hover:text-gray-700"
@@ -163,7 +171,7 @@ export default function NormalPlaylistCard() {
               </svg>
             </div>
           </div>
-        </button>
+        </div>
       ))}
     </div>
   );

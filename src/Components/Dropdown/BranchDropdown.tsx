@@ -10,7 +10,7 @@ const BranchDropdown = () => {
   const selectedBranchId = useSelector(
     (s: RootState) => s.screenManagement.selectedBranchId
   );
-  console.log("Branch", selectedBranchId);
+
   const dispatch = useDispatch();
 
   useEffect(() => {

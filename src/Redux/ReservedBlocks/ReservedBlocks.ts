@@ -2,10 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "../../../store";
 
 /* ------------------------------- Debug ---------------------------------- */
-const DEBUG = true; // ← set false to mute logs
-const log = (...args: any[]) => {
-  if (DEBUG) console.log("%c[ReservedBlocks]", "color:#a21caf", ...args);
-};
+
 
 /* ------------------------------- Types ---------------------------------- */
 export type Id = number | string;
@@ -88,18 +85,14 @@ const reservedBlocksSlice = createSlice({
       state,
       action: PayloadAction<{ groups: Named[]; screens: Named[] }>
     ) {
-      log("setReservedSelection(payload):", action.payload);
+     
       state.selectedGroups = dedupeById(action.payload.groups ?? []);
       state.selectedScreens = dedupeById(action.payload.screens ?? []);
-      log("setReservedSelection(state):", {
-        selectedGroups: state.selectedGroups,
-        selectedScreens: state.selectedScreens,
-      });
     },
 
     /** Clear selection + focus */
     clearReservedSelection(state) {
-      log("clearReservedSelection()");
+
       state.selectedGroups = [];
       state.selectedScreens = [];
       state.focusedScreenId = null;
@@ -110,7 +103,7 @@ const reservedBlocksSlice = createSlice({
 
     /** Merge or insert many blocks by id; DOES NOT touch selection/focus */
     upsertMany(state, action: PayloadAction<ReservedBlock[]>) {
-      log("upsertMany(count):", action.payload?.length ?? 0);
+     
       const map = new Map<Id, ReservedBlock>();
       for (const b of state.items) map.set(b.id, b);
       for (const incoming of action.payload ?? []) {
@@ -118,14 +111,14 @@ const reservedBlocksSlice = createSlice({
         map.set(incoming.id, { ...(prev ?? {}), ...incoming });
       }
       state.items = [...map.values()];
-      log("upsertMany → items:", state.items);
+    
     },
 
     /** Replace all blocks; DOES NOT touch selection/focus */
     setAll(state, action: PayloadAction<ReservedBlock[]>) {
-      log("setAll(count):", action.payload?.length ?? 0);
+     
       state.items = dedupeById(action.payload ?? []);
-      log("setAll → items:", state.items);
+    
     },
 
     /* ---------------- Focus logic (mutually exclusive + toggle) --------- */
@@ -149,7 +142,7 @@ const reservedBlocksSlice = createSlice({
 
       if (next == null) {
         state.reservedBlockforScreen = [];
-        log("setFocusedScreenAndCompute(null) → cleared screen focus");
+      
         return;
       }
 
@@ -157,13 +150,7 @@ const reservedBlocksSlice = createSlice({
       const filtered = (state.items ?? []).filter((b) => blockHasScreen(b, numericId));
       state.reservedBlockforScreen = filtered;
 
-      log(
-        "setFocusedScreenAndCompute(screenId):",
-        next,
-        "→ matches:",
-        filtered.length,
-        filtered.map((x) => String(x.id))
-      );
+
     },
 
     /**
@@ -186,7 +173,7 @@ const reservedBlocksSlice = createSlice({
 
       if (next == null) {
         state.reservedBlockforGroup = [];
-        log("setFocusedGroupAndCompute(null) → cleared group focus");
+      
         return;
       }
 
@@ -194,13 +181,7 @@ const reservedBlocksSlice = createSlice({
       const filtered = (state.items ?? []).filter((b) => blockHasGroup(b, numericId));
       state.reservedBlockforGroup = filtered;
 
-      log(
-        "setFocusedGroupAndCompute(groupId):",
-        next,
-        "→ matches:",
-        filtered.length,
-        filtered.map((x) => String(x.id))
-      );
+     
     },
   },
 });

@@ -86,12 +86,7 @@ const navigate = useNavigate();
   }, [renamingId]);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  //  const screens = useSelector(selectScheduleItemScreens);
-  // const groups  = useSelector(selectScheduleItemGroups);
-  //       useEffect(() => {
-  //         console.log("[Redux] screens (derived):", screens , "GROUPS" ,groups);
-  //       }, [screens]);
-  // ✅ hooks
+
   const { mutateAsync: renameScheduleItem, isPending: isRenaming } =
     useRenameScheduleItem();
   const { mutateAsync: deleteScheduleItem, isPending: isDeleting } =
@@ -147,7 +142,6 @@ const navigate = useNavigate();
     try {
       // fetch + prime cache + get data
       const blocks = await primeScheduleItemBlocksCache(qc, r.id);
-      console.log("[Blocks for schedule]", r.id, blocks);
 
       // ✅ save blocks in Redux
       dispatch(setScheduleItemBlocks(blocks));
@@ -544,9 +538,6 @@ const navigate = useNavigate();
         open={openWizard}
         onClose={() => setOpenWizard(false)}
         onConfirm={(payload) => {
-          console.log("[Create New] Selected targets:", payload);
-          // Example: dispatch to store or start creation wizard step
-          // dispatch(setPendingTargets(payload))
           setOpenWizard(false);
         }}
       />
