@@ -92,6 +92,9 @@ const interactiveSlice = createSlice({
     setIsEditing: (state, action: PayloadAction<boolean>) => {
       state.isEditing = action.payload;
     },
+        setLayoutId: (state, action: PayloadAction<number | null>) => {
+      state.layoutId = action.payload;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -119,5 +122,5 @@ const interactiveSlice = createSlice({
 export const selectInteractiveLayoutId = (s: { interactive: InteractiveState }) =>
   s.interactive.details?.layoutId ?? s.interactive.layoutId ?? null;
 
-export const { setSelectedId, setIsEditing } = interactiveSlice.actions;
+export const { setSelectedId, setIsEditing , setLayoutId} = interactiveSlice.actions;
 export default interactiveSlice.reducer;

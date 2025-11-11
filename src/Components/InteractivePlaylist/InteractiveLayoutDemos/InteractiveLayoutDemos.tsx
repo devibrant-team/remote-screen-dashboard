@@ -3,6 +3,8 @@ import { useDispatch } from "react-redux";
 import { saveLayoutId } from "../../../Redux/Playlist/interactivePlaylist/playlistInteractiveSlice";
 import BaseModal from "../../Models/BaseModal";
 import CreateInteractivePlaylist from "../InteractivePlaylist/InteractivePlaylist";
+import { setLayoutId as setInteractiveLayoutId } from "../../../Redux/Playlist/interactivePlaylist/interactiveSlice"; // <-- import
+
 import { X } from "lucide-react";
 
 type InteractiveLayoutDemosProps = {
@@ -16,16 +18,16 @@ export default function InteractiveLayoutDemos({
   const [modalOpen, setModalOpen] = useState(false);
   const dispatch = useDispatch();
 
-  const handleSelect = (layout: string) => {
-    setSelectedLayout(layout);
+const handleSelect = (layout: string) => {
+  setSelectedLayout(layout);
 
-    // Dispatch layout ID
-    const layoutId = layout === "tree" ? 2 : layout === "continuous" ? 3 : null;
-    if (layoutId) {
-      dispatch(saveLayoutId(layoutId));
-      setModalOpen(true); // Open CreateInteractivePlaylist modal
-    }
-  };
+  const layoutId = layout === "tree" ? 2 : layout === "continuous" ? 3 : null;
+  if (layoutId) {
+    dispatch(saveLayoutId(layoutId));              // existing: update playlistInteractive
+    dispatch(setInteractiveLayoutId(layoutId));    // NEW: mirror into interactive
+    setModalOpen(true);
+  }
+};
 
   return (
     <>
