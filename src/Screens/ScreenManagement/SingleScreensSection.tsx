@@ -12,13 +12,14 @@ import BaseModal from "../../Components/Models/BaseModal";
 import AddScreenModal from "../../Components/Models/AddScreenModal";
 import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
 import { setScreens } from "../../Redux/ScreenManagement/ScreenSlice";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   setSelectedBranchId,
   setSelectedRatio,
   setDefaultPlaylist,
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
 import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
+import type { RootState } from "../../../store";
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
 
@@ -29,6 +30,10 @@ const SingleScreensSection: React.FC = () => {
   const [visible, setVisible] = useState(CHUNK);
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
+  console.log(screens);
+  const FilteredBranchId = useSelector(
+    (s: RootState) => s.screenManagement.FilterScreenAcctoBranchId
+  );
 
   // Fill Redux with screens
   useEffect(() => {
@@ -36,7 +41,20 @@ const SingleScreensSection: React.FC = () => {
       dispatch(setScreens(screens as any));
     }
   }, [screens, isLoading, isError, dispatch]);
+  const totalScreens = screens ?? [];
+  const filteredScreens = useMemo(() => {
+    if (!Array.isArray(totalScreens)) return [];
 
+    // if FilteredBranchId is empty / null => show all
+    if (!FilteredBranchId) return totalScreens;
+
+    const branchIdNum = Number(FilteredBranchId);
+    if (!Number.isFinite(branchIdNum)) return totalScreens;
+
+    return totalScreens.filter((sc) => Number(sc.branchId) === branchIdNum);
+  }, [totalScreens, FilteredBranchId]);
+
+  const total = filteredScreens.length;
   // Modal close event
   useEffect(() => {
     const handleClose = () => setOpen(false);
@@ -51,19 +69,15 @@ const SingleScreensSection: React.FC = () => {
       );
   }, []);
 
-  const total = screens?.length ?? 0;
-
-  // Keep visible count in bounds when data changes
   useEffect(() => {
     if (total === 0) setVisible(CHUNK);
     else setVisible((v) => Math.min(Math.max(MIN_VISIBLE, v), total));
   }, [total]);
 
   const visibleScreens = useMemo(() => {
-    if (!screens || screens.length === 0) return [];
-    return screens.slice(0, visible);
-  }, [screens, visible]);
-
+    if (!filteredScreens || filteredScreens.length === 0) return [];
+    return filteredScreens.slice(0, visible);
+  }, [filteredScreens, visible]);
   const canShowMore = visible < total;
   const canShowLess = visible > MIN_VISIBLE;
 

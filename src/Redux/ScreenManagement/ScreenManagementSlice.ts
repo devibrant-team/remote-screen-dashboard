@@ -10,6 +10,7 @@ export type ScreenManagementState = {
   selectedRatioName: string | null;
   selectedBranchId: IdLike | null;
   playlist_id: IdLike | null;
+  FilterScreenAcctoBranchId: IdLike | null;
 };
 
 const initialState: ScreenManagementState = {
@@ -17,6 +18,7 @@ const initialState: ScreenManagementState = {
   selectedRatioName: null,
   selectedBranchId: null,
   playlist_id: null,
+  FilterScreenAcctoBranchId: null,
 };
 
 const screenManagementSlice = createSlice({
@@ -33,6 +35,9 @@ const screenManagementSlice = createSlice({
     setSelectedBranchId: (s, a: PayloadAction<IdLike | null>) => {
       s.selectedBranchId = a.payload;
     },
+    setFilterScreenAcctoBranchId: (s, a: PayloadAction<IdLike | null>) => {
+      s.FilterScreenAcctoBranchId = a.payload;
+    },
     setDefaultPlaylist: (s, a: PayloadAction<IdLike | null>) => {
       s.playlist_id = a.payload;
     },
@@ -43,10 +48,10 @@ const screenManagementSlice = createSlice({
 export const {
   setSelectedRatio,
   setSelectedBranchId,
-  setDefaultPlaylist,          // ✅ export the action
+  setDefaultPlaylist,
   resetScreenManagement,
+  setFilterScreenAcctoBranchId,
 } = screenManagementSlice.actions;
-
 
 export default screenManagementSlice.reducer;
 
@@ -59,3 +64,4 @@ export const selectSelectedBranchId = (st: RootState) =>
   st.screenManagement.selectedBranchId;
 export const selectedDefaultPlaylistId = (st: RootState) =>
   st.screenManagement.playlist_id;
+

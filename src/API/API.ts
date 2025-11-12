@@ -36,3 +36,4 @@ export const UpdateGroupApi = `${http}updategroup`
 export const DeleteGroupApi = `${http}deletegroup`
 export const GetProfileApi = `${http}getuserprofile`
 export const GetAdsApi = `${http}getads`
+export const LogoutApi = `${http}logout`

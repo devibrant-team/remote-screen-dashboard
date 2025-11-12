@@ -14,7 +14,6 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../../../store";
 import { UpdateReservedBlockApi } from "../../../../API/API";
 
-
 import {
   clearSelectedBlock,
   selectSelectedBlock,
@@ -22,11 +21,9 @@ import {
   type Block,
 } from "../../../../Redux/Block/BlockSlice";
 
-
 import {
   selectScheduleItemId,
   addScheduleItemBlock,
-  
 } from "../../../../Redux/ScheduleItem/ScheduleItemSlice";
 
 import {
@@ -102,8 +99,11 @@ const toIsoDate = (dmyOrYmd?: string) => {
 
 const toDateTime = (dateYmd?: string, time?: string) => {
   if (!dateYmd || !time) return null;
-  const t =
-    /^\d{2}:\d{2}(:\d{2})?$/.test(time) ? (time.length === 5 ? `${time}:00` : time) : "00:00:00";
+  const t = /^\d{2}:\d{2}(:\d{2})?$/.test(time)
+    ? time.length === 5
+      ? `${time}:00`
+      : time
+    : "00:00:00";
   const d = new Date(`${dateYmd}T${t}`);
   return isNaN(d.getTime()) ? null : d;
 };
@@ -167,14 +167,14 @@ function scheduleBlockFromApiSchedule(
     list.find((x) => Number(x.id) === idNum)?.name ?? `${prefix} #${idNum}`;
 
   const screenIds: number[] = Array.isArray(schedule?.screens)
-    ? schedule!.screens!
-        .map((s) => Number(s?.screenId))
+    ? schedule!
+        .screens!.map((s) => Number(s?.screenId))
         .filter((n) => Number.isFinite(n) && n > 0)
     : [];
 
   const groupIds: number[] = Array.isArray(schedule?.groups)
-    ? schedule!.groups!
-        .map((g) => Number(g?.groupId))
+    ? schedule!
+        .groups!.map((g) => Number(g?.groupId))
         .filter((n) => Number.isFinite(n) && n > 0)
     : [];
 
@@ -471,9 +471,9 @@ export default function ReservedAssignSchedulebar({
 
     const currentId =
       selectedBlock?.id != null
-        ? (String(selectedBlock.id).startsWith("block-")
-            ? Number(String(selectedBlock.id).replace("block-", ""))
-            : Number(selectedBlock.id))
+        ? String(selectedBlock.id).startsWith("block-")
+          ? Number(String(selectedBlock.id).replace("block-", ""))
+          : Number(selectedBlock.id)
         : NaN;
 
     const out = new Set<number>();
@@ -514,9 +514,9 @@ export default function ReservedAssignSchedulebar({
 
     const currentId =
       selectedBlock?.id != null
-        ? (String(selectedBlock.id).startsWith("block-")
-            ? Number(String(selectedBlock.id).replace("block-", ""))
-            : Number(selectedBlock.id))
+        ? String(selectedBlock.id).startsWith("block-")
+          ? Number(String(selectedBlock.id).replace("block-", ""))
+          : Number(selectedBlock.id)
         : NaN;
 
     const out = new Set<number>();
@@ -621,8 +621,23 @@ export default function ReservedAssignSchedulebar({
         ? selectedGroupIds.map((id) => ({ groupId: id }))
         : selectedBlock.groups ?? [];
 
-    if ((finalScreens?.length ?? 0) === 0 && (finalGroups?.length ?? 0) === 0) {
-      console.warn("[Apply] You must select at least one group or one screen.");
+    const hasAnyDevice =
+      (finalScreens?.length ?? 0) > 0 || (finalGroups?.length ?? 0) > 0;
+
+    const missingPlaylist =
+      !selectedBlock.playlistId ||
+      !Number.isFinite(Number(selectedBlock.playlistId));
+
+    if (missingPlaylist && !hasAnyDevice) {
+      alert("Please select a playlist and at least one screen or group.");
+      return;
+    }
+    if (missingPlaylist) {
+      alert("Please select a playlist.");
+      return;
+    }
+    if (!hasAnyDevice) {
+      alert("Please select at least one screen or one group.");
       return;
     }
 
@@ -880,8 +895,14 @@ export default function ReservedAssignSchedulebar({
                               ? "border-red-500 ring-2 ring-red-500/40"
                               : "border-gray-200 hover:shadow-sm"
                           }
-                          ${hasConflict ? "opacity-60 cursor-not-allowed" : ""}`}
-                          title={hasConflict ? "Conflicts with another block in this time range" : undefined}
+                          ${
+                            hasConflict ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
+                          title={
+                            hasConflict
+                              ? "Conflicts with another block in this time range"
+                              : undefined
+                          }
                         >
                           <div className="aspect-[4/3] bg-gray-100 relative">
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -940,8 +961,14 @@ export default function ReservedAssignSchedulebar({
                               ? "border-red-500 ring-2 ring-red-500/40"
                               : "border-gray-200 hover:shadow-sm"
                           }
-                          ${hasConflict ? "opacity-60 cursor-not-allowed" : ""}`}
-                          title={hasConflict ? "Conflicts with another block in this time range" : undefined}
+                          ${
+                            hasConflict ? "opacity-60 cursor-not-allowed" : ""
+                          }`}
+                          title={
+                            hasConflict
+                              ? "Conflicts with another block in this time range"
+                              : undefined
+                          }
                         >
                           <div className="aspect-[4/3] bg-gray-100 relative">
                             <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -991,12 +1018,7 @@ export default function ReservedAssignSchedulebar({
           <button
             type="button"
             onClick={onApply}
-            disabled={
-              submitting ||
-              posting ||
-              !selectedBlock ||
-              !selectedBlock.playlistId
-            }
+            disabled={submitting || posting}
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium
             ${
               submitting || posting

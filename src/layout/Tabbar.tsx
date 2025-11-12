@@ -9,17 +9,25 @@ import {
   Menu,
   X,
   UploadCloudIcon,
+  LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logoutUser, logout as forceLocalLogout } from "../Redux/Authentications/AuthSlice";
 
-const menuItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
-  { label: "Media", icon: UploadCloudIcon, path: "/mediaupload" },
-  { label: "Schedule", icon: CalendarDays, path: "/schedule" },
-  { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
-  { label: "Account", icon: User, path: "/profile" },
-  { label: "Support", icon: LifeBuoy, path: "/support" },
+type NavItem =
+  | { label: "Dashboard" | "Media Content" | "Media" | "Schedule" | "Screen Management" | "Account" | "Support"; icon: any; path: string }
+  | { label: "Logout"; icon: any; action: "logout" };
+
+const menuItems: NavItem[] = [
+  { label: "Dashboard",         icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Media Content",     icon: MonitorPlay,     path: "/mediacontent" },
+  { label: "Media",             icon: UploadCloudIcon, path: "/mediaupload" },
+  { label: "Schedule",          icon: CalendarDays,    path: "/schedule" },
+  { label: "Screen Management", icon: Monitor,         path: "/screenmanagement" },
+  { label: "Account",           icon: User,            path: "/profile" },
+  { label: "Support",           icon: LifeBuoy,        path: "/support" },
+  { label: "Logout",            icon: LogOut,          action: "logout" },
 ];
 
 const ToolBar = () => {
@@ -27,10 +35,28 @@ const ToolBar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+  const dispatch = useDispatch();
 
   const handleNavClick = (path: string) => {
     navigate(path);
     setIsOpen(false);
+  };
+
+  // Simple alert/confirm before logging out
+  const startLogoutFlow = async () => {
+    const ok = window.confirm("Are you sure you want to log out?");
+    if (!ok) return;
+
+    try {
+      // @ts-ignore unwrap available if you use RTK types; ignore if not
+      await dispatch(logoutUser()).unwrap();
+    } catch {
+      // Force local cleanup even if server logout fails
+      dispatch(forceLocalLogout());
+    } finally {
+      setIsOpen(false);
+      navigate("/login", { replace: true });
+    }
   };
 
   return (
@@ -55,21 +81,30 @@ const ToolBar = () => {
             Admin Dashboard
           </h1>
 
-          <nav className="flex flex-col gap-5 overflow-y-auto flex-1 ">
-            {menuItems.map(({ label, icon: Icon, path }) => {
-              const isActive = currentPath.startsWith(path);
+          <nav className="flex flex-col gap-5 overflow-y-auto flex-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                "path" in item ? currentPath.startsWith(item.path) : false;
+
+              const className = `flex items-center gap-3 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors whitespace-nowrap ${
+                isActive
+                  ? "bg-[var(--mainred)] text-white"
+                  : "text-black hover:bg-[var(--mainred)] hover:text-white"
+              }`;
+
               return (
                 <button
-                  key={path}
-                  onClick={() => handleNavClick(path)}
-                  className={`flex items-center gap-3 px-4 py-2 rounded-md font-medium cursor-pointer transition-colors whitespace-nowrap ${
-                    isActive
-                      ? "bg-[var(--mainred)] text-white"
-                      : "text-black hover:bg-[var(--mainred)] hover:text-white"
-                  }`}
+                  key={"path" in item ? item.path : item.label}
+                  onClick={
+                    "action" in item && item.action === "logout"
+                      ? startLogoutFlow
+                      : () => handleNavClick((item as Extract<NavItem, { path: string }>).path)
+                  }
+                  className={className}
                 >
                   <Icon size={20} />
-                  <span className="whitespace-nowrap">{label}</span>
+                  <span className="whitespace-nowrap">{item.label}</span>
                 </button>
               );
             })}

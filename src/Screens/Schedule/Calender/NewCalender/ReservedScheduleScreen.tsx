@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { Monitor, Layers, Hash } from "lucide-react";
+import { Monitor, Layers, Hash, Clock } from "lucide-react";
 import {
   selectAllReservedBlocks,
   selectReservedSelectedScreens,
@@ -137,8 +137,8 @@ const ReservedScheduleScreen: React.FC = () => {
       {/* Selected Screens (click to focus/toggle) */}
       <section>
         <SectionHeader
-          icon={<Monitor className="h-5 w-5 text-zinc-700" />}
-          title="Selected Screens"
+          icon={<Clock className="h-5 w-5 text-zinc-700" />}
+          title="History of Screens"
         />
 
         {(screens?.length ?? 0) === 0 ? (
@@ -186,9 +186,10 @@ const ReservedScheduleScreen: React.FC = () => {
       {/* Selected Groups (click to focus/toggle) */}
       <section>
         <SectionHeader
-          icon={<Layers className="h-5 w-5 text-zinc-700" />}
-          title="Selected Groups"
+          icon={<Clock className="h-5 w-5 text-zinc-700" />}
+          title="History of Groups"
         />
+
         {(groups?.length ?? 0) === 0 ? (
           <EmptyState
             title="No groups selected"
