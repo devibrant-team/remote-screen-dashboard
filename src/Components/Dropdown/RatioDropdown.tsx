@@ -4,14 +4,14 @@ import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import { useGetRatio } from "../../ReactQuery/Ratio/GetRatio";
-import { setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice"; // adjust path
+import { setPlaylistRatio } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { RatioRecord } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 
 const RatioDropdown = () => {
   const { data: ratios, isLoading, isError } = useGetRatio();
   const dispatch = useDispatch();
   const selected = useSelector((s: RootState) => s.playlist.selectedRatio);
-console.log(selected)
+
   // Initialize once data arrives
   useEffect(() => {
     if (!selected && ratios?.length) {

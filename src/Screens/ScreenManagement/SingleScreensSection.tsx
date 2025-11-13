@@ -55,19 +55,6 @@ const SingleScreensSection: React.FC = () => {
   }, [totalScreens, FilteredBranchId]);
 
   const total = filteredScreens.length;
-  // Modal close event
-  useEffect(() => {
-    const handleClose = () => setOpen(false);
-    window.addEventListener(
-      "close-add-screen-modal",
-      handleClose as EventListener
-    );
-    return () =>
-      window.removeEventListener(
-        "close-add-screen-modal",
-        handleClose as EventListener
-      );
-  }, []);
 
   useEffect(() => {
     if (total === 0) setVisible(CHUNK);
@@ -306,14 +293,21 @@ const SingleScreensSection: React.FC = () => {
         )}
       </section>
 
-      <BaseModal
-        open={open}
-        onClose={() => setOpen(false)}
-        title="" // 👈 dynamic title
-      >
-        <AddScreenModal isEdit={isEditMode} editingScreen={editingScreen} />{" "}
-        {/* 👈 pass screen */}
-      </BaseModal>
+
+             {open && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-6">
+          <div className="w-full max-w-3xl lg:max-w-4xl">
+            <div className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
+              <AddScreenModal
+                isEdit={isEditMode}
+                editingScreen={editingScreen}
+                onClose={() => setOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };

@@ -22,8 +22,8 @@ type NavItem =
   | {
       label:
         | "Dashboard"
-        | "Media Content"
-        | "Media"
+        | "Playlist"
+        | "Library"
         | "Schedule"
         | "Screen Management"
         | "Account"
@@ -35,8 +35,8 @@ type NavItem =
 
 const menuItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
-  { label: "Media", icon: UploadCloudIcon, path: "/mediaupload" },
+  { label: "Playlist", icon: MonitorPlay, path: "/mediacontent" },
+  { label: "Library", icon: UploadCloudIcon, path: "/mediaupload" },
   { label: "Schedule", icon: CalendarDays, path: "/schedule" },
   { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
   { label: "Account", icon: User, path: "/profile" },

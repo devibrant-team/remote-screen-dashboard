@@ -1,6 +1,6 @@
 // ScreenRatioDropdown.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Plus, CheckCircle2, X } from "lucide-react";
+import { ChevronDown, Plus, CheckCircle2, X , } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../store";
 import { useGetRatio, RATIO_QK } from "../../ReactQuery/Ratio/GetRatio";
@@ -69,7 +69,7 @@ const ScreenRatioDropdown: React.FC<Props> = ({
   const selectedIdFromStore = useSelector(
     (s: RootState) => s.screenManagement.selectedRatioId
   );
-console.log(selectedIdFromStore)
+
   const [mode, setMode] = useState<"preset" | "custom">("preset");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -215,9 +215,9 @@ console.log(selectedIdFromStore)
               min={1}
               step={1}
               inputMode="numeric"
-              placeholder="Numerator (e.g., 16)"
+              placeholder="Width ratio (e.g., 16)"
               {...register("num")}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 outline-none focus:border-neutral-400"
             />
             {errors.num && (
               <p className="text-xs text-red-600">{errors.num.message as string}</p>
@@ -228,40 +228,12 @@ console.log(selectedIdFromStore)
               min={1}
               step={1}
               inputMode="numeric"
-              placeholder="Denominator (e.g., 9)"
+              placeholder="Height ratio (e.g., 9)"
               {...register("den")}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
+             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 outline-none focus:border-neutral-400"
             />
             {errors.den && (
               <p className="text-xs text-red-600">{errors.den.message as string}</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-2">
-            <input
-              type="number"
-              min={1}
-              step={1}
-              inputMode="numeric"
-              placeholder="Width (optional)"
-              {...register("width")}
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-            />
-            {errors.width && (
-              <p className="text-xs text-red-600">{errors.width.message as string}</p>
-            )}
-
-            <input
-              type="number"
-              min={1}
-              step={1}
-              inputMode="numeric"
-              placeholder="Height (optional)"
-              {...register("height")}
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
-            />
-            {errors.height && (
-              <p className="text-xs text-red-600">{errors.height.message as string}</p>
             )}
           </div>
 

@@ -41,11 +41,16 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-type AddScreenModalProps = { isEdit?: boolean; editingScreen?: any | null };
+type AddScreenModalProps = {
+  isEdit?: boolean;
+  editingScreen?: any | null;
+  onClose?: () => void;
+};
 
 const AddScreenModal: React.FC<AddScreenModalProps> = ({
   isEdit = false,
   editingScreen,
+  onClose,
 }) => {
   const dispatch = useDispatch();
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -143,7 +148,10 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
     }
   }, [code, setValue, dispatch]);
 
-  const close = () => window.dispatchEvent(new Event("close-add-screen-modal"));
+    const close = () => {
+    onClose?.();
+  };
+
   const onSubmit = (values: FormValues) => {
     const isEditing = Boolean(isEdit && editingScreen && editingScreen.id);
 
@@ -172,8 +180,6 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
         playlist_id: selectedPlaylistId ? Number(selectedPlaylistId) : null,
       };
 
-
-
       updateScreen(payload, {
         onSuccess: () => {
           dispatch(resetScreenForm());
@@ -184,8 +190,6 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
       });
     } else {
       const payload = basePayload;
-
-
 
       createScreen(payload, {
         onSuccess: () => {

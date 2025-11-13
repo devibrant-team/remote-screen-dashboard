@@ -1,9 +1,10 @@
+import React, { useState } from "react";
 import { Play, X } from "lucide-react";
 import { useVideoThumbnail } from "../../Hook/Playlist/useVideoThumbnail";
 import { useDeleteMedia } from "../../ReactQuery/Media/DeleteMedia";
 
 export const MediaCard: React.FC<{
-  id: number | string; 
+  id: number | string;
   url: string;
   type?: string;
   storage: number;
@@ -13,9 +14,19 @@ export const MediaCard: React.FC<{
   const { thumb } = useVideoThumbnail(isVideo ? url : undefined, 1.0);
   const { deleteMedia, deletingId } = useDeleteMedia();
 
+  // 🔁 handle image load errors + retry
+  const [imgError, setImgError] = useState(false);
+  const [retryKey, setRetryKey] = useState(0);
+
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (confirm("Delete this media?")) deleteMedia(id);
+  };
+
+  const handleRetry = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImgError(false);
+    setRetryKey((k) => k + 1); // force <img> remount → reload
   };
 
   return (
@@ -45,25 +56,51 @@ export const MediaCard: React.FC<{
 
       {/* Media */}
       {isVideo ? (
-        thumb ? (
+        !imgError && thumb ? (
           <img
+            key={retryKey}
             src={thumb}
             alt="video thumbnail"
             className="w-full aspect-square object-cover transition group-hover:scale-[1.02]"
+            onError={() => setImgError(true)}
           />
+        ) : imgError ? (
+          <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-gray-100 text-xs text-gray-500">
+            <span>Failed to load preview</span>
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] font-medium hover:bg-gray-50"
+            >
+              Retry
+            </button>
+          </div>
         ) : (
           <div className="w-full aspect-square grid place-items-center bg-black/70 text-white">
             <Play className="h-10 w-10 opacity-90" />
           </div>
         )
-      ) : (
+      ) : !imgError ? (
         <img
+          key={retryKey}
           src={url}
           alt={type || "image"}
           loading="lazy"
           decoding="async"
           className="w-full aspect-square object-cover transition group-hover:scale-[1.02]"
+          onError={() => setImgError(true)}
         />
+      ) : (
+        <div className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-gray-100 text-xs text-gray-500">
+          <span>Failed to load image</span>
+          <button
+            type="button"
+            onClick={handleRetry}
+            className="rounded-md border border-gray-300 bg-white px-2 py-1 text-[11px] font-medium hover:bg-gray-50"
+          >
+            Retry
+          </button>
+        </div>
       )}
 
       {/* Badge */}
