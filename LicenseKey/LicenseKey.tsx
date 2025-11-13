@@ -1,41 +1,32 @@
+// LicenseKey/LicenseKey.tsx
 import { useEffect } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setMachineId } from '../src/Redux/Machine/machineSlice';
+import type { RootState } from 'store';
 
-declare global {
-  interface Window {
-    electronAPI?: {
-      sendLog?: (...args: any[]) => void;
-      getMachineId?: () => Promise<string>;
-    };
-  }
-}
-
-// Optional: Forward console logs to Electron
-const originalConsoleLog = console.log;
-console.log = (...args: unknown[]) => {
-  if (window.electronAPI?.sendLog) {
-    window.electronAPI.sendLog(...args);
-  }
-  originalConsoleLog(...args);
-};
 
 export default function LicenseKey() {
   const dispatch = useDispatch();
+  const t = useSelector((s:RootState)=>s.machine.machineId)
+  console.log("HEH" , t)
+  // Optional console forwarding (guarded)
+  const originalConsoleLog = console.log;
+  // @ts-ignore
+  console.log = (...args: unknown[]) => {
+    try { window.electronAPI?.sendLog?.(...(args as any[])); } catch {}
+    originalConsoleLog(...args);
+  };
 
   useEffect(() => {
-    if (window.electronAPI?.getMachineId) {
-      window.electronAPI.getMachineId()
-        .then((id: string) => {
-          dispatch(setMachineId(id));
-        })
-        .catch(() => {
-          console.error('Failed to get Machine ID');
-        });
-    } else {
-      console.error('electronAPI.getMachineId not available');
+    const api = window.electronAPI;
+    if (!api?.getMachineId) {
+      console.warn('electronAPI.getMachineId not available (dev web or preload failed).');
+      return;
     }
+    api.getMachineId()
+      .then((id: string) => dispatch(setMachineId(id)))
+      .catch((err) => console.error('Failed to get Machine ID', err));
   }, [dispatch]);
 
-  return null; // Render nothing to the UI
+  return null;
 }

@@ -69,7 +69,7 @@ const ScreenRatioDropdown: React.FC<Props> = ({
   const selectedIdFromStore = useSelector(
     (s: RootState) => s.screenManagement.selectedRatioId
   );
-
+console.log(selectedIdFromStore)
   const [mode, setMode] = useState<"preset" | "custom">("preset");
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 

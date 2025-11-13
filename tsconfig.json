@@ -10,9 +10,7 @@
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
+    "paths": { "@/*": ["src/*"] }
   },
   "include": ["vite.config.ts"],
   "references": [

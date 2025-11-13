@@ -16,7 +16,7 @@ export type RatioRecord = {
 };
 
 export interface PlaylistState {
-  id: string ;
+  id: string;
   name: string;
   type: number; // future-proofing if you add other types later
   slides: NormalPlaylistState[];
@@ -24,6 +24,7 @@ export interface PlaylistState {
   selectedRatio: RatioRecord | null;
   isEdit: boolean;
   selectedCity: string;
+  isLoading: boolean;
 }
 
 const initialState: PlaylistState = {
@@ -35,6 +36,7 @@ const initialState: PlaylistState = {
   selectedSlideIndex: null,
   selectedRatio: null,
   selectedCity: "",
+  isLoading: false,
 };
 
 const playlistSlice = createSlice({
@@ -59,7 +61,9 @@ const playlistSlice = createSlice({
     setSelectedSlideIndex: (state, action: PayloadAction<number | null>) => {
       state.selectedSlideIndex = action.payload;
     },
-
+    setPlaylistLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
     addSlide: (state, action: PayloadAction<NormalPlaylistState>) => {
       state.slides.push(action.payload);
     },
@@ -201,6 +205,7 @@ export const {
   reorderSlide,
   setSelectedId,
   setIsEdit,
+  setPlaylistLoading,
 } = playlistSlice.actions;
 
 export default playlistSlice.reducer;

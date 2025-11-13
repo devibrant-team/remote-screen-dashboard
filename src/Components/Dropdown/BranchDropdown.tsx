@@ -6,7 +6,7 @@ import type { RootState } from "../../../store";
 import { useEffect, useMemo } from "react";
 
 const BranchDropdown = () => {
-  const { data: branches, isLoading, isError } = useGetBranches();
+  const { data: branches = [], isLoading, isError } = useGetBranches();
   const selectedBranchId = useSelector(
     (s: RootState) => s.screenManagement.selectedBranchId
   );

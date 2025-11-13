@@ -29,19 +29,7 @@ const ScreenHeader = () => {
           </button>
         </div>
 
-        {/* Right side: Search Input */}
-        <div className="relative w-full sm:w-72">
-          <Search
-            size={16}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
-          />
-          <input
-            type="search"
-            placeholder="Search screens..."
-            aria-label="Search screens"
-            className="w-full rounded-lg border border-neutral-300 bg-white py-2 pl-9 pr-3 text-sm text-neutral-800 shadow-sm outline-none transition focus:border-neutral-400"
-          />
-        </div>
+      
       </div>
 
       {/* Modal (opens only from the button) */}

@@ -11,7 +11,7 @@ const RatioDropdown = () => {
   const { data: ratios, isLoading, isError } = useGetRatio();
   const dispatch = useDispatch();
   const selected = useSelector((s: RootState) => s.playlist.selectedRatio);
-
+console.log(selected)
   // Initialize once data arrives
   useEffect(() => {
     if (!selected && ratios?.length) {

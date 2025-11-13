@@ -13,21 +13,35 @@ import {
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
-import { logoutUser, logout as forceLocalLogout } from "../Redux/Authentications/AuthSlice";
+import {
+  logoutUser,
+  logout as forceLocalLogout,
+} from "../Redux/Authentications/AuthSlice";
 
 type NavItem =
-  | { label: "Dashboard" | "Media Content" | "Media" | "Schedule" | "Screen Management" | "Account" | "Support"; icon: any; path: string }
+  | {
+      label:
+        | "Dashboard"
+        | "Media Content"
+        | "Media"
+        | "Schedule"
+        | "Screen Management"
+        | "Account"
+        | "Support";
+      icon: any;
+      path: string;
+    }
   | { label: "Logout"; icon: any; action: "logout" };
 
 const menuItems: NavItem[] = [
-  { label: "Dashboard",         icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Media Content",     icon: MonitorPlay,     path: "/mediacontent" },
-  { label: "Media",             icon: UploadCloudIcon, path: "/mediaupload" },
-  { label: "Schedule",          icon: CalendarDays,    path: "/schedule" },
-  { label: "Screen Management", icon: Monitor,         path: "/screenmanagement" },
-  { label: "Account",           icon: User,            path: "/profile" },
-  { label: "Support",           icon: LifeBuoy,        path: "/support" },
-  { label: "Logout",            icon: LogOut,          action: "logout" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Media Content", icon: MonitorPlay, path: "/mediacontent" },
+  { label: "Media", icon: UploadCloudIcon, path: "/mediaupload" },
+  { label: "Schedule", icon: CalendarDays, path: "/schedule" },
+  { label: "Screen Management", icon: Monitor, path: "/screenmanagement" },
+  { label: "Account", icon: User, path: "/profile" },
+  { label: "Support", icon: LifeBuoy, path: "/support" },
+  { label: "Logout", icon: LogOut, action: "logout" },
 ];
 
 const ToolBar = () => {
@@ -99,7 +113,10 @@ const ToolBar = () => {
                   onClick={
                     "action" in item && item.action === "logout"
                       ? startLogoutFlow
-                      : () => handleNavClick((item as Extract<NavItem, { path: string }>).path)
+                      : () =>
+                          handleNavClick(
+                            (item as Extract<NavItem, { path: string }>).path
+                          )
                   }
                   className={className}
                 >

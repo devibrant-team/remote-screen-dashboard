@@ -21,16 +21,18 @@ import AccountSettingsDashboard from "./Screens/Profile/AccountSettingsDashboard
 import Dashboard from "./Screens/Dashboard/Dashboard";
 import Support from "./Screens/Support/Support";
 
+
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  return token ? <Outlet /> : <Navigate to="/login" replace />;
+  return token ? <Outlet /> : <Navigate to="/login" replace /> ;
 }
 
 /* ---------- Layouts ---------- */
 // Shown on authenticated pages that should have the Tabbar
 function AppLayoutWithTabbar() {
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -61,6 +63,7 @@ function PlainLayout() {
 export default function App() {
   return (
     <>
+    
       <LicenseKey />
       <Router>
         <Routes>

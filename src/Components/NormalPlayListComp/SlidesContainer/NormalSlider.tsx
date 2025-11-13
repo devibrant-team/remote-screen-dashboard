@@ -30,11 +30,11 @@ import { DragOverlay } from "@dnd-kit/core";
 
 import SortableSlide from "../SortableSlide";
 
-
 type SlideType = any; // replace with your NormalPlaylistState type if available
 
 const NormalSlider: React.FC = () => {
   const dispatch = useDispatch();
+  const { loading, error } = useSelector((s: RootState) => s.playlistEditor);
 
   const slides = useSelector((s: RootState) => s.playlist.slides);
 
@@ -152,7 +152,37 @@ const NormalSlider: React.FC = () => {
     () => slides.find((s: SlideType) => String(s.id) === activeId),
     [slides, activeId]
   );
+  if (loading) {
+    return (
+      <section className="p-4 md:p-6 max-h-screen">
+        {/* Header skeleton */}
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="h-6 w-40 rounded bg-gray-100 animate-pulse" />
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="h-4 w-28 rounded bg-gray-100 animate-pulse" />
+            <div className="h-9 w-32 rounded-xl bg-gray-100 animate-pulse" />
+          </div>
+        </div>
 
+        {/* Slides grid skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={`skeleton-slide-${i}`}
+              className="rounded-2xl border border-gray-200 bg-white p-2 animate-pulse"
+            >
+              <div className="w-full aspect-[7/5] overflow-hidden rounded-xl bg-gray-100" />
+              <div className="mt-2 h-3 w-16 rounded bg-gray-100" />
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-600">Something went wrong</div>;
+  }
   return (
     <section className="p-4 md:p-6 max-h-screen">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
