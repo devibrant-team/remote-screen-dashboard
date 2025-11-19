@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   UploadCloudIcon,
+  Building2Icon,
   LogOut,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -23,6 +24,7 @@ type NavItem =
       label:
         | "Dashboard"
         | "Playlist"
+        | "Branches"
         | "Library"
         | "Schedule"
         | "Screen Management"
@@ -35,6 +37,7 @@ type NavItem =
 
 const menuItems: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Branches", icon: Building2Icon, path: "/branches" },
   { label: "Playlist", icon: MonitorPlay, path: "/mediacontent" },
   { label: "Library", icon: UploadCloudIcon, path: "/mediaupload" },
   { label: "Schedule", icon: CalendarDays, path: "/schedule" },

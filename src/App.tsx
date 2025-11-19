@@ -20,19 +20,18 @@ import New from "./Screens/Schedule/Calender/NewCalender/New";
 import AccountSettingsDashboard from "./Screens/Profile/AccountSettingsDashboard";
 import Dashboard from "./Screens/Dashboard/Dashboard";
 import Support from "./Screens/Support/Support";
-
+import BranchScreen from "./Screens/Branches/BranchScreen";
 
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
-  return token ? <Outlet /> : <Navigate to="/login" replace /> ;
+  return token ? <Outlet /> : <Navigate to="/login" replace />;
 }
 
 /* ---------- Layouts ---------- */
 // Shown on authenticated pages that should have the Tabbar
 function AppLayoutWithTabbar() {
-
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -63,7 +62,6 @@ function PlainLayout() {
 export default function App() {
   return (
     <>
-    
       <LicenseKey />
       <Router>
         <Routes>
@@ -88,13 +86,14 @@ export default function App() {
           {/* Protected routes WITH Tabbar */}
           <Route element={<RequireAuth />}>
             <Route element={<AppLayoutWithTabbar />}>
+              <Route path="/branches" element={<BranchScreen />} />
               <Route path="/mediacontent" element={<MediaContent />} />
               <Route path="/screenmanagement" element={<ScreenManagement />} />
               <Route path="/mediaupload" element={<Media />} />
               <Route path="/schedule" element={<ScheduleItem />} />
               <Route path="/profile" element={<AccountSettingsDashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
-               <Route path="/support" element={<Support />} />
+              <Route path="/support" element={<Support />} />
             </Route>
           </Route>
 

@@ -37,3 +37,7 @@ export const DeleteGroupApi = `${http}deletegroup`
 export const GetProfileApi = `${http}getuserprofile`
 export const GetAdsApi = `${http}getads`
 export const LogoutApi = `${http}logout`
+export const DeleteScreenApi = `${http}deletescreen`
+export const RenameBranchApi = `${http}updatebranch`
+export const DeleteBranchApi = `${http}deletebranch`
+export const BranchScreenApi = `${http}getscreens`

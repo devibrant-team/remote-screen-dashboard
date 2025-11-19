@@ -35,7 +35,6 @@ const FilterBranchDropdown = () => {
   }, [branches]);
 
   const handleChange = (val: string) => {
-    // "" means "All branches"
     dispatch(setFilterScreenAcctoBranchId(val || ""));
   };
 

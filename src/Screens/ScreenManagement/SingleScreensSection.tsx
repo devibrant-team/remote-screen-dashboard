@@ -7,8 +7,8 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from "lucide-react";
-import BaseModal from "../../Components/Models/BaseModal";
 import AddScreenModal from "../../Components/Models/AddScreenModal";
 import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
 import { setScreens } from "../../Redux/ScreenManagement/ScreenSlice";
@@ -20,6 +20,7 @@ import {
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
 import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
 import type { RootState } from "../../../store";
+import { useDeleteScreen } from "@/Redux/ScreenManagement/DeleteScreen";
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
 
@@ -30,6 +31,7 @@ const SingleScreensSection: React.FC = () => {
   const [visible, setVisible] = useState(CHUNK);
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
+  const { mutate: deleteScreen } = useDeleteScreen();
   console.log(screens);
   const FilteredBranchId = useSelector(
     (s: RootState) => s.screenManagement.FilterScreenAcctoBranchId
@@ -250,6 +252,19 @@ const SingleScreensSection: React.FC = () => {
                           >
                             <Pencil size={16} />
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm("Delete this screen?")) {
+                                deleteScreen({ screenId: String(sc.screenId) });
+                              }
+                            }}
+                            className="rounded p-1 hover:bg-neutral-100 text-red-500"
+                            title="Delete"
+                            aria-label={`Delete ${sc.name || "screen"}`}
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </article>
                     ))}
@@ -293,8 +308,7 @@ const SingleScreensSection: React.FC = () => {
         )}
       </section>
 
-
-             {open && (
+      {open && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4 py-6">
           <div className="w-full max-w-3xl lg:max-w-4xl">
             <div className="max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl">
@@ -307,7 +321,6 @@ const SingleScreensSection: React.FC = () => {
           </div>
         </div>
       )}
-
     </>
   );
 };

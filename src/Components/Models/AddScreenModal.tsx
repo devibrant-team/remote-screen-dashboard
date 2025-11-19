@@ -132,8 +132,6 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
     dispatch(setScreenName(""));
     dispatch(setScreenCode(""));
     dispatch(setScreenGroupId(null));
-    dispatch(setSelectedBranchId(null));
-    dispatch(setSelectedRatio({ id: null, name: null }));
     dispatch(setDefaultPlaylist(null));
   }, [isEditing, editingScreen, reset, dispatch]);
 
