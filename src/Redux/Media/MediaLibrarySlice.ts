@@ -2,7 +2,11 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 export type MediaItem = {
-  storage: number; id: number; media: string; type?: string 
+  tag: string | undefined;
+  storage: number;
+  id: number;
+  media: string;
+  type?: string;
 };
 
 type Meta = {
@@ -15,7 +19,7 @@ type MediaLibraryState = {
   meta: Meta;
   page: number;
   perPage: number;
-
+  tag: string | null;
   // lightbox state
   lightboxOpen: boolean;
   selectedIndex: number | null;
@@ -29,7 +33,7 @@ const initialState: MediaLibraryState = {
   meta: { last_page: 1, total: 0 },
   page: 1,
   perPage: 24,
-
+  tag: null,
   lightboxOpen: false,
   selectedIndex: null,
 
@@ -72,7 +76,10 @@ const mediaLibrarySlice = createSlice({
 
     nextItem(state) {
       if (state.selectedIndex === null) return;
-      state.selectedIndex = Math.min(state.items.length - 1, state.selectedIndex + 1);
+      state.selectedIndex = Math.min(
+        state.items.length - 1,
+        state.selectedIndex + 1
+      );
     },
 
     prevItem(state) {

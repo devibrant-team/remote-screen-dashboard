@@ -25,6 +25,7 @@
   "include": [
     "src",
     "LicenseKey",                  // ← if your component lives here
-    "src/types/electron.d.ts"      // ← ensure the global Window.electronAPI is loaded
+    "src/types/electron.d.ts",      // ← ensure the global Window.electronAPI is loaded
+    "store.ts"
   ]
 }

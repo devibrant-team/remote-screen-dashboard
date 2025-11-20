@@ -17,7 +17,8 @@ import groupReducer from "./src/Redux/ScreenManagement/GroupSlice";
 import ScheduleItemReducer from "./src/Redux/ScheduleItem/ScheduleItemSlice";
 import ReservedBlocksreducer from "./src/Redux/ReservedBlocks/ReservedBlocks";
 import selectedBlockReducer from "./src/Redux/Block/BlockSlice";
-import supportReducer from "./src/Redux/Support/SupportSlice"
+import supportReducer from "./src/Redux/Support/SupportSlice";
+import tagReducer from "./src/ReactQuery/Tag/TagSlice"
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -39,6 +40,7 @@ export const store = configureStore({
     ReservedBlocks: ReservedBlocksreducer,
     selectedBlock: selectedBlockReducer,
     support: supportReducer,
+     tag: tagReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

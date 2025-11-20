@@ -15,7 +15,7 @@ interface PlaylistData {
   layoutId?: number;    // 2 or 3 (others = no cap)
 }
 
-interface PlaylistState {
+export interface PlaylistState {
   playlistData: PlaylistData | null;
 }
 

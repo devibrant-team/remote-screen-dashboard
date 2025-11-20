@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-interface MachineState {
+export interface MachineState {
   machineId: string | null;
 }
 

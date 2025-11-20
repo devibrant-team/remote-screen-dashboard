@@ -16,7 +16,7 @@ export interface PlaylistDetails {
   layoutId: number | null;
 }
 
-interface InteractiveState {
+export interface InteractiveState {
   selectedId: number | null;
   details: PlaylistDetails | null;
   status: "idle" | "loading" | "succeeded" | "failed";

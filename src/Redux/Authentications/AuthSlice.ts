@@ -4,7 +4,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import { loginApi, LogoutApi } from "../../API/API";
 import { api, attachToken } from "./authhelper";
 
-interface AuthState {
+export interface AuthState {
   isLoggedIn: boolean;
   loading: boolean;
   error: string | null;

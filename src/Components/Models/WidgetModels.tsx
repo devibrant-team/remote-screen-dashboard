@@ -5,6 +5,7 @@ import type { RootState } from "../../../store";
 import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPlaylistSlice";
 import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { SlotWidget } from "../../Config/GridConfig/DefaultGridConfig";
+import SaudiCityDropdown from "../Dropdown/CitiesDropdown";
 
 type WidgetModelsProps = { onClose: () => void; selectedCity?: string };
 
@@ -13,6 +14,7 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
   selectedCity,
 }) => {
   const dispatch = useDispatch();
+
   const selectedSlideIndex = useSelector(
     (state: RootState) => state.playlist.selectedSlideIndex
   );
@@ -21,7 +23,13 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
       ? state.playlist.slides[selectedSlideIndex]
       : null
   );
-  const city = useSelector((s: RootState) => s.playlist.selectedCity);
+
+  // city from global store
+  const cityFromStore = useSelector((s: RootState) => s.playlist.selectedCity);
+
+  // effective city: prefer prop if passed, otherwise store
+  const effectiveCity = (selectedCity ?? cityFromStore ?? "").trim();
+
   const ensureSlotMedia = (slotIndex: number) => {
     const slot = slide?.slots[slotIndex];
     if (!slot?.media) {
@@ -52,15 +60,15 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
   };
 
   const handleAddClockWidget = () => {
-    if (!selectedCity || !selectedCity.trim()) {
+    if (!effectiveCity) {
       window.alert("Please choose a city first.");
-      return; 
+      return;
     }
     const slotIndex = 0;
     setSlotWidget(slotIndex, {
       type: "clock",
-      timezone: "Asia/Riyadh", 
-      city: city,
+      timezone: "Asia/Riyadh",
+      city: effectiveCity,
       showSeconds: true,
       twentyFourHour: true,
       position: "center",
@@ -68,25 +76,46 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
   };
 
   const handleAddWeatherWidget = () => {
-    if (!selectedCity || !selectedCity.trim()) {
+    if (!effectiveCity) {
       window.alert("Please choose a city first.");
-      return; 
+      return;
     }
     const slotIndex = 0;
     setSlotWidget(slotIndex, {
       type: "weather",
-      city: city, 
+      city: effectiveCity,
       position: "center",
     });
   };
 
+  const isCitySelected = Boolean(effectiveCity);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* City selector inside modal */}
+      <section className="rounded-xl border border-gray-200 bg-white p-3">
+        <SaudiCityDropdown />
+        {!isCitySelected && (
+          <p className="mt-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-1.5">
+            Please choose a city to enable widgets.
+          </p>
+        )}
+      </section>
+
       <button
         onClick={handleAddClockWidget}
-        className="flex items-center gap-3 p-4 w-full rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition cursor-pointer"
+        disabled={!isCitySelected}
+        className={`flex items-center gap-3 p-4 w-full rounded-lg border shadow-sm transition cursor-pointer
+          ${
+            isCitySelected
+              ? "border-gray-200 hover:bg-gray-50 bg-white"
+              : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+          }`}
       >
-        <Clock size={20} className="text-[var(--mainred)]" />
+        <Clock
+          size={20}
+          className={isCitySelected ? "text-[var(--mainred)]" : "text-gray-400"}
+        />
         <div className="flex flex-col items-start">
           <h1 className="font-bold text-lg">Clock Widget</h1>
           <span className="font-semibold text-gray-400 text-sm">
@@ -97,9 +126,18 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
 
       <button
         onClick={handleAddWeatherWidget}
-        className="flex items-center gap-3 p-4 w-full rounded-lg border border-gray-200 shadow-sm hover:bg-gray-50 transition cursor-pointer"
+        disabled={!isCitySelected}
+        className={`flex items-center gap-3 p-4 w-full rounded-lg border shadow-sm transition cursor-pointer
+          ${
+            isCitySelected
+              ? "border-gray-200 hover:bg-gray-50 bg-white"
+              : "border-gray-100 bg-gray-50 text-gray-400 cursor-not-allowed"
+          }`}
       >
-        <Cloud size={20} className="text-[var(--mainred)]" />
+        <Cloud
+          size={20}
+          className={isCitySelected ? "text-[var(--mainred)]" : "text-gray-400"}
+        />
         <div className="flex flex-col items-start">
           <h1 className="font-bold text-lg">Weather Widget</h1>
           <span className="font-semibold text-gray-400 text-sm">

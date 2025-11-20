@@ -7,7 +7,7 @@ export type SelectedMedia = {
   type?: string;   // "image" | "video" | ...
 };
 
-interface MediaState {
+export interface MediaState {
   selectedMedia: SelectedMedia[];
 }
 

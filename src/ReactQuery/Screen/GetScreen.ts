@@ -15,6 +15,7 @@ export type Screen = {
   PlaylistId: number | null;
   PlaylistName: string | null;
   branchId: number | null;
+  isOnline: boolean;
 };
 
 export const SCREEN_OK = ["screens"] as const;
@@ -42,6 +43,7 @@ async function fetchScreens(): Promise<Screen[]> {
     PlaylistId: r.PlaylistId ?? null,
     PlaylistName: r.PlaylistName ?? null,
     branchId: r.branchId ?? null,
+    isOnline: r.isOnline ?? false
   }));
 }
 

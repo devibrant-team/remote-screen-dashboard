@@ -144,7 +144,7 @@ export const loadPlaylistForEdit = createAsyncThunk(
 /** -------------------------------------------------------
  * Editor meta slice (loading/error)
  * ----------------------------------------------------- */
-interface EditorState {
+export interface EditorState {
   loading: boolean;
   error: string | null;
 }

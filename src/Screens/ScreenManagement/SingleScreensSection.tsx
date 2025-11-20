@@ -190,9 +190,31 @@ const SingleScreensSection: React.FC = () => {
                             />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold text-neutral-900">
-                              {sc.name || "Unnamed screen"}
-                            </h3>
+                            <div className=" flex flex-row">
+                              <h3 className="truncate text-sm font-semibold text-neutral-900">
+                                {sc.name || "Unnamed screen"}
+                              </h3>{" "}
+                              {(() => {
+                                const isOnline = sc.isOnline === true; // strict boolean
+
+                                return (
+                                  <span
+                                    className={`mx-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
+        ${
+          isOnline
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-rose-50 text-rose-700"
+        }`}
+                                  >
+                                    <span
+                                      className={`mr-1.5 h-1.5 w-1.5 rounded-full
+          ${isOnline ? "bg-emerald-500" : "bg-rose-500"}`}
+                                    />
+                                    {isOnline ? "Online" : "Offline"}
+                                  </span>
+                                );
+                              })()}
+                            </div>
                             <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
                               ID:{sc.id}
                               <span className="mx-2">•</span>
@@ -200,16 +222,7 @@ const SingleScreensSection: React.FC = () => {
                               <span className="mx-2">•</span>
                               {sc.branch ?? "No branch"}
                               <span className="mx-2">•</span>
-                              🎵 {sc.PlaylistName ? sc.PlaylistName : ""}
-                              {(() => {
-                                const ls = sc.lastSeen ?? "—";
-                                return (
-                                  <>
-                                    <span className="mx-2">•</span>
-                                    {ls}
-                                  </>
-                                );
-                              })()}
+                              🎵 {sc.PlaylistName ? sc.PlaylistName : "___"}
                             </p>
                           </div>
                         </div>

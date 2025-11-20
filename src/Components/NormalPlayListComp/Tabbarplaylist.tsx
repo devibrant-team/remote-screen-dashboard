@@ -15,7 +15,6 @@ import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
 import RatioDropdown from "../Dropdown/RatioDropdown";
 import { useQueryClient } from "@tanstack/react-query";
-import SaudiCityDropdown from "../Dropdown/CitiesDropdown";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -30,7 +29,6 @@ const Tabbarplaylist = () => {
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
   const isEdit = useSelector((s: RootState) => s.playlist.isEdit);
-  const playlistId = useSelector((s: RootState) => s.playlist.id);
   const handleSavePlaylist = async () => {
     if (!playlist.name || playlist.name.trim() === "") {
       window.alert("❌ Please enter a playlist name.");
@@ -196,16 +194,11 @@ const Tabbarplaylist = () => {
 
             <button
               onClick={() => setModalOpen(true)}
-              disabled={!playlist.selectedCity?.trim()}
-              className={`
+              className="
               group flex items-center justify-center gap-2 w-full rounded-lg px-4 py-2.5 text-sm font-semibold transition
-              focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mainred)]
-              ${
-                !playlist.selectedCity?.trim()
-                  ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
-                  : "bg-[var(--mainred)] text-white shadow-sm hover:bg-red-600 active:scale-[0.99]"
-              }
-            `}
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mainred)] bg-red-500 text-white
+             
+            "
             >
               <Layers
                 size={18}
@@ -213,12 +206,6 @@ const Tabbarplaylist = () => {
               />
               <span>Add Widget</span>
             </button>
-
-            {!playlist.selectedCity?.trim() && (
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-700">
-                Select a city first to enable widgets.
-              </div>
-            )}
           </section>
 
           {/* Card: Ratio */}
@@ -226,14 +213,6 @@ const Tabbarplaylist = () => {
             <h4 className="text-[13px] font-semibold text-gray-600">Ratio</h4>
             <div className="mt-2">
               <RatioDropdown />
-            </div>
-          </section>
-
-          {/* Card: City (kept separate for clarity) */}
-          <section className="rounded-xl border border-gray-200 bg-white shadow-xs p-4">
-            <h4 className="text-[13px] font-semibold text-gray-600">City</h4>
-            <div className="mt-2">
-              <SaudiCityDropdown />
             </div>
           </section>
 
