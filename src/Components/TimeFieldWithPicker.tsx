@@ -162,7 +162,14 @@ const CompactDropdown: React.FC<DropdownProps> = ({
       }
     }
   };
+const handleWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
+  // Stop the default fast scroll
+  e.preventDefault();
 
+  // Smaller factor = slower scroll
+  const factor = 0.25; // try 0.25, 0.2, etc.
+  e.currentTarget.scrollTop += e.deltaY * factor;
+};
   const maxHeight = Math.max(4, maxRows) * 32; // compact rows
 
   return (
@@ -203,6 +210,7 @@ const CompactDropdown: React.FC<DropdownProps> = ({
               aria-label={label}
               onKeyDown={keyOnList}
               style={{ maxHeight, overflowY: "auto" }}
+                onWheel={handleWheel} 
               className="p-1 scrollbar-hide overscroll-contain"
             >
               {options.map((opt, idx) => {

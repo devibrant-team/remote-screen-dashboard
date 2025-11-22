@@ -1,10 +1,11 @@
-import React, { useMemo, useState, useEffect } from "react";
-import { Building2, Pencil, Trash2, Monitor, Users } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Building2, Pencil, Trash2, Monitor, Users, Plus } from "lucide-react";
 import { useGetBranches } from "@/ReactQuery/Branch/GetBranch";
 import { useRenameBranch } from "@/ReactQuery/Branch/RenameBranch";
 import { useDeleteBranch } from "@/ReactQuery/Branch/DeleteBranch";
 import { useGetBranchScreen } from "@/ReactQuery/Branch/GetBranchScreen";
 import type { IdLike } from "@/ReactQuery/Branch/GetBranchScreen";
+import AddBranchModal from "../ScreenManagement/AddBranchModal";
 
 const PAGE_SIZE = 4;
 
@@ -84,6 +85,7 @@ const BranchCard: React.FC = () => {
       }
     );
   };
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   // Fetch screens for the selected branch
   const {
@@ -97,18 +99,11 @@ const BranchCard: React.FC = () => {
     () => selectedBranchScreens.filter((s: any) => !s.group),
     [selectedBranchScreens]
   );
-
+  console.log(singleScreens);
   const groupedScreens = useMemo(
     () => selectedBranchScreens.filter((s: any) => s.group),
     [selectedBranchScreens]
   );
-
-  useEffect(() => {
-    if (selectedId) {
-      console.log("Selected branch ID:", selectedId);
-      console.log("Screens for this branch:", selectedBranchScreens);
-    }
-  }, [selectedId, selectedBranchScreens]);
 
   const selectedBranch = useMemo(
     () => branches.find((b) => b.id === selectedId) || null,
@@ -118,6 +113,7 @@ const BranchCard: React.FC = () => {
   return (
     <section className="w-full max-w-full overflow-x-hidden rounded-xl bg-white p-4 shadow-sm sm:p-5 lg:p-6">
       <header className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Left: title + description */}
         <div className="min-w-0">
           <h2 className="truncate text-base font-semibold text-neutral-900 sm:text-lg lg:text-2xl">
             Branches
@@ -126,16 +122,31 @@ const BranchCard: React.FC = () => {
             Manage your branches and their screens.
           </p>
         </div>
-        {!isLoading && !isError && (
-          <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700 sm:text-sm lg:text-base">
-            <span className="truncate">{branches.length} branches</span>
-            {hasPaging && (
-              <span className="shrink-0 text-[10px] text-neutral-400 sm:text-xs lg:text-sm">
-                Page {page + 1} / {totalPages}
-              </span>
-            )}
-          </span>
-        )}
+
+        {/* Right: stats + action */}
+        <div className="flex items-center gap-3 sm:justify-end">
+          {!isLoading && !isError && (
+            <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-700 sm:text-sm lg:text-base">
+              <span className="truncate">{branches.length} branches</span>
+              {hasPaging && (
+                <span className="shrink-0 text-[10px] text-neutral-400 sm:text-xs lg:text-sm">
+                  Page {page + 1} / {totalPages}
+                </span>
+              )}
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsAddOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-red-500 px-3 py-1.5 text-xs font-semibold 
+                 text-white shadow-sm transition hover:scale-[1.03] hover:bg-red-600 
+                 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-1"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Branch</span>
+          </button>
+        </div>
       </header>
 
       {/* Loading state */}
@@ -230,10 +241,6 @@ const BranchCard: React.FC = () => {
                         ID: {b.id}
                       </p>
                     </div>
-                  </div>
-
-                  <div className="mt-1 text-[11px] text-neutral-500 sm:text-xs lg:text-sm">
-                    Created branch entry for user #{(b as any).user_id ?? "—"}
                   </div>
 
                   <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -379,11 +386,8 @@ const BranchCard: React.FC = () => {
                     <Monitor size={16} />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-neutral-800 sm:text-sm">
-                      Single Screens
-                    </p>
                     <p className="text-[11px] text-neutral-500 sm:text-xs">
-                      Screens not part of any group.
+                      Single Screens
                     </p>
                   </div>
                 </div>
@@ -397,7 +401,6 @@ const BranchCard: React.FC = () => {
                     {singleScreens.map((s: any) => {
                       const playlist =
                         s.PlaylistName || s.playlistName || "No playlist";
-                      const lastSeen = s.lastSeen || "Never";
 
                       return (
                         <div
@@ -437,13 +440,6 @@ const BranchCard: React.FC = () => {
                               </span>
                               <span>{s.ratio || "—"}</span>
                             </div>
-
-                            <div className="flex items-center gap-1 min-w-[140px]">
-                              <span className="font-medium text-neutral-800">
-                                Last seen:
-                              </span>
-                              <span className="truncate">{lastSeen}</span>
-                            </div>
                           </div>
 
                           {/* Status row */}
@@ -473,9 +469,6 @@ const BranchCard: React.FC = () => {
                     <Users size={16} />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-neutral-800 sm:text-sm">
-                      Grouped Screens
-                    </p>
                     <p className="text-[11px] text-neutral-500 sm:text-xs">
                       Screens organised in groups.
                     </p>
@@ -491,7 +484,6 @@ const BranchCard: React.FC = () => {
                     {groupedScreens.map((s: any) => {
                       const playlist =
                         s.PlaylistName || s.playlistName || "No playlist";
-                      const lastSeen = s.lastSeen || "Never";
 
                       return (
                         <div
@@ -530,13 +522,6 @@ const BranchCard: React.FC = () => {
                               </span>
                               <span>{s.ratio || "—"}</span>
                             </div>
-
-                            <div className="flex items-center gap-1 min-w-[140px]">
-                              <span className="font-medium text-neutral-800">
-                                Last seen:
-                              </span>
-                              <span className="truncate">{lastSeen}</span>
-                            </div>
                           </div>
 
                           {/* Status row */}
@@ -549,13 +534,8 @@ const BranchCard: React.FC = () => {
                               }`}
                             >
                               <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
-                              {s.active ? "Online" : "Offline"}
+                              {s.isOnline ? "Online" : "Offline"}
                             </span>
-                          </div>
-
-                          <div className="mt-1 text-[10px] text-neutral-500">
-                            Screen ID:{" "}
-                            <span className="break-all">{s.screenId}</span>
                           </div>
                         </div>
                       );
@@ -567,6 +547,7 @@ const BranchCard: React.FC = () => {
           )}
         </section>
       )}
+        <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
     </section>
   );
 };

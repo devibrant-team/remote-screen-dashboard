@@ -278,7 +278,7 @@ const MediaPage: React.FC = () => {
 
   const handleTagFilterClick = (tagId: number | string | "all") => {
     dispatch(setSelectedTagId(tagId));
-    console.log("Filter by tag:", tagId);
+
   };
 
   // 👇 compute visible tags for current page

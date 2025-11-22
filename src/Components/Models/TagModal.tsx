@@ -129,7 +129,7 @@ const TagModal: React.FC<TagModalProps> = ({
     try {
       setLocalSubmitting(true);
       const res = await AssignTag(payload);
-      console.log("✅ AssignTag API response:", res);
+
       onClose();
     } catch (err) {
       console.error("❌ AssignTag API error:", err);

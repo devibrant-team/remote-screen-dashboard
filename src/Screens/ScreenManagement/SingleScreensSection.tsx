@@ -32,7 +32,7 @@ const SingleScreensSection: React.FC = () => {
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
   const { mutate: deleteScreen } = useDeleteScreen();
-  console.log(screens);
+
   const FilteredBranchId = useSelector(
     (s: RootState) => s.screenManagement.FilterScreenAcctoBranchId
   );
