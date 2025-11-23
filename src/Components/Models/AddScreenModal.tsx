@@ -27,6 +27,9 @@ import {
   setSelectedRatio,
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
 import type { UpdateScreenPayload } from "../../ReactQuery/Screen/UpdateScreen";
+import { GROUP_OK } from "@/ReactQuery/Group/GetGroup";
+import { SCREEN_OK } from "@/ReactQuery/Screen/GetScreen";
+import { GROUP_SCREENS_QK } from "@/ReactQuery/Group/GetGroupScreen";
 const schema = z.object({
   name: z.string().trim().min(1, "Screen name is required").max(80, "Too long"),
   code: z
@@ -146,7 +149,7 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
     }
   }, [code, setValue, dispatch]);
 
-    const close = () => {
+  const close = () => {
     onClose?.();
   };
 
@@ -181,7 +184,10 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
       updateScreen(payload, {
         onSuccess: () => {
           dispatch(resetScreenForm());
-          queryClient.invalidateQueries({ queryKey: ["screens"] });
+          queryClient.invalidateQueries({ queryKey: SCREEN_OK });
+            queryClient.invalidateQueries({ queryKey: GROUP_OK });
+          queryClient.invalidateQueries({ queryKey: GROUP_SCREENS_QK });
+
           close();
         },
         onError: (err) => console.error("Update screen failed:", err),

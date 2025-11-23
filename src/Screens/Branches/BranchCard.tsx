@@ -443,16 +443,20 @@ const BranchCard: React.FC = () => {
                           </div>
 
                           {/* Status row */}
-                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                          <div className="mt-2 flex justify-end">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${
-                                s.active
-                                  ? "bg-red-50 text-red-700"
-                                  : "border border-neutral-200 bg-white text-neutral-500"
+                                s.isOnline
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-rose-50 text-rose-700"
                               }`}
                             >
-                              <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
-                              {s.active ? "Online" : "Offline"}
+                              <span
+                                className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
+                                  s.isOnline ? "bg-emerald-500" : "bg-rose-500"
+                                }`}
+                              />
+                              {s.isOnline ? "Online" : "Offline"}
                             </span>
                           </div>
                         </div>
@@ -525,15 +529,19 @@ const BranchCard: React.FC = () => {
                           </div>
 
                           {/* Status row */}
-                          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                          <div className="mt-2 flex justify-end">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] ${
-                                s.active
-                                  ? "bg-red-50 text-red-700"
-                                  : "border border-neutral-200 bg-white text-neutral-500"
+                                s.isOnline
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-rose-50 text-rose-700"
                               }`}
                             >
-                              <span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-current" />
+                              <span
+                                className={`mr-1.5 h-1.5 w-1.5 rounded-full ${
+                                  s.isOnline ? "bg-emerald-500" : "bg-rose-500"
+                                }`}
+                              />
                               {s.isOnline ? "Online" : "Offline"}
                             </span>
                           </div>
@@ -547,7 +555,7 @@ const BranchCard: React.FC = () => {
           )}
         </section>
       )}
-        <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
+      <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
     </section>
   );
 };

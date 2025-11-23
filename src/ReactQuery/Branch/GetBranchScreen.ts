@@ -41,6 +41,7 @@ async function fetchBranchScreen(branchId: IdLike | null): Promise<Screen[]> {
     PlaylistName: r.PlaylistName ?? null,
     branchId: r.branchId ?? null,
     group: r.groupName ?? null,
+    isOnline:r.isOnline?? null
   }));
 }
 
