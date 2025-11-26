@@ -1,11 +1,23 @@
 import React, { useMemo, useState } from "react";
-import { Building2, Pencil, Trash2, Monitor, Users, Plus } from "lucide-react";
-import { useGetBranches } from "@/ReactQuery/Branch/GetBranch";
+import {
+  Building2,
+  Pencil,
+  Trash2,
+  Monitor,
+  Users,
+  Plus,
+  RefreshCw,
+} from "lucide-react";
+import { BRANCHES_QK, useGetBranches } from "@/ReactQuery/Branch/GetBranch";
 import { useRenameBranch } from "@/ReactQuery/Branch/RenameBranch";
 import { useDeleteBranch } from "@/ReactQuery/Branch/DeleteBranch";
-import { useGetBranchScreen } from "@/ReactQuery/Branch/GetBranchScreen";
+import {
+  BRANCHSCREEN_QK,
+  useGetBranchScreen,
+} from "@/ReactQuery/Branch/GetBranchScreen";
 import type { IdLike } from "@/ReactQuery/Branch/GetBranchScreen";
 import AddBranchModal from "../ScreenManagement/AddBranchModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 const PAGE_SIZE = 4;
 
@@ -19,9 +31,10 @@ const BranchCard: React.FC = () => {
   // inline edit state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState<string>("");
-
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { mutate: deleteBranch, isPending: isDeleting } = useDeleteBranch();
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const queryClient = useQueryClient();
 
   const { mutate: renameBranch, isPending: isRenaming } = useRenameBranch();
 
@@ -68,7 +81,21 @@ const BranchCard: React.FC = () => {
     setEditingId(null);
     setEditingName("");
   };
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
 
+      // invalidate both groups + screens → any active useGetGroups/useGetScreen will refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: BRANCHES_QK }),
+        queryClient.invalidateQueries({
+          queryKey: BRANCHSCREEN_QK(selectedId),
+        }),
+      ]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   const saveEdit = (id: number) => {
     const trimmed = editingName.trim();
     if (!trimmed) {
@@ -145,6 +172,16 @@ const BranchCard: React.FC = () => {
           >
             <Plus className="h-4 w-4" />
             <span>New Branch</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
       </header>

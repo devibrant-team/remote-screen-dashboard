@@ -6,6 +6,7 @@ import AddBranchModal from "./AddBranchModal";
 import FilterBranchDropdown from "../../Components/Dropdown/FilterBranchDropdown";
 import { GROUP_OK } from "@/ReactQuery/Group/GetGroup";
 import { SCREEN_OK } from "@/ReactQuery/Screen/GetScreen";
+import { BRANCHES_QK } from "@/ReactQuery/Branch/GetBranch";
 
 const ScreenHeader = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -20,6 +21,7 @@ const ScreenHeader = () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: GROUP_OK }),
         queryClient.invalidateQueries({ queryKey: SCREEN_OK }),
+        queryClient.invalidateQueries({ queryKey: BRANCHES_QK }),
       ]);
     } finally {
       setIsRefreshing(false);

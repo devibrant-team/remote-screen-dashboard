@@ -130,7 +130,7 @@ const ToolBar = () => {
             })}
           </nav>
 
-          <div className="pt-6 text-sm text-gray-500">v1.0.0</div>
+          <div className="pt-6 text-sm text-gray-500">v2.2.4</div>
         </div>
       </aside>
     </>

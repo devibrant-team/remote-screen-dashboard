@@ -43,3 +43,5 @@ export const DeleteBranchApi = `${http}deletebranch`
 export const BranchScreenApi = `${http}getscreens`
 export const GetTagApi = `${http}getmediatags`
 export const AssignMediaToTagApi = `${http}updatemediatags`
+export const UpdateTagApi = `${http}updatetag`
+export const DeleteTagApi = `${http}deletetag`

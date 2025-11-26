@@ -52,7 +52,11 @@ const CompactDropdown: React.FC<DropdownProps> = ({
   const [focusIdx, setFocusIdx] = useState(() =>
     Math.max(0, options.indexOf(value))
   );
-  const [rect, setRect] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [rect, setRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const ensureRect = useCallback(() => {
     if (!btnRef.current) return;
@@ -162,15 +166,30 @@ const CompactDropdown: React.FC<DropdownProps> = ({
       }
     }
   };
-const handleWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
-  // Stop the default fast scroll
-  e.preventDefault();
 
-  // Smaller factor = slower scroll
-  const factor = 0.25; // try 0.25, 0.2, etc.
-  e.currentTarget.scrollTop += e.deltaY * factor;
-};
   const maxHeight = Math.max(4, maxRows) * 32; // compact rows
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // In passive listeners cancelable is false, so guard anyway
+      if (!e.cancelable) return;
+
+      e.preventDefault();
+
+      const factor = 0.25; // tweak to control scroll speed
+      el.scrollTop += e.deltaY * factor;
+    };
+
+    // Attach as *non-passive* so preventDefault is allowed
+    el.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [open]);
 
   return (
     <div className="relative">
@@ -210,7 +229,6 @@ const handleWheel: React.WheelEventHandler<HTMLDivElement> = (e) => {
               aria-label={label}
               onKeyDown={keyOnList}
               style={{ maxHeight, overflowY: "auto" }}
-                onWheel={handleWheel} 
               className="p-1 scrollbar-hide overscroll-contain"
             >
               {options.map((opt, idx) => {
@@ -286,7 +304,9 @@ const TimeFieldWithPicker: React.FC<TimeFieldWithPickerProps> = ({
   const hourOpts = useMemo(() => gen(24), []);
   const minuteOptsBase = useMemo(() => {
     if (Array.isArray(minuteOptions) && minuteOptions.length > 0) {
-      const uniq = Array.from(new Set(minuteOptions.map((n) => clamp(n, 0, 59))));
+      const uniq = Array.from(
+        new Set(minuteOptions.map((n) => clamp(n, 0, 59)))
+      );
       return uniq.sort((a, b) => a - b);
     }
     const step = Math.max(1, Math.floor(minuteStep || 1));
@@ -295,7 +315,9 @@ const TimeFieldWithPicker: React.FC<TimeFieldWithPickerProps> = ({
 
   const secondOptsBase = useMemo(() => {
     if (Array.isArray(secondOptions) && secondOptions.length > 0) {
-      const uniq = Array.from(new Set(secondOptions.map((n) => clamp(n, 0, 59))));
+      const uniq = Array.from(
+        new Set(secondOptions.map((n) => clamp(n, 0, 59)))
+      );
       return uniq.sort((a, b) => a - b);
     }
     const st = Math.max(1, Math.floor(secondStep || 1));

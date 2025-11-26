@@ -6,7 +6,7 @@ import {
   Tag,
   ChevronLeft,
   ChevronRight,
-} from "lucide-react"; // 👈 added ChevronLeft/Right
+} from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { useGetMedia } from "../../ReactQuery/Media/useGetMedia";
 import { MediaCard } from "../../Components/Media/MediaCard";
@@ -132,7 +132,7 @@ async function pdfToImages(
   return out;
 }
 
-const TAGS_PER_PAGE = 10; // 👈 show 10 tags per "page"
+const TAGS_PER_PAGE = 10; // show 10 tags per "page"
 
 const MediaPage: React.FC = () => {
   const dispatch = useDispatch();
@@ -142,9 +142,10 @@ const MediaPage: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [renderStatus, setRenderStatus] = useState<string | null>(null);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [isTagEditMode, setIsTagEditMode] = useState(false); // 👈 وضع Edit
   const [isSelectable, setIsSelectable] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Array<number | string>>([]);
-  const [tagPage, setTagPage] = useState(0); // 👈 current page of tags
+  const [tagPage, setTagPage] = useState(0); // current page of tags
 
   const selectedTagId = useSelector((s: RootState) => s.tag.selectedTagId);
 
@@ -169,7 +170,7 @@ const MediaPage: React.FC = () => {
     isError: tagsError,
   } = useGetTags();
 
-  // 👇 Clamp tagPage when tags length changes
+  // clamp tagPage when tags length changes
   useEffect(() => {
     const maxPage = Math.max(0, Math.ceil(tags.length / TAGS_PER_PAGE) - 1);
     if (tagPage > maxPage) {
@@ -278,10 +279,9 @@ const MediaPage: React.FC = () => {
 
   const handleTagFilterClick = (tagId: number | string | "all") => {
     dispatch(setSelectedTagId(tagId));
-
   };
 
-  // 👇 compute visible tags for current page
+  // compute visible tags for current page
   const totalTagPages =
     tags.length > 0 ? Math.ceil(tags.length / TAGS_PER_PAGE) : 1;
   const start = tagPage * TAGS_PER_PAGE;
@@ -351,7 +351,7 @@ const MediaPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 🔴 Tags header row with pagination & skeleton */}
+        {/* 🔴 Tags header row with pagination & Edit Tag on the right */}
         <div className="mb-5">
           {tagsLoading ? (
             <div className="rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm">
@@ -387,38 +387,47 @@ const MediaPage: React.FC = () => {
                 )}
 
                 <div className="flex flex-1 items-center gap-4 overflow-hidden">
-                  {/* All option (always visible) */}
-                  {/* All option (always visible) */}
+                  {/* All option */}
                   <button
                     type="button"
                     onClick={() => handleTagFilterClick("all")}
                     className={`relative pb-2 text-xs font-medium whitespace-nowrap transition
-    ${
-      selectedTagId === "all"
-        ? "text-red-600"
-        : "text-gray-600 hover:text-gray-800"
-    }`}
+                      ${
+                        selectedTagId === "all"
+                          ? "text-red-600"
+                          : "text-gray-600 hover:text-gray-800"
+                      }`}
                   >
                     All
                     <span
                       className={`absolute left-0 right-0 bottom-0 h-[2px] rounded-full transition
-      ${selectedTagId === "all" ? "bg-red-500" : "bg-transparent"}`}
+                        ${
+                          selectedTagId === "all"
+                            ? "bg-red-500"
+                            : "bg-transparent"
+                        }`}
                     />
                   </button>
 
-                  {/* 🔴 Non Tag option → selectedTagId = 0 */}
+                  {/* Non Tag option → selectedTagId = 0 */}
                   <button
                     type="button"
                     onClick={() => handleTagFilterClick(0)}
                     className={`relative pb-2 text-xs font-medium whitespace-nowrap transition
-    ${
-      selectedTagId === 0 ? "text-red-600" : "text-gray-600 hover:text-gray-800"
-    }`}
+                      ${
+                        selectedTagId === 0
+                          ? "text-red-600"
+                          : "text-gray-600 hover:text-gray-800"
+                      }`}
                   >
                     Non Tag
                     <span
                       className={`absolute left-0 right-0 bottom-0 h-[2px] rounded-full transition
-      ${selectedTagId === 0 ? "bg-red-500" : "bg-transparent"}`}
+                        ${
+                          selectedTagId === 0
+                            ? "bg-red-500"
+                            : "bg-transparent"
+                        }`}
                     />
                   </button>
 
@@ -448,6 +457,19 @@ const MediaPage: React.FC = () => {
                     })}
                   </div>
                 </div>
+
+                {/* 👉 Edit Tag button on the right side */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTagEditMode(true);
+                    setIsTagModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                >
+                  <Tag className="h-3 w-3" />
+                  <span>Edit Tag</span>
+                </button>
 
                 {/* Next arrow (only if more than one page) */}
                 {tags.length > TAGS_PER_PAGE && (
@@ -567,7 +589,11 @@ const MediaPage: React.FC = () => {
       {/* Tag modal */}
       <TagModal
         open={isTagModalOpen}
-        onClose={() => setIsTagModalOpen(false)}
+        onClose={() => {
+          setIsTagModalOpen(false);
+          setIsTagEditMode(false);
+        }}
+        isEdit={isTagEditMode}
       />
 
       {/* Bottom bar */}
@@ -579,6 +605,7 @@ const MediaPage: React.FC = () => {
         }}
         onAssign={() => {
           if (!selectedIds.length) return;
+          setIsTagEditMode(false);
           setIsTagModalOpen(true);
         }}
       />
