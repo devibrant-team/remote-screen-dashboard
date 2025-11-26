@@ -15,10 +15,20 @@ import {
   HelpCircle,
   MonitorSmartphone,
   CreditCard,
+  RefreshCw, // 👈 NEW
+  AlertTriangle, // 👈 NEW
 } from "lucide-react";
 
 const Dashboard = () => {
-  const { data: ads, isLoading, isError } = useGetAds();
+  const {
+    data: ads,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetAds() as any; // لو الهوك مضبوط بتايب، شيل as any
+
+  const hasAds = Array.isArray(ads) && ads.length > 0;
 
   return (
     <div className="px-4 md:px-6 py-8 md:py-10 bg-gray-50 min-h-screen">
@@ -28,29 +38,61 @@ const Dashboard = () => {
           {/* Loading state */}
           {isLoading && (
             <div className="flex-1 flex items-center justify-center">
-              <div className="animate-spin h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent" />
+              <div className="flex flex-col items-center gap-2 text-sm text-gray-500">
+                <div className="animate-spin h-8 w-8 rounded-full border-2 border-red-500 border-t-transparent" />
+                <span>Loading your ads…</span>
+              </div>
             </div>
           )}
 
           {/* Error state */}
-          {isError && !isLoading && (
+          {!isLoading && isError && (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-red-500">
-                Failed to load ads. Please try again.
-              </p>
+              <div className="max-w-md rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex flex-col items-center text-center gap-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5" />
+                  <span className="font-semibold">
+                    Failed to load ads. Please try again.
+                  </span>
+                </div>
+                {error?.message && (
+                  <p className="text-[12px] text-red-600/80">
+                    {String(error.message)}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => refetch()}
+                  className="mt-1 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-red-700 shadow-sm border border-red-200 hover:bg-red-100"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Retry
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Empty state */}
-          {!isLoading && !isError && (!ads || ads.length === 0) && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center text-sm text-gray-500">
-              <p>No ads found.</p>
-              <p className="mt-1">Create a new ad to see it here.</p>
+          {/* Empty state (no ads) */}
+          {!isLoading && !isError && !hasAds && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center">
+              <div className="max-w-sm space-y-2">
+                <p className="text-sm font-semibold text-gray-800">
+                  No ads found yet
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Once you create ads, they will appear here in a rotating
+                  carousel so you can preview exactly what your players show.
+                </p>
+                {/* هنا ممكن تضيف زر ينقلك لصفحة إنشاء Ad */}
+                {/* <button className="mt-3 inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-600">
+                  Create your first ad
+                </button> */}
+              </div>
             </div>
           )}
 
           {/* Swiper with ads */}
-          {!isLoading && !isError && ads && ads.length > 0 && (
+          {!isLoading && !isError && hasAds && (
             <div className="mt-2 flex-1 flex flex-col">
               <div className="h-[260px] sm:h-[320px] md:h-[480px] lg:h-[620px]">
                 <Swiper
@@ -63,21 +105,21 @@ const Dashboard = () => {
                   navigation
                   className="rounded-2xl h-full"
                 >
-                  {ads.map((ad) => (
+                  {ads.map((ad: any) => (
                     <SwiperSlide key={ad.id} className="h-full flex">
-                      <div className="relative w-full h-full overflow-hidden rounded-2xl bg-white">
+                      <div className="relative w-full h-full overflow-hidden rounded-2xl bg-black">
                         {ad.media_type === "image" && (
                           <img
                             src={ad.media}
                             alt={ad.description || `Ad #${ad.id}`}
-                            className="w-full h-full object-fill"
+                            className="w-full h-full object-contain bg-black"
                           />
                         )}
 
                         {ad.media_type === "video" && (
                           <video
                             src={ad.media}
-                            className="w-full h-full object-fill"
+                            className="w-full h-full object-contain bg-black"
                             controls
                             muted
                             loop

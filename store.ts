@@ -18,7 +18,9 @@ import ScheduleItemReducer from "./src/Redux/ScheduleItem/ScheduleItemSlice";
 import ReservedBlocksreducer from "./src/Redux/ReservedBlocks/ReservedBlocks";
 import selectedBlockReducer from "./src/Redux/Block/BlockSlice";
 import supportReducer from "./src/Redux/Support/SupportSlice";
-import tagReducer from "./src/ReactQuery/Tag/TagSlice"
+import tagReducer from "./src/ReactQuery/Tag/TagSlice";
+import calendarViewReducer from "./src/Redux/Calendar/calendarViewSlice";
+import scheduleBlocksReducer from "./src/Redux/ScheduleItem/scheduleBlocksSlice"
 export const store = configureStore({
   reducer: {
     machine: machineReducer,
@@ -41,6 +43,9 @@ export const store = configureStore({
     selectedBlock: selectedBlockReducer,
     support: supportReducer,
      tag: tagReducer,
+
+     calendarView:calendarViewReducer,
+     scheduleBlocks: scheduleBlocksReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

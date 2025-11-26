@@ -6,7 +6,8 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAddScreen } from "../../ReactQuery/Screen/useAddScreen";
 import { useUpdateScreen } from "../../ReactQuery/Screen/useUpdateScreen";
-
+import ErrorToast from "../ErrorToast";
+import SuccessToast from "../SuccessToast";
 import {
   resetScreenForm,
   setScreenName,
@@ -58,6 +59,8 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
   const dispatch = useDispatch();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [errorForToast, setErrorForToast] = useState<unknown | null>(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   const isEditing = Boolean(isEdit && editingScreen && editingScreen.id);
 
@@ -185,12 +188,15 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
         onSuccess: () => {
           dispatch(resetScreenForm());
           queryClient.invalidateQueries({ queryKey: SCREEN_OK });
-            queryClient.invalidateQueries({ queryKey: GROUP_OK });
+          queryClient.invalidateQueries({ queryKey: GROUP_OK });
           queryClient.invalidateQueries({ queryKey: GROUP_SCREENS_QK });
-
+          setShowSuccessToast(true);
           close();
         },
-        onError: (err) => console.error("Update screen failed:", err),
+        onError: (err) => {
+          console.error("Update screen failed");
+          setErrorForToast(err);
+        },
       });
     } else {
       const payload = basePayload;
@@ -198,10 +204,16 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
       createScreen(payload, {
         onSuccess: () => {
           dispatch(resetScreenForm());
-          queryClient.invalidateQueries({ queryKey: ["screens"] });
+          queryClient.invalidateQueries({ queryKey: SCREEN_OK });
+          queryClient.invalidateQueries({ queryKey: GROUP_OK });
+          queryClient.invalidateQueries({ queryKey: GROUP_SCREENS_QK });
+          setShowSuccessToast(true);
           close();
         },
-        onError: (err) => console.error("Add screen failed:", err),
+        onError: (err) => {
+          console.error("Add screen failed");
+          setErrorForToast(err);
+        },
       });
     }
   };
@@ -329,6 +341,26 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
       </form>
 
       <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
+      {errorForToast && (
+        <ErrorToast
+          error={errorForToast}
+          onClose={() => setErrorForToast(null)}
+          anchor="top-right"
+        />
+      )}
+
+      {showSuccessToast && (
+        <SuccessToast
+          title={isEditing ? "Screen updated" : "Screen created"}
+          message={
+            isEditing
+              ? "Screen has been updated successfully."
+              : "Screen has been created successfully."
+          }
+          onClose={() => setShowSuccessToast(false)}
+          anchor="top-right"
+        />
+      )}
     </>
   );
 };

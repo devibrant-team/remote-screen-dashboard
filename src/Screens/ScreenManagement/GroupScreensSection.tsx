@@ -12,6 +12,7 @@ import {
   ChevronUp,
   Pencil,
   Trash2,
+  Loader2, // 👈 NEW
 } from "lucide-react";
 import BaseModal from "../../Components/Models/BaseModal";
 import { useGetGroups } from "../../ReactQuery/Group/GetGroup";
@@ -29,6 +30,8 @@ import {
   setSelectedBranchId,
   setSelectedRatio,
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
+import ErrorToast from "@/Components/ErrorToast";     // 👈 NEW
+import SuccessToast from "@/Components/SuccessToast"; // 👈 NEW
 
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
@@ -74,17 +77,24 @@ const EmptyState: React.FC<{ onAdd: () => void }> = ({ onAdd }) => (
 const GroupScreensSection: React.FC = () => {
   const [openCreate, setOpenCreate] = useState(false);
   const dispatch = useDispatch();
+
   // Add/Edit modal state
   const [isEditMode, setIsEditMode] = useState(false);
-  const [uiError, setUiError] = useState<unknown | null>(null);
+
   // Which group to show screens for
   const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
   const [openScreensModal, setOpenScreensModal] = useState(false);
 
+  // Pagination
   const [visible, setVisible] = useState(CHUNK);
 
+  // 👇 Delete / toast state
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
+  const [errorForToast, setErrorForToast] = useState<unknown | null>(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
   const { data: groups, isLoading, isError, refetch } = useGetGroups();
-  const { mutate: deleteGroup, isPending: deleting } = useDeleteGroup();
+  const { mutate: deleteGroup } = useDeleteGroup();
 
   const {
     data: groupScreens,
@@ -92,6 +102,7 @@ const GroupScreensSection: React.FC = () => {
     isError: isScreensError,
     refetch: refetchScreens,
   } = useGetGroupScreens(selectedGroupId);
+
   const handleDeleteGroup = (
     g: Group,
     e: React.MouseEvent<HTMLButtonElement>
@@ -102,9 +113,17 @@ const GroupScreensSection: React.FC = () => {
       return;
     }
 
+    setDeletingId(g.id);
+
     deleteGroup(Number(g.id), {
       onSuccess: () => {
-        refetch();
+        setDeletingId(null);
+        setShowSuccessToast(true);
+        refetch(); // reload groups list
+      },
+      onError: (err) => {
+        setDeletingId(null);
+        setErrorForToast(err);
       },
     });
   };
@@ -195,104 +214,119 @@ const GroupScreensSection: React.FC = () => {
           <>
             <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1 scrollbar-hide ">
               <div className="flex flex-col gap-3">
-                {visibleGroups.map((g: Group) => (
-                  <button
-                    key={g.id}
-                    type="button"
-                    onClick={() => handleOpenGroup(Number(g.id))}
-                    className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
-                    aria-label={`Open group ${g.name}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5">
-                        <FileStack size={18} className="text-red-500" />
-                      </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate text-sm font-semibold text-neutral-900">
-                          {g.name || "Untitled group"}
-                        </h3>
+                {visibleGroups.map((g: Group) => {
+                  const isDeletingThis = deletingId === g.id;
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                          {/* Ratio */}
-                          <span
-                            className={[
-                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5",
-                              g.ratio
-                                ? "bg-neutral-100 text-neutral-700"
-                                : "bg-red-100 text-red-700",
-                            ].join(" ")}
-                            title={
-                              g.ratio
-                                ? `Ratio: ${g.ratio}`
-                                : "Ratio not assigned"
-                            }
-                          >
-                            {g.ratio || "Unassigned ratio"}
-                          </span>
+                  return (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => handleOpenGroup(Number(g.id))}
+                      className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white p-4 text-left shadow-xs transition hover:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-red-500/30"
+                      aria-label={`Open group ${g.name}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">
+                          <FileStack size={18} className="text-red-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-semibold text-neutral-900">
+                            {g.name || "Untitled group"}
+                          </h3>
 
-                          {/* Branch */}
-                          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
-                            <GitBranch size={12} />
-                            {g.branchName ?? "—"}
-                          </span>
-
-                          {/* Screens count */}
-                          <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
-                            <Monitor size={12} />
-                            {g.screenNumber ?? 0}
-                          </span>
-
-                          {/* Default playlist */}
-                          {g.defaultPlaylistName && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
-                              🎵 {g.defaultPlaylistName}
+                          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                            {/* Ratio */}
+                            <span
+                              className={[
+                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5",
+                                g.ratio
+                                  ? "bg-neutral-100 text-neutral-700"
+                                  : "bg-red-100 text-red-700",
+                              ].join(" ")}
+                              title={
+                                g.ratio
+                                  ? `Ratio: ${g.ratio}`
+                                  : "Ratio not assigned"
+                              }
+                            >
+                              {g.ratio || "Unassigned ratio"}
                             </span>
-                          )}
+
+                            {/* Branch */}
+                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                              <GitBranch size={12} />
+                              {g.branchName ?? "—"}
+                            </span>
+
+                            {/* Screens count */}
+                            <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                              <Monitor size={12} />
+                              {g.screenNumber ?? 0}
+                            </span>
+
+                            {/* Default playlist */}
+                            {g.defaultPlaylistName && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-700">
+                                🎵 {g.defaultPlaylistName}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {/* Edit icon */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsEditMode(true);
-                          dispatch(clearSelectedGroup());
-                          dispatch(resetScreenManagement());
-                          dispatch(setSelectedGroup(g));
-                          setOpenCreate(true);
-                          if (g.branchId != null) {
-                            dispatch(setSelectedBranchId(g.branchId));
-                          } else {
-                            dispatch(setSelectedBranchId(null));
-                          }
-                          if (g.ratioId != null) {
-                            dispatch(
-                              setSelectedRatio({
-                                id: g.ratioId ?? null,
-                                name: g.ratio ?? null,
-                              })
-                            );
-                          }
-                        }}
-                        className="rounded p-1 text-neutral-500 hover:bg-neutral-100"
-                        title="Edit group"
-                      >
-                        <Pencil size={14} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteGroup(g, e)}
-                        disabled={deleting}
-                        className="rounded p-1 text-red-500 hover:bg-red-50 disabled:opacity-50"
-                        title="Delete group"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </button>
-                ))}
+                      <div className="flex items-center gap-1">
+                        {/* Edit icon */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsEditMode(true);
+                            dispatch(clearSelectedGroup());
+                            dispatch(resetScreenManagement());
+                            dispatch(setSelectedGroup(g));
+                            setOpenCreate(true);
+                            if (g.branchId != null) {
+                              dispatch(setSelectedBranchId(g.branchId));
+                            } else {
+                              dispatch(setSelectedBranchId(null));
+                            }
+                            if (g.ratioId != null) {
+                              dispatch(
+                                setSelectedRatio({
+                                  id: g.ratioId ?? null,
+                                  name: g.ratio ?? null,
+                                })
+                              );
+                            }
+                          }}
+                          className="rounded p-1 text-neutral-500 hover:bg-neutral-100"
+                          title="Edit group"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteGroup(g, e)}
+                          disabled={isDeletingThis}
+                          className={`rounded p-1 text-red-500 hover:bg-red-50 ${
+                            isDeletingThis
+                              ? "opacity-60 cursor-not-allowed"
+                              : ""
+                          }`}
+                          title="Delete group"
+                        >
+                          {isDeletingThis ? (
+                            <Loader2
+                              size={14}
+                              className="animate-spin text-red-500"
+                            />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -398,6 +432,25 @@ const GroupScreensSection: React.FC = () => {
           )}
         </div>
       </BaseModal>
+
+      {/* 🔴 Error toast */}
+      {errorForToast && (
+        <ErrorToast
+          error={errorForToast}
+          onClose={() => setErrorForToast(null)}
+          anchor="top-right"
+        />
+      )}
+
+      {/* 🟢 Success toast */}
+      {showSuccessToast && (
+        <SuccessToast
+          title="Group deleted"
+          message="The group has been deleted successfully."
+          onClose={() => setShowSuccessToast(false)}
+          anchor="top-right"
+        />
+      )}
     </>
   );
 };

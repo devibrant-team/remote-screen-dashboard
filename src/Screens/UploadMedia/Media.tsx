@@ -33,6 +33,9 @@ import {
   setMediaIds,
   setSelectedTagId,
 } from "@/ReactQuery/Tag/TagSlice";
+import SuccessToast from "@/Components/SuccessToast";
+// 🔴 NEW: import ErrorToast
+import ErrorToast from "@/Components/ErrorToast";
 
 // pdf.js
 import {
@@ -147,6 +150,13 @@ const MediaPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Array<number | string>>([]);
   const [tagPage, setTagPage] = useState(0); // current page of tags
 
+  // 🔴 NEW: central error for ErrorToast
+  const [toastError, setToastError] = useState<unknown | null>(null);
+  const [toastSuccess, setToastSuccess] = useState<{
+    message?: string;
+    items?: string[];
+    raw?: unknown;
+  } | null>(null);
   const selectedTagId = useSelector((s: RootState) => s.tag.selectedTagId);
 
   const upload = useUploadMedia();
@@ -155,7 +165,15 @@ const MediaPage: React.FC = () => {
     (s: RootState) => s.mediaLibrary
   );
 
-  const { data, isPending, isFetching, isError, refetch } = useGetMedia({
+  // 🔴 NEW: grab `error` from useGetMedia
+  const {
+    data,
+    isPending,
+    isFetching,
+    isError,
+    error: mediaError,
+    refetch,
+  } = useGetMedia({
     page,
     perPage,
     tagId:
@@ -168,6 +186,8 @@ const MediaPage: React.FC = () => {
     data: tags = [],
     isLoading: tagsLoading,
     isError: tagsError,
+    // (optional) you can also grab tag error if your hook exposes it:
+    // error: tagsErrorObj,
   } = useGetTags();
 
   // clamp tagPage when tags length changes
@@ -199,6 +219,13 @@ const MediaPage: React.FC = () => {
   useEffect(() => {
     dispatch(setMediaIds(selectedIds));
   }, [selectedIds, dispatch]);
+
+  // 🔴 NEW: whenever useGetMedia has an error, show toast
+  useEffect(() => {
+    if (isError && mediaError) {
+      setToastError(mediaError);
+    }
+  }, [isError, mediaError]);
 
   const onUpload = () => fileInputRef.current?.click();
 
@@ -258,11 +285,23 @@ const MediaPage: React.FC = () => {
         { files: expanded, onProgress: (p: number) => setProgress(p) },
         {
           onError: (err: any) => {
+            // 🔴 NEW: send error to ErrorToast
+            setToastError(err);
+
+            // keep your small banner if you still want
             const msg =
               err?.response?.data?.message ??
               "Upload failed. Please try again.";
             setErrorMsg(msg);
           },
+          onSuccess: (res: any) => {
+            // ✅ NEW: show green success toast
+            setToastSuccess({
+              message: "Media uploaded successfully.",
+              raw: res,
+            });
+          },
+
           onSettled: () => {
             setProgress(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
@@ -272,6 +311,8 @@ const MediaPage: React.FC = () => {
     } catch (err: any) {
       setRenderStatus(null);
       setProgress(null);
+      // 🔴 NEW: also send unexpected PDF processing errors to toast
+      setToastError(err);
       setErrorMsg(err?.message ?? "Failed to process PDF.");
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
@@ -424,9 +465,7 @@ const MediaPage: React.FC = () => {
                     <span
                       className={`absolute left-0 right-0 bottom-0 h-[2px] rounded-full transition
                         ${
-                          selectedTagId === 0
-                            ? "bg-red-500"
-                            : "bg-transparent"
+                          selectedTagId === 0 ? "bg-red-500" : "bg-transparent"
                         }`}
                     />
                   </button>
@@ -609,6 +648,26 @@ const MediaPage: React.FC = () => {
           setIsTagModalOpen(true);
         }}
       />
+
+      {/* 🔴 NEW: Error toast mounted once, global for this page */}
+      {toastError && (
+        <ErrorToast
+          error={toastError}
+          onClose={() => setToastError(null)}
+          anchor="top-right"
+          autoHideMs={7000}
+        />
+      )}
+      {toastSuccess && (
+        <SuccessToast
+          title="Success"
+          message={toastSuccess.message}
+          raw={toastSuccess.raw}
+          onClose={() => setToastSuccess(null)}
+          anchor="top-right"
+          autoHideMs={4000}
+        />
+      )}
     </>
   );
 };

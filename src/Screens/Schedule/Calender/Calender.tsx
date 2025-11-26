@@ -1,4 +1,4 @@
-// CalenderForScheduleItem.tsx
+// src/Screens/Schedule/Calender/CalenderForScheduleItem.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -7,24 +7,43 @@ import interactionPlugin, {
   type DateClickArg,
   type EventResizeDoneArg,
 } from "@fullcalendar/interaction";
-import AssignSchedulebar from "../AssignSchedulebar";
 import type {
   DateSelectArg,
   EventClickArg,
   EventContentArg,
   EventDropArg,
+  DatesSetArg,
 } from "@fullcalendar/core";
+
+import AssignSchedulebar from "../AssignSchedulebar";
+
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "../../../../store";
+import { useQueryClient } from "@tanstack/react-query";
+
 import {
   setSelectedBlock,
   clearSelectedBlock,
   type Block,
 } from "../../../Redux/Block/BlockSlice";
 
-// NEW 👇
-import { removeScheduleItemBlock } from "../../../Redux/ScheduleItem/ScheduleItemSlice";
+import {
+  removeScheduleItemBlock,
+  selectScheduleItemBlocks,
+  selectSelectedScreenId,
+  selectSelectedGroupId,
+  selectScheduleItemId,
+  setScheduleItemBlocks,
+} from "@/Redux/ScheduleItem/ScheduleItemSlice";
+
+import { setCalendarView } from "@/Redux/Calendar/calendarViewSlice";
 import { useDeleteReservedBlock } from "../../../Redux/Block/DeleteBlock";
+
+import {
+  useScheduleItemBlocksByView,
+  SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK,
+} from "@/Redux/ScheduleItem/useScheduleItemBlocksByView";
+import type { ScheduleBlock } from "@/Redux/ScheduleItem/GetScheduleItemBlocks";
 
 declare global {
   interface Window {
@@ -118,24 +137,54 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   const [assignOpen, setAssignOpen] = useState(false);
   const [slotStepMin, setSlotStepMin] = useState<number>(30);
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
-  const ScheduleItemblocks = useSelector(
-    (s: RootState) => s.ScheduleItem.scheduleItemBlocks
-  );
-  const selectedScreenStr = useSelector(
-    (s: RootState) => s.ScheduleItem.selectedscreenId
-  );
-  const selectedGroupStr = useSelector(
-    (s: RootState) => s.ScheduleItem.selectedgroupId
-  );
+  // 1) React Query: blocks for (scheduleItemId + current view range)
+  const {
+    data: blocksData,
+    isLoading: blocksLoading,
+    isFetching: blocksFetching,
+  } = useScheduleItemBlocksByView();
+
+  const loadingBlocks = blocksLoading || blocksFetching;
+
+  // 2) Sync result into ScheduleItemSlice so باقي الشاشة تستخدمها
+  useEffect(() => {
+    if (blocksData) {
+      dispatch(setScheduleItemBlocks(blocksData));
+    }
+  }, [blocksData, dispatch]);
+
+  // 3) Read blocks + filters + keys from Redux
+  const ScheduleItemblocks = useSelector(selectScheduleItemBlocks);
+
+  useEffect(() => {
+    console.log(
+      "[Calendar] blocksData from React Query (for this viewKey):",
+      blocksData
+    );
+    if (blocksData) {
+      dispatch(setScheduleItemBlocks(blocksData));
+    }
+  }, [blocksData, dispatch]);
+
+  useEffect(() => {
+    console.log(
+      "[Calendar] ScheduleItemblocks in Redux (after sync):",
+      ScheduleItemblocks
+    );
+  }, [ScheduleItemblocks]);
+  const selectedScreenStr = useSelector(selectSelectedScreenId);
+  const selectedGroupStr = useSelector(selectSelectedGroupId);
+  const scheduleItemId = useSelector(selectScheduleItemId);
+  const { viewKey } = useSelector((s: RootState) => s.calendarView);
 
   const selectedScreenId =
     selectedScreenStr != null ? Number(selectedScreenStr) : null;
   const selectedGroupId =
     selectedGroupStr != null ? Number(selectedGroupStr) : null;
 
-
-
+  // Local draft events
   const [evts, setEvts] = useState<LocalEvt[]>(
     colorize((events ?? []).map((e, i) => ({ ...e, id: e.id ?? `seed-${i}` })))
   );
@@ -146,6 +195,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     return isNaN(d.getTime()) ? undefined : d;
   }
 
+  // Backend blocks → FullCalendar events
   const backendEvents: LocalEvt[] = useMemo(() => {
     if (!Array.isArray(ScheduleItemblocks)) return [];
     return ScheduleItemblocks.map((b) => {
@@ -170,6 +220,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     });
   }, [ScheduleItemblocks]);
 
+  // Apply screen / group filters
   const filteredBackendEvents: LocalEvt[] = useMemo(() => {
     if (selectedScreenId == null && selectedGroupId == null)
       return backendEvents;
@@ -223,7 +274,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     [filteredBackendEvents, evts]
   );
 
-  // NEW 👇 delete hook and helpers
+  // delete hook + cache sync
   const { mutateAsync: deleteBlock } = useDeleteReservedBlock();
 
   const toServerId = (eventId: string): number | null => {
@@ -240,13 +291,46 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     const idNum = toServerId(eventId);
     if (!idNum) return;
     if (!window.confirm("Delete this block?")) return;
+
     try {
-      await deleteBlock(idNum); // ← DB delete
-      // Redux + local cleanup
+      // 1) delete from backend
+      await deleteBlock(idNum);
+
+      // 2) Redux slice (ScheduleItemBlocks)
       dispatch(removeScheduleItemBlock(idNum));
+
+      // 3) React Query cache for current [scheduleItemId, viewKey]
+if (scheduleItemId && viewKey) {
+  queryClient.setQueryData<ScheduleBlock[]>(
+    [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
+    (old) => {
+      console.log(
+        "[Cache] BEFORE delete – key:",
+        [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
+        "value:",
+        old
+      );
+
+      if (!old) return old;
+      const next = old.filter((b) => b.id !== idNum);
+
+      console.log(
+        "[Cache] AFTER delete – key:",
+        [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
+        "value:",
+        next
+      );
+
+      return next;
+    }
+  );
+}
+      // 4) Local events state
       setEvts((prev) =>
         prev.filter((x) => x.id !== String(idNum) && x.id !== `block-${idNum}`)
       );
+
+      // 5) Broadcast (لو في كومبوننتات ثانية تسمع لهذا)
       window.dispatchEvent(
         new CustomEvent("schedule/removed", { detail: { id: String(idNum) } })
       );
@@ -255,16 +339,21 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     }
   };
 
-  // Listen for external removals (keep local evts in sync)
+  // Listen for external removals to keep evts in sync
   useEffect(() => {
     const onRemoved = (e: Event) => {
       const { id } = (e as CustomEvent<{ id?: string }>).detail ?? {};
       if (!id) return;
-      setEvts((prev) => prev.filter((x) => x.id !== id && x.id !== `block-${id}`));
+      setEvts((prev) =>
+        prev.filter((x) => x.id !== id && x.id !== `block-${id}`)
+      );
     };
     window.addEventListener("schedule/removed", onRemoved as EventListener);
     return () => {
-      window.removeEventListener("schedule/removed", onRemoved as EventListener);
+      window.removeEventListener(
+        "schedule/removed",
+        onRemoved as EventListener
+      );
     };
   }, []);
 
@@ -305,7 +394,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
           ].join(" ")}
         />
 
-        {/* Local drafts: show × to remove locally */}
         {isLocal && (
           <button
             aria-label="Remove local"
@@ -323,7 +411,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
           </button>
         )}
 
-        {/* Persisted events: show × to delete from DB */}
         {!isLocal && (
           <button
             aria-label="Delete"
@@ -478,6 +565,30 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     };
   }
 
+  // ⬅️ هنا نحدّد viewKey + نخزّن start/end كـ "YYYY-MM-DD"
+  const handleDatesSet = (arg: DatesSetArg) => {
+    const { start, end, view } = arg;
+
+    let prefix: "d" | "w" | "m";
+    if (view.type.includes("Day")) prefix = "d";
+    else if (view.type.includes("Week")) prefix = "w";
+    else prefix = "m";
+
+    const startDate = start.toISOString().slice(0, 10); // "2025-11-29"
+    const endDate = end.toISOString().slice(0, 10); // "2025-12-06"
+
+    const viewKey = `${prefix}:${startDate}`;
+
+    dispatch(
+      setCalendarView({
+        start: startDate,
+        end: endDate,
+        viewType: view.type,
+        viewKey,
+      })
+    );
+  };
+
   return (
     <>
       <div className="w-full">
@@ -562,6 +673,10 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                   className="w-20 rounded-md border border-neutral-300 px-2 py-1 text-sm text-neutral-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
                 />
               </div>
+
+              {loadingBlocks && (
+                <span className="text-xs text-neutral-400">Loading…</span>
+              )}
             </div>
           </div>
 
@@ -572,6 +687,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
               plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
               initialView={initialView}
               headerToolbar={false}
+              datesSet={handleDatesSet}
               expandRows={false}
               dayMaxEvents={false}
               slotDuration={minutesToDur(slotStepMin)}
@@ -608,7 +724,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                   end,
                   allDay: false,
                   extendedProps: {
-                    ...ext, // keep playlistId, isInteractive, durationSec, etc.
+                    ...ext,
                     borderClass: DEFAULT_BORDER,
                     isLocal: true,
                   },
@@ -633,7 +749,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                 arg.event.remove();
                 window.__draggingPlaylist = false;
               }}
-              // Prevent creation while dragging from list
               selectAllow={() => !isDraggingPlaylist()}
               dateClick={handleDateClick}
               eventClick={(arg) => {
@@ -642,7 +757,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                 const id = arg.event.id;
 
                 if (id.startsWith("block-")) {
-                  // backend block
                   const numericId = Number(id.replace("block-", ""));
                   const raw = (ScheduleItemblocks ?? []).find((b: any) => {
                     const bid =
@@ -651,7 +765,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
                   });
                   if (raw) dispatch(setSelectedBlock(selectedFromBackend(raw)));
                 } else {
-                  // local event → include extendedProps.playlistId
                   const start = arg.event.start ?? new Date();
                   const end =
                     arg.event.end ?? new Date(start.getTime() + 30 * 60000);
@@ -700,7 +813,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
         </div>
       </div>
 
-      {/* --- assign drawer (unchanged UI) --- */}
+      {/* --- assign drawer --- */}
       {assignOpen && (
         <>
           <div

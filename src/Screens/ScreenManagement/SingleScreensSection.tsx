@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Trash2,
+  Loader2, // 👈 NEW
 } from "lucide-react";
 import AddScreenModal from "../../Components/Models/AddScreenModal";
 import { useGetScreen } from "../../ReactQuery/Screen/GetScreen";
@@ -21,6 +22,9 @@ import {
 import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
 import type { RootState } from "../../../store";
 import { useDeleteScreen } from "@/Redux/ScreenManagement/DeleteScreen";
+import ErrorToast from "@/Components/ErrorToast"; // 👈 NEW
+import SuccessToast from "@/Components/SuccessToast"; // 👈 NEW
+
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
 
@@ -29,6 +33,12 @@ const SingleScreensSection: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingScreen, setEditingScreen] = useState<any | null>(null);
   const [visible, setVisible] = useState(CHUNK);
+
+  // 👇 للحذف
+  const [deletingId, setDeletingId] = useState<number | string | null>(null);
+  const [errorForToast, setErrorForToast] = useState<unknown | null>(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
   const { mutate: deleteScreen } = useDeleteScreen();
@@ -43,7 +53,9 @@ const SingleScreensSection: React.FC = () => {
       dispatch(setScreens(screens as any));
     }
   }, [screens, isLoading, isError, dispatch]);
+
   const totalScreens = screens ?? [];
+
   const filteredScreens = useMemo(() => {
     if (!Array.isArray(totalScreens)) return [];
 
@@ -67,6 +79,7 @@ const SingleScreensSection: React.FC = () => {
     if (!filteredScreens || filteredScreens.length === 0) return [];
     return filteredScreens.slice(0, visible);
   }, [filteredScreens, visible]);
+
   const canShowMore = visible < total;
   const canShowLess = visible > MIN_VISIBLE;
 
@@ -172,115 +185,146 @@ const SingleScreensSection: React.FC = () => {
                 {/* FIXED HEIGHT SCROLL AREA */}
                 <div className="h-[55vh] sm:h-[65vh] lg:h-[70vh] overflow-y-auto overscroll-contain pr-1 scrollbar-hide">
                   <div className="flex flex-col gap-3">
-                    {visibleScreens.map((sc) => (
-                      <article
-                        key={sc.id}
-                        className="flex flex-col items-start justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center"
-                      >
-                        <div className="flex w-full items-start gap-3">
-                          <div className="mt-0.5 shrink-0">
-                            <Monitor
-                              size={18}
-                              className={
-                                sc.active
-                                  ? "text-green-600"
-                                  : "text-neutral-400"
-                              }
-                              aria-label={sc.active ? "Online" : "Offline"}
-                            />
-                          </div>
-                          <div className="min-w-0">
-                            <div className=" flex flex-row">
-                              <h3 className="truncate text-sm font-semibold text-neutral-900">
-                                {sc.name || "Unnamed screen"}
-                              </h3>{" "}
-                              {(() => {
-                                const isOnline = sc.isOnline === true; // strict boolean
+                    {visibleScreens.map((sc) => {
+                      const isDeletingThis = deletingId === sc.id;
 
-                                return (
-                                  <span
-                                    className={`mx-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
+                      return (
+                        <article
+                          key={sc.id}
+                          className="flex flex-col items-start justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center"
+                        >
+                          <div className="flex w-full items-start gap-3">
+                            <div className="mt-0.5 shrink-0">
+                              <Monitor
+                                size={18}
+                                className={
+                                  sc.active
+                                    ? "text-green-600"
+                                    : "text-neutral-400"
+                                }
+                                aria-label={sc.active ? "Online" : "Offline"}
+                              />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex flex-row">
+                                <h3 className="truncate text-sm font-semibold text-neutral-900">
+                                  {sc.name || "Unnamed screen"}
+                                </h3>
+                                {(() => {
+                                  const isOnline = sc.isOnline === true; // strict boolean
+
+                                  return (
+                                    <span
+                                      className={`mx-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium
         ${
           isOnline
             ? "bg-emerald-50 text-emerald-700"
             : "bg-rose-50 text-rose-700"
         }`}
-                                  >
-                                    <span
-                                      className={`mr-1.5 h-1.5 w-1.5 rounded-full
+                                    >
+                                      <span
+                                        className={`mr-1.5 h-1.5 w-1.5 rounded-full
           ${isOnline ? "bg-emerald-500" : "bg-rose-500"}`}
-                                    />
-                                    {isOnline ? "Online" : "Offline"}
-                                  </span>
-                                );
-                              })()}
+                                      />
+                                      {isOnline ? "Online" : "Offline"}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                              <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
+                                ID:{sc.id}
+                                <span className="mx-2">•</span>
+                                {sc.ratio ?? "—"}
+                                <span className="mx-2">•</span>
+                                {sc.branch ?? "No branch"}
+                                <span className="mx-2">•</span>
+                                🎵 {sc.PlaylistName ? sc.PlaylistName : "___"}
+                              </p>
                             </div>
-                            <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
-                              ID:{sc.id}
-                              <span className="mx-2">•</span>
-                              {sc.ratio ?? "—"}
-                              <span className="mx-2">•</span>
-                              {sc.branch ?? "No branch"}
-                              <span className="mx-2">•</span>
-                              🎵 {sc.PlaylistName ? sc.PlaylistName : "___"}
-                            </p>
                           </div>
-                        </div>
 
-                        <div className="flex shrink-0 items-center gap-3 self-end text-neutral-500 sm:self-auto">
-                          <button
-                            className="rounded p-1 hover:bg-neutral-100"
-                            title="Edit"
-                            aria-label={`Edit ${sc.name || "screen"}`}
-                            onClick={() => {
-                              dispatch(resetScreenForm());
-                              setIsEditMode(true);
-                              setEditingScreen(sc);
+                          <div className="flex shrink-0 items-center gap-3 self-end text-neutral-500 sm:self-auto">
+                            <button
+                              className="rounded p-1 hover:bg-neutral-100"
+                              title="Edit"
+                              aria-label={`Edit ${sc.name || "screen"}`}
+                              onClick={() => {
+                                dispatch(resetScreenForm());
+                                setIsEditMode(true);
+                                setEditingScreen(sc);
 
-                              // ✅ pre-select branch
-                              if (sc.branchId != null) {
-                                dispatch(setSelectedBranchId(sc.branchId));
-                              }
+                                // ✅ pre-select branch
+                                if (sc.branchId != null) {
+                                  dispatch(setSelectedBranchId(sc.branchId));
+                                }
 
-                              // ✅ pre-select ratio
-                              if (sc.ratioId != null) {
-                                dispatch(
-                                  setSelectedRatio({
-                                    id: sc.ratioId,
-                                    name: sc.ratio ?? null,
-                                  })
+                                // ✅ pre-select ratio
+                                if (sc.ratioId != null) {
+                                  dispatch(
+                                    setSelectedRatio({
+                                      id: sc.ratioId,
+                                      name: sc.ratio ?? null,
+                                    })
+                                  );
+                                }
+
+                                // ✅ pre-select playlist
+                                if (sc.PlaylistId != null) {
+                                  dispatch(
+                                    setDefaultPlaylist(String(sc.PlaylistId))
+                                  );
+                                }
+
+                                setOpen(true);
+                              }}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isDeletingThis}
+                              onClick={() => {
+                                if (!confirm("Delete this screen?")) return;
+
+                                setDeletingId(sc.id);
+                                deleteScreen(
+                                  { screenId: String(sc.screenId) },
+                                  {
+                                    onSuccess: () => {
+                                      setDeletingId(null);
+                                      setShowSuccessToast(true);
+                                      // لو هوك deleteScreen بيعمل invalidateQueries للداتا، ما تحتاج refetch
+                                      // لو ما بيعمل، تقدر تستعمل refetch():
+                                      // refetch();
+                                    },
+                                    onError: (err) => {
+                                      setDeletingId(null);
+                                      setErrorForToast(err);
+                                    },
+                                  }
                                 );
-                              }
-
-                              // ✅ pre-select playlist
-                              if (sc.PlaylistId != null) {
-                                // DefaultPlaylistDropdown reads screenManagement.playlist_id
-                                dispatch(
-                                  setDefaultPlaylist(String(sc.PlaylistId))
-                                );
-                              }
-
-                              setOpen(true);
-                            }}
-                          >
-                            <Pencil size={16} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (confirm("Delete this screen?")) {
-                                deleteScreen({ screenId: String(sc.screenId) });
-                              }
-                            }}
-                            className="rounded p-1 hover:bg-neutral-100 text-red-500"
-                            title="Delete"
-                            aria-label={`Delete ${sc.name || "screen"}`}
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </article>
-                    ))}
+                              }}
+                              className={`rounded p-1 hover:bg-neutral-100 text-red-500 ${
+                                isDeletingThis
+                                  ? "opacity-60 cursor-not-allowed"
+                                  : ""
+                              }`}
+                              title="Delete"
+                              aria-label={`Delete ${sc.name || "screen"}`}
+                            >
+                              {isDeletingThis ? (
+                                <Loader2
+                                  size={16}
+                                  className="animate-spin text-red-500"
+                                />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                            </button>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -333,6 +377,25 @@ const SingleScreensSection: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 🔴 Error toast */}
+      {errorForToast && (
+        <ErrorToast
+          error={errorForToast}
+          onClose={() => setErrorForToast(null)}
+          anchor="top-right"
+        />
+      )}
+
+      {/* 🟢 Success toast */}
+      {showSuccessToast && (
+        <SuccessToast
+          title="Screen deleted"
+          message="The screen has been deleted successfully."
+          onClose={() => setShowSuccessToast(false)}
+          anchor="top-right"
+        />
       )}
     </>
   );

@@ -23,6 +23,7 @@ import { primeScheduleItemBlocksCache } from "../../../Redux/ScheduleItem/GetSch
 import { useQueryClient } from "@tanstack/react-query";
 import SelectDevicesModel from "../SelectDevicesModel";
 import { useNavigate } from "react-router-dom";
+import { setScheduleBlocksScheduleItem } from "@/Redux/ScheduleItem/scheduleBlocksSlice";
 type Row = { id: string; name: string; modifiedAtISO: string };
 
 const fmtDateTime = (iso: string) => {
@@ -50,7 +51,7 @@ const ScheduleItem: React.FC = () => {
   const dispatch = useDispatch();
   const qc = useQueryClient();
   const [displayRows, setDisplayRows] = useState<Row[]>([]);
-const navigate = useNavigate();
+  const navigate = useNavigate();
   useEffect(() => {
     if (!Array.isArray(data)) return;
 
@@ -135,7 +136,7 @@ const navigate = useNavigate();
   const handleSelect = async (r: Row) => {
     // set selected schedule meta
     dispatch(setScheduleItem({ id: r.id, name: r.name }));
-
+    dispatch(setScheduleBlocksScheduleItem({ scheduleItemId: r.id }));
     // (optional) clear previous blocks immediately to avoid stale UI
     dispatch(clearScheduleItemBlocks());
 
@@ -148,7 +149,7 @@ const navigate = useNavigate();
     } catch (e) {
       console.error("Failed to fetch blocks:", e);
     }
-    navigate('/calender')
+    navigate("/calender");
   };
 
   const askDelete = (id: string) => setDeletingId(id);

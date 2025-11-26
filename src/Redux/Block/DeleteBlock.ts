@@ -1,9 +1,10 @@
 // src/Redux/Schedule/ReservedBlocks/useDeleteReservedBlock.ts
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { DeleteReservedBlockApi } from "../../API/API";
 import { removeSelectedMediaById } from "../Media/MediaSlice";
+import { SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK } from "../ScheduleItem/useScheduleItemBlocksByView";
 
 
 
@@ -38,11 +39,12 @@ async function deleteReservedBlockRequest(id: number | string) {
 
 export function useDeleteReservedBlock() {
   const dispatch = useDispatch();
-
+  const qc = useQueryClient();
   return useMutation({
     mutationKey: ["reserved-block-delete"],
     mutationFn: (id: number | string) => deleteReservedBlockRequest(id),
     onSuccess: (_data, id) => {
+       qc.invalidateQueries({ queryKey: [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK] });
       const n = Number(id);
       dispatch(removeSelectedMediaById(Number.isFinite(n) ? n : (id as any)));
     },

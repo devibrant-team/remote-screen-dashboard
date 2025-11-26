@@ -18,7 +18,8 @@ import {
 import type { IdLike } from "@/ReactQuery/Branch/GetBranchScreen";
 import AddBranchModal from "../ScreenManagement/AddBranchModal";
 import { useQueryClient } from "@tanstack/react-query";
-
+import ErrorToast from "@/Components/ErrorToast";
+import SuccessToast from "@/Components/SuccessToast";
 const PAGE_SIZE = 4;
 
 const BranchCard: React.FC = () => {
@@ -35,6 +36,11 @@ const BranchCard: React.FC = () => {
   const { mutate: deleteBranch, isPending: isDeleting } = useDeleteBranch();
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const queryClient = useQueryClient();
+  const [uiError, setUiError] = useState<unknown | null>(null);
+  const [successToast, setSuccessToast] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
 
   const { mutate: renameBranch, isPending: isRenaming } = useRenameBranch();
 
@@ -98,16 +104,20 @@ const BranchCard: React.FC = () => {
   };
   const saveEdit = (id: number) => {
     const trimmed = editingName.trim();
-    if (!trimmed) {
-      alert("Branch name cannot be empty.");
-      return;
-    }
+
     renameBranch(
       { id: String(id), name: trimmed },
       {
         onSuccess: () => {
           setEditingId(null);
           setEditingName("");
+          setSuccessToast({
+            title: "Branch renamed",
+            message: "The branch name has been updated successfully.",
+          });
+        },
+        onError: (err) => {
+          setUiError(err);
         },
       }
     );
@@ -126,7 +136,7 @@ const BranchCard: React.FC = () => {
     () => selectedBranchScreens.filter((s: any) => !s.group),
     [selectedBranchScreens]
   );
-  console.log(singleScreens);
+
   const groupedScreens = useMemo(
     () => selectedBranchScreens.filter((s: any) => s.group),
     [selectedBranchScreens]
@@ -334,7 +344,18 @@ const BranchCard: React.FC = () => {
                             deleteBranch(
                               { id: String(b.id) },
                               {
-                                onSettled: () => setDeletingId(null),
+                                onSuccess: () => {
+                                  setDeletingId(null);
+                                  setSuccessToast({
+                                    title: "Branch deleted",
+                                    message:
+                                      "The branch has been deleted successfully.",
+                                  });
+                                },
+                                onError: (err) => {
+                                  setDeletingId(null);
+                                  setUiError(err);
+                                },
                               }
                             );
                           }}
@@ -593,6 +614,22 @@ const BranchCard: React.FC = () => {
         </section>
       )}
       <AddBranchModal open={isAddOpen} onClose={() => setIsAddOpen(false)} />
+      {!!uiError && (
+        <ErrorToast
+          error={uiError}
+          onClose={() => setUiError(null)}
+          anchor="top-right"
+        />
+      )}
+
+      {successToast && (
+        <SuccessToast
+          title={successToast.title}
+          message={successToast.message}
+          onClose={() => setSuccessToast(null)}
+          anchor="top-right"
+        />
+      )}
     </section>
   );
 };

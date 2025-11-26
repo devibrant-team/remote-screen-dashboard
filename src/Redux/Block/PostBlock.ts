@@ -2,6 +2,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { postscheduleApi } from "../../API/API";
+import { SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK } from "../ScheduleItem/useScheduleItemBlocksByView";
 
 /* --------------------------------- Types --------------------------------- */
 
@@ -71,7 +72,7 @@ export function usePostSchedule(opts?: {
     mutationFn: postScheduleWithId,
     onSuccess: (data, vars) => {
       // Invalidate anything you want refreshed after a successful post (optional)
-      // qc.invalidateQueries({ queryKey: ["schedule-details", vars.scheduleItemId] });
+      qc.invalidateQueries({ queryKey: [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK] });
       // qc.invalidateQueries({ queryKey: ["schedule-list"] });
 
       opts?.onSuccess?.(data, vars);

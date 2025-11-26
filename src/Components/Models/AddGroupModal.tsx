@@ -30,7 +30,7 @@ import {
   GROUP_SCREENS_QK,
 } from "../../ReactQuery/Group/GetGroupScreen";
 import ErrorToast from "../ErrorToast";
-
+import SuccessToast from "../SuccessToast";
 const toNullableNumber = z.preprocess((v) => {
   if (v === "" || v == null) return null;
   const n = Number(v);
@@ -59,6 +59,8 @@ const AddGroupModal = ({ open, onClose, isEdit = false }: Props) => {
   const queryClient = useQueryClient();
   const selectedGroup = useSelector(selectSelectedGroup);
   const [uiError, setUiError] = useState<unknown | null>(null);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [successMode, setSuccessMode] = useState<"add" | "edit" | null>(null);
   const [visible, setVisible] = useState(15);
   const [screensLoading] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -281,6 +283,8 @@ const AddGroupModal = ({ open, onClose, isEdit = false }: Props) => {
 
       updateGroup(payload, {
         onSuccess: () => {
+          setSuccessMode("edit");
+          setShowSuccessToast(true);
           handleClose();
         },
         onError: handleError,
@@ -290,6 +294,8 @@ const AddGroupModal = ({ open, onClose, isEdit = false }: Props) => {
 
       addGroup(payload, {
         onSuccess: () => {
+          setSuccessMode("add");
+          setShowSuccessToast(true);
           handleClose();
         },
         onError: handleError,
@@ -485,9 +491,7 @@ const AddGroupModal = ({ open, onClose, isEdit = false }: Props) => {
                             <button
                               type="button"
                               onClick={() =>
-                                setVisible((v) =>
-                                  Math.min(totalScreens, v + 5)
-                                )
+                                setVisible((v) => Math.min(totalScreens, v + 5))
                               }
                               className="inline-flex items-center gap-1 rounded-md border border-neutral-300 px-2 py-1 text-xs text-neutral-700 hover:bg-neutral-50"
                             >
@@ -554,6 +558,24 @@ const AddGroupModal = ({ open, onClose, isEdit = false }: Props) => {
           onClose={() => setUiError(null)}
           autoHideMs={8000}
           anchor="top-right"
+        />
+      )}
+
+      {/* ✅ Success toast for Add/Edit */}
+      {showSuccessToast && (
+        <SuccessToast
+          title={successMode === "edit" ? "Group updated" : "Group created"}
+          message={
+            successMode === "edit"
+              ? "The group has been updated successfully."
+              : "The group has been created successfully."
+          }
+          anchor="top-right"
+          onClose={() => {
+            setShowSuccessToast(false);
+            setSuccessMode(null);
+            handleClose(); // 👈 هنا نقفل المودال + نعمل reset مثل ما هو
+          }}
         />
       )}
     </>

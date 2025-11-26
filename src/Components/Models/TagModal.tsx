@@ -289,7 +289,7 @@ const TagModal: React.FC<TagModalProps> = ({
                                 e.stopPropagation();
                                 if (isDeleting || updateTag.isPending) return;
                                 deleteTag(tag.id);
-                                // لو التاغ اللي عم ينحذف هو المختار، فضّي الفورم
+                         
                                 if (editingTagId === tag.id) {
                                   setEditingTagId(null);
                                   setEditingName("");

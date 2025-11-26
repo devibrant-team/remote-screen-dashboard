@@ -21,7 +21,7 @@ import AccountSettingsDashboard from "./Screens/Profile/AccountSettingsDashboard
 import Dashboard from "./Screens/Dashboard/Dashboard";
 import Support from "./Screens/Support/Support";
 import BranchScreen from "./Screens/Branches/BranchScreen";
-
+import ConnectionStatusBanner from "./Components/ConnectionStatusBanner";
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
   const token =
@@ -63,6 +63,7 @@ export default function App() {
   return (
     <>
       <LicenseKey />
+      <ConnectionStatusBanner />
       <Router>
         <Routes>
           {/* Public routes (no Tabbar) */}
