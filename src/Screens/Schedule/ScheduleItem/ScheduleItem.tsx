@@ -15,15 +15,13 @@ import { useDeleteScheduleItem } from "../../../Redux/ScheduleItem/DeleteSchedul
 import { useDispatch } from "react-redux";
 import {
   setScheduleItem,
-  setScheduleItemBlocks,
   clearScheduleItemBlocks,
 } from "../../../Redux/ScheduleItem/ScheduleItemSlice";
 
-import { primeScheduleItemBlocksCache } from "../../../Redux/ScheduleItem/GetScheduleItemBlocks";
-import { useQueryClient } from "@tanstack/react-query";
+
+
 import SelectDevicesModel from "../SelectDevicesModel";
 import { useNavigate } from "react-router-dom";
-import { setScheduleBlocksScheduleItem } from "@/Redux/ScheduleItem/scheduleBlocksSlice";
 type Row = { id: string; name: string; modifiedAtISO: string };
 
 const fmtDateTime = (iso: string) => {
@@ -49,7 +47,6 @@ const RENAME_INPUT_CLS =
 const ScheduleItem: React.FC = () => {
   const { data = [], isLoading, isError, refetch } = useGetScheduleItem();
   const dispatch = useDispatch();
-  const qc = useQueryClient();
   const [displayRows, setDisplayRows] = useState<Row[]>([]);
   const navigate = useNavigate();
   useEffect(() => {
@@ -136,19 +133,11 @@ const ScheduleItem: React.FC = () => {
   const handleSelect = async (r: Row) => {
     // set selected schedule meta
     dispatch(setScheduleItem({ id: r.id, name: r.name }));
-    dispatch(setScheduleBlocksScheduleItem({ scheduleItemId: r.id }));
+
     // (optional) clear previous blocks immediately to avoid stale UI
     dispatch(clearScheduleItemBlocks());
 
-    try {
-      // fetch + prime cache + get data
-      const blocks = await primeScheduleItemBlocksCache(qc, r.id);
-
-      // ✅ save blocks in Redux
-      dispatch(setScheduleItemBlocks(blocks));
-    } catch (e) {
-      console.error("Failed to fetch blocks:", e);
-    }
+  
     navigate("/calender");
   };
 
