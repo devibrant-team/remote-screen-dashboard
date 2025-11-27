@@ -7,8 +7,8 @@ import type { RootState } from 'store';
 
 export default function LicenseKey() {
   const dispatch = useDispatch();
-  const t = useSelector((s:RootState)=>s.machine.machineId)
-  console.log("HEH" , t)
+
+
   // Optional console forwarding (guarded)
   const originalConsoleLog = console.log;
   // @ts-ignore

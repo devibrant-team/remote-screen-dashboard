@@ -38,6 +38,7 @@ import {
 import type { ScheduleBlock } from "../../../../Redux/ScheduleItem/GetScheduleItemBlocks";
 
 import { useDeleteReservedBlock } from "../../../../Redux/Block/DeleteBlock";
+import type { RootState } from "store";
 
 declare global {
   interface Window {
@@ -181,7 +182,7 @@ const NewCalender: React.FC<CalenderProps> = ({
   const [assignOpen, setAssignOpen] = useState(false);
   const [slotStepMin, setSlotStepMin] = useState<number>(30);
   const dispatch = useDispatch();
-
+  const ScheduleItemName = useSelector((s: RootState) => s.ScheduleItem.name);
   /* 🔁 delete hook for persisted blocks */
   const { mutateAsync: deleteBlock } = useDeleteReservedBlock();
 
@@ -400,7 +401,7 @@ const NewCalender: React.FC<CalenderProps> = ({
             isFocused ? "text-zinc-800" : "text-neutral-900",
           ].join(" ")}
         >
-          {content.event.title}
+           {content.event.title} / {ScheduleItemName}
         </div>
       </div>
     );
@@ -505,11 +506,16 @@ const NewCalender: React.FC<CalenderProps> = ({
     const onRemoved = (e: Event) => {
       const { id } = (e as CustomEvent<{ id?: string }>).detail ?? {};
       if (!id) return;
-      setEvts((prev) => prev.filter((x) => x.id !== id && x.id !== `block-${id}`));
+      setEvts((prev) =>
+        prev.filter((x) => x.id !== id && x.id !== `block-${id}`)
+      );
     };
     window.addEventListener("schedule/removed", onRemoved as EventListener);
     return () => {
-      window.removeEventListener("schedule/removed", onRemoved as EventListener);
+      window.removeEventListener(
+        "schedule/removed",
+        onRemoved as EventListener
+      );
     };
   }, []);
 
@@ -626,8 +632,6 @@ const NewCalender: React.FC<CalenderProps> = ({
     onEventClick?.(arg);
   };
 
-
-
   return (
     <>
       <div className="w-full">
@@ -637,7 +641,7 @@ const NewCalender: React.FC<CalenderProps> = ({
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
               <h2 className="text-lg font-semibold text-neutral-800">
-                Calendar
+               {ScheduleItemName} Calendar
               </h2>
             </div>
 

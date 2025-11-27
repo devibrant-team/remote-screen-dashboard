@@ -138,7 +138,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   const [slotStepMin, setSlotStepMin] = useState<number>(30);
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
-
+  const ScheduleItemName = useSelector((s: RootState) => s.ScheduleItem.name);
   // 1) React Query: blocks for (scheduleItemId + current view range)
   const {
     data: blocksData,
@@ -158,22 +158,8 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   // 3) Read blocks + filters + keys from Redux
   const ScheduleItemblocks = useSelector(selectScheduleItemBlocks);
 
-  useEffect(() => {
-    console.log(
-      "[Calendar] blocksData from React Query (for this viewKey):",
-      blocksData
-    );
-    if (blocksData) {
-      dispatch(setScheduleItemBlocks(blocksData));
-    }
-  }, [blocksData, dispatch]);
 
-  useEffect(() => {
-    console.log(
-      "[Calendar] ScheduleItemblocks in Redux (after sync):",
-      ScheduleItemblocks
-    );
-  }, [ScheduleItemblocks]);
+ 
   const selectedScreenStr = useSelector(selectSelectedScreenId);
   const selectedGroupStr = useSelector(selectSelectedGroupId);
   const scheduleItemId = useSelector(selectScheduleItemId);
@@ -300,31 +286,21 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
       dispatch(removeScheduleItemBlock(idNum));
 
       // 3) React Query cache for current [scheduleItemId, viewKey]
-if (scheduleItemId && viewKey) {
-  queryClient.setQueryData<ScheduleBlock[]>(
-    [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
-    (old) => {
-      console.log(
-        "[Cache] BEFORE delete – key:",
-        [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
-        "value:",
-        old
-      );
+      if (scheduleItemId && viewKey) {
+        queryClient.setQueryData<ScheduleBlock[]>(
+          [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
+          (old) => {
+            
 
-      if (!old) return old;
-      const next = old.filter((b) => b.id !== idNum);
+            if (!old) return old;
+            const next = old.filter((b) => b.id !== idNum);
 
-      console.log(
-        "[Cache] AFTER delete – key:",
-        [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
-        "value:",
-        next
-      );
+        
 
-      return next;
-    }
-  );
-}
+            return next;
+          }
+        );
+      }
       // 4) Local events state
       setEvts((prev) =>
         prev.filter((x) => x.id !== String(idNum) && x.id !== `block-${idNum}`)
@@ -435,8 +411,9 @@ if (scheduleItemId && viewKey) {
         <div className="text-[11px] leading-none text-neutral-600">
           {content.timeText}
         </div>
+
         <div className="mt-1 line-clamp-1 text-xs font-semibold">
-          {content.event.title}
+          {content.event.title} / {ScheduleItemName}
         </div>
       </div>
     );
@@ -598,7 +575,7 @@ if (scheduleItemId && viewKey) {
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
               <h2 className="text-lg font-semibold text-neutral-800">
-                Calendar
+                {ScheduleItemName} Calendar
               </h2>
             </div>
 
