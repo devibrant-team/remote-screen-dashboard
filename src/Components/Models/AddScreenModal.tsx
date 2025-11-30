@@ -92,7 +92,8 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
     reset,
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    mode: "onChange",
+    mode: "onBlur",
+    reValidateMode: "onBlur",
     defaultValues: { name: nameFromStore || "", code: codeFromStore || "" },
   });
 
@@ -142,15 +143,15 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
   }, [isEditing, editingScreen, reset, dispatch]);
 
   // sanitize code
-  const code = watch("code");
-  useEffect(() => {
-    if (code == null) return;
-    const sanitized = code.replace(/\D/g, "").slice(0, 6);
-    if (sanitized !== code) {
-      setValue("code", sanitized, { shouldValidate: true });
-      dispatch(setScreenCode(sanitized));
-    }
-  }, [code, setValue, dispatch]);
+const code = watch("code");
+useEffect(() => {
+  if (code == null) return;
+  const sanitized = code.replace(/\D/g, "").slice(0, 6);
+  if (sanitized !== code) {
+    setValue("code", sanitized, { shouldValidate: true });
+  }
+}, [code, setValue]);
+
 
   const close = () => {
     onClose?.();
@@ -242,12 +243,11 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
                 Screen Name *
               </label>
               <input
-                {...register("name", {
-                  onChange: (e) => dispatch(setScreenName(e.target.value)),
-                })}
+                {...register("name")}
                 placeholder="Front Window TV"
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
               />
+
               {errors.name && (
                 <p className="text-xs text-red-600 mt-1">
                   {errors.name.message}
@@ -261,14 +261,13 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
                   Code (6 digits)
                 </label>
                 <input
-                  {...register("code", {
-                    onChange: (e) => dispatch(setScreenCode(e.target.value)),
-                  })}
+                  {...register("code")}
                   placeholder="102345"
                   maxLength={6}
                   inputMode="numeric"
                   className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
                 />
+
                 {errors.code && (
                   <p className="text-xs text-red-600 mt-1">
                     {errors.code.message}

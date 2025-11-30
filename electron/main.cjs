@@ -17,9 +17,6 @@ const activeDownloads = new Map();
 
 function createWindow() {
   const preloadPath = getPreloadPath();
-  console.log('[Main] __dirname:', __dirname);
-  console.log('[Main] app.getAppPath():', app.getAppPath());
-  console.log('[Main] Using preload:', preloadPath);
 
   win = new BrowserWindow({
     width: 1000,
@@ -111,10 +108,7 @@ ipcMain.handle('get-machine-id', async () => {
   }
 });
 
-// IPC: renderer console relay (optional)
-ipcMain.on('renderer-log', (_event, ...args) => {
-  console.log('[Renderer]', ...args);
-});
+
 
 // IPC: trigger a download from renderer
 ipcMain.on('download-file', (_event, payload) => {
@@ -123,7 +117,7 @@ ipcMain.on('download-file', (_event, payload) => {
       typeof payload === 'string' ? { url: payload } : payload || {};
     if (!win || !url) return;
     win.webContents.downloadURL(url);
-    console.log('[Main] Download requested:', url);
+
   } catch (err) {
     console.error('[Main] download-file error:', err);
   }

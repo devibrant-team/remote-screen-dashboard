@@ -1,7 +1,7 @@
 // electron/preload.cjs
 const { contextBridge, ipcRenderer } = require('electron');
 
-console.log('[Preload] Loaded');
+
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getMachineId: () => ipcRenderer.invoke('get-machine-id'),
@@ -28,4 +28,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 });
 
-console.log('[Preload] Exposed electronAPI');
+

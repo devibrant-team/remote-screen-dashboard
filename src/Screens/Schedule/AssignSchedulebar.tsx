@@ -134,6 +134,7 @@ export default function AssignSchedulebar({
   );
 
   /* ------------------------- Prefill from block --------------------------- */
+  // ------------------------- Prefill from block ---------------------------
   useEffect(() => {
     if (!selectedBlock) return;
 
@@ -145,10 +146,17 @@ export default function AssignSchedulebar({
     setStartTime(selectedBlock.start_time || "00:00:00");
     setEndTime(selectedBlock.end_time || "00:10:00");
 
-    // devices from block
-    setSelectedScreenIds((selectedBlock.screens ?? []).map((s) => s.screenId));
-    setSelectedGroupIds((selectedBlock.groups ?? []).map((g) => g.groupId));
-  }, [selectedBlock]); // eslint-disable-line react-hooks/exhaustive-deps
+    // devices from block (يدعم الشكلين: {screenId} أو {id})
+    const blockScreenIds = (selectedBlock.screens ?? []).map(
+      (s: any) => s.screenId ?? s.id
+    );
+    const blockGroupIds = (selectedBlock.groups ?? []).map(
+      (g: any) => g.groupId ?? g.id
+    );
+
+    setSelectedScreenIds(blockScreenIds);
+    setSelectedGroupIds(blockGroupIds);
+  }, [selectedBlock?.id]); // 🔥 انتبه: نعتمد على الـ id فقط
 
   // After playlists load, highlight the correct card + tab
   useEffect(() => {
@@ -193,24 +201,35 @@ export default function AssignSchedulebar({
   };
 
   // Devices
-  const toggleScreen = (id: number) => {
-    setSelectedScreenIds((prev) => {
-      const next = prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id];
-      patchBlock({ screens: next.map((n) => ({ screenId: n })) });
-      return next;
-    });
-  };
-  const toggleGroup = (id: number) => {
-    setSelectedGroupIds((prev) => {
-      const next = prev.includes(id)
-        ? prev.filter((x) => x !== id)
-        : [...prev, id];
-      patchBlock({ groups: next.map((n) => ({ groupId: n })) });
-      return next;
-    });
-  };
+const toggleScreen = (id: number) => {
+  // استخدم القيمة الحالية من الـ state (مش callback)
+  const prev = selectedScreenIds;
+  const next = prev.includes(id)
+    ? prev.filter((x) => x !== id)
+    : [...prev, id];
+
+  // 1) حدّث الـ local state
+  setSelectedScreenIds(next);
+
+  // 2) حدّث الـ block عن طريق الـ dispatch
+  patchBlock({
+    screens: next.map((screenId) => ({ screenId })),
+  });
+};
+
+const toggleGroup = (id: number) => {
+  const prev = selectedGroupIds;
+  const next = prev.includes(id)
+    ? prev.filter((x) => x !== id)
+    : [...prev, id];
+
+  setSelectedGroupIds(next);
+
+  patchBlock({
+    groups: next.map((groupId) => ({ groupId })),
+  });
+};
+
 
   /* --------------------------- Create vs Update --------------------------- */
   // local draft if id is a string and doesn’t start with "block-"
@@ -233,7 +252,6 @@ export default function AssignSchedulebar({
         // Insert into ScheduleItem slice so it appears in calendar/dev lists
         dispatch(addScheduleItemBlock(created));
       }
-
     },
     onError: (err) => {
       setUiError(err);
