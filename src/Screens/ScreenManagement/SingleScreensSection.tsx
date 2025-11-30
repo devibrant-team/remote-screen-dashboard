@@ -232,7 +232,7 @@ const SingleScreensSection: React.FC = () => {
                                 })()}
                               </div>
                               <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
-                                ID:{sc.id}
+                                ID:{sc.screenId}
                                 <span className="mx-2">•</span>
                                 {sc.ratio ?? "—"}
                                 <span className="mx-2">•</span>

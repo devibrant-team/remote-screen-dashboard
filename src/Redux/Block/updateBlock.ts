@@ -44,9 +44,12 @@ export function useUpdateReservedBlock(opts?: {
     mutationFn: updateReservedBlock,
     onSuccess: async (data, vars) => {
       // Optional: invalidate queries after update
-      // await qc.invalidateQueries({ queryKey: ["schedule-details"] });
-      // await qc.invalidateQueries({ queryKey: ["schedule-list"] });
-      // await qc.invalidateQueries({ queryKey: ["reservedBlocks"] });
+      await qc.invalidateQueries({ queryKey: ["schedule-details"] });
+      await qc.invalidateQueries({ queryKey: ["schedule-list"] });
+      await qc.invalidateQueries({ queryKey: ["reservedBlocks"] });
+      await qc.invalidateQueries({ queryKey: ["scheduleItemBlocksByView"] });
+
+
 
       opts?.onSuccess?.(data, vars);
     },
