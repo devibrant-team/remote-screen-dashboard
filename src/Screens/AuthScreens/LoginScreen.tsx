@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { traceInputLag } from "@/traceInputLag";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -62,22 +61,23 @@ const LoginScreen = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
+            <div style={{ position: "fixed", top: 8, right: 8, zIndex: 9999 }}>
+  <span className="text-xs bg-black text-white px-2 py-1 rounded">
+    loading: {String(loading)}
+  </span>
+</div>
+
             <label htmlFor="email" className="block text-sm font-medium mb-2">
               Email
             </label>
-           <input
-  id="email"
-  type="email"
-  {...register("email", {
-    onChange: () => {
-      traceInputLag("LoginScreen:email input");
-    },
-  })}
-  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)] transition-all"
-  placeholder="you@example.com"
-  disabled={loading}
-/>
-
+            <input
+              id="email"
+              type="email"
+              {...register("email")}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)] transition-all"
+              placeholder="you@example.com"
+              disabled={loading}
+            />
             {errors.email && (
               <p className="text-sm text-red-600 mt-1">
                 {errors.email.message}
@@ -92,19 +92,14 @@ const LoginScreen = () => {
             >
               Password
             </label>
-          <input
-  id="password"
-  type="password"
-  {...register("password", {
-    onChange: () => {
-      traceInputLag("LoginScreen:password input");
-    },
-  })}
-  className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)] transition-all"
-  placeholder="••••••••"
-  disabled={loading}
-/>
-
+            <input
+              id="password"
+              type="password"
+              {...register("password")}
+              className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)] transition-all"
+              placeholder="••••••••"
+              disabled={loading}
+            />
             {errors.password && (
               <p className="text-sm text-red-600 mt-1">
                 {errors.password.message}
