@@ -31,6 +31,7 @@ import type { UpdateScreenPayload } from "../../ReactQuery/Screen/UpdateScreen";
 import { GROUP_OK } from "@/ReactQuery/Group/GetGroup";
 import { SCREEN_OK } from "@/ReactQuery/Screen/GetScreen";
 import { GROUP_SCREENS_QK } from "@/ReactQuery/Group/GetGroupScreen";
+import { traceInputLag } from "@/traceInputLag";
 const schema = z.object({
   name: z.string().trim().min(1, "Screen name is required").max(80, "Too long"),
   code: z
@@ -143,15 +144,14 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
   }, [isEditing, editingScreen, reset, dispatch]);
 
   // sanitize code
-const code = watch("code");
-useEffect(() => {
-  if (code == null) return;
-  const sanitized = code.replace(/\D/g, "").slice(0, 6);
-  if (sanitized !== code) {
-    setValue("code", sanitized, { shouldValidate: true });
-  }
-}, [code, setValue]);
-
+  const code = watch("code");
+  useEffect(() => {
+    if (code == null) return;
+    const sanitized = code.replace(/\D/g, "").slice(0, 6);
+    if (sanitized !== code) {
+      setValue("code", sanitized, { shouldValidate: true });
+    }
+  }, [code, setValue]);
 
   const close = () => {
     onClose?.();
@@ -243,7 +243,13 @@ useEffect(() => {
                 Screen Name *
               </label>
               <input
-                {...register("name")}
+                {...register("name", {
+                  onChange: (e) => {
+                    // نرصد فريم lag عند كل تغيير
+                    traceInputLag("AddScreenModal:name input");
+                    return e; // مهم عشان RHF يكمل شغله الطبيعي
+                  },
+                })}
                 placeholder="Front Window TV"
                 className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-400"
               />
@@ -261,7 +267,12 @@ useEffect(() => {
                   Code (6 digits)
                 </label>
                 <input
-                  {...register("code")}
+                  {...register("code", {
+                    onChange: (e) => {
+                      traceInputLag("AddScreenModal:code input");
+                      return e;
+                    },
+                  })}
                   placeholder="102345"
                   maxLength={6}
                   inputMode="numeric"
