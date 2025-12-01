@@ -39,6 +39,7 @@ import {
   type Named as DeviceNamed,
 } from "../../../../Redux/ReservedBlocks/ReservedBlocks";
 import ReservedAssignNewModel from "./ReservedAssignNewModel";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 /* -------------------------------- Types ---------------------------------- */
 type Item = { id: number; name: string; duration?: number; media?: string };
@@ -359,7 +360,7 @@ export default function ReservedAssignSchedulebar({
   const [selectedScreenIds, setSelectedScreenIds] = useState<number[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [assignMoreOpen, setAssignMoreOpen] = useState<boolean>(false);
-
+  const alert = useAlertDialog();
   /* ----------------------- Helper to patch the block ---------------------- */
   const patchBlock = useCallback(
     (partial: Partial<Block>) => {
@@ -629,15 +630,29 @@ export default function ReservedAssignSchedulebar({
       !Number.isFinite(Number(selectedBlock.playlistId));
 
     if (missingPlaylist && !hasAnyDevice) {
-      alert("Please select a playlist and at least one screen or group.");
+      await alert({
+        title: "Playlist and devices required",
+        message:
+          "Please select a playlist and at least one screen or group before applying.",
+        buttonText: "OK",
+      });
       return;
     }
     if (missingPlaylist) {
-      alert("Please select a playlist.");
+      await alert({
+        title: "Playlist required",
+        message: "Please select a playlist before applying this block.",
+        buttonText: "OK",
+      });
+      return;
       return;
     }
     if (!hasAnyDevice) {
-      alert("Please select at least one screen or one group.");
+      await alert({
+        title: "No devices selected",
+        message: "Please select at least one screen or one group.",
+        buttonText: "OK",
+      });
       return;
     }
 

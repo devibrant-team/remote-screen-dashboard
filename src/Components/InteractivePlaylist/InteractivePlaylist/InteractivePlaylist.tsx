@@ -30,6 +30,7 @@ import UploadDropzone from "./UploadDropzone";
 import PreviewArrange from "./PreviewArrange";
 import FooterActions from "./FooterActions";
 import { StatPill, ProgressBar, Section } from "./uiPrimitives";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 /**
  * CreateInteractivePlaylist (Compact container)
@@ -70,7 +71,7 @@ export default function CreateInteractivePlaylist({
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-
+  const alert = useAlertDialog();
   const [playlistName, setPlaylistName] = useState("");
 
   const {
@@ -171,8 +172,13 @@ export default function CreateInteractivePlaylist({
     const allowed = files.slice(0, room === Infinity ? files.length : room);
     const valid = allowed.filter(isValidImageFile);
     if (valid.length < allowed.length) {
-      alert("Some files were ignored (only JPG/PNG/WEBP; no .ico or video).");
+      alert({
+        title: "Some files were ignored",
+        message: "Only JPG/PNG/WEBP are allowed. No .ico or video files.",
+        buttonText: "OK",
+      });
     }
+
     addUploads(valid);
   };
 
@@ -180,11 +186,15 @@ export default function CreateInteractivePlaylist({
   const handleReplaceImage = (index: number, file: File) => {
     const res = replaceAt(index, file);
     if (!res.ok) {
-      alert(
-        "This file type is not allowed. Please choose a JPG/PNG/WEBP (no .ico, no video)."
-      );
+      alert({
+        title: "File type not allowed",
+        message:
+          "Please choose a JPG/PNG/WEBP image. .ico and video files are not supported.",
+        buttonText: "OK",
+      });
       return;
     }
+
     if (res.removedLibraryMediaId) {
       dispatch(removeSelectedMediaById(res.removedLibraryMediaId));
     }
@@ -219,9 +229,32 @@ export default function CreateInteractivePlaylist({
 
   // ---- strict save rule
   const handleSave = () => {
-    if (!layoutId) return alert("❌ Please select a layout before saving.");
-    if (!playlistName.trim()) return alert("❌ Please enter a playlist name.");
-    if (slides.length === 0) return alert("❌ Please add at least one slide.");
+    if (!layoutId) {
+      alert({
+        title: "Layout required",
+        message: "❌ Please select a layout before saving.",
+        buttonText: "OK",
+      });
+      return;
+    }
+
+    if (!playlistName.trim()) {
+      alert({
+        title: "Name required",
+        message: "❌ Please enter a playlist name.",
+        buttonText: "OK",
+      });
+      return;
+    }
+
+    if (slides.length === 0) {
+      alert({
+        title: "No slides",
+        message: "❌ Please add at least one slide.",
+        buttonText: "OK",
+      });
+      return;
+    }
 
     if (hasExactCap && slides.length !== requiredCount) {
       const diff = (requiredCount ?? 0) - slides.length;
@@ -233,7 +266,11 @@ export default function CreateInteractivePlaylist({
           : `❌ Remove ${Math.abs(diff)} slide${
               Math.abs(diff) === 1 ? "" : "s"
             } (required: ${requiredCount}).`;
-      alert(msg);
+      alert({
+        title: "Slide count mismatch",
+        message: msg,
+        buttonText: "OK",
+      });
       return;
     }
 
@@ -250,7 +287,11 @@ export default function CreateInteractivePlaylist({
             queryClient.invalidateQueries({
               queryKey: ["interactiveplaylist", "details", selectedId],
             });
-            alert("✅ Playlist updated!");
+            alert({
+              title: "Playlist updated",
+              message: "✅ Playlist updated successfully!",
+              buttonText: "Done",
+            });
             resetAll(); // 👈 clear UI + Redux
             onCloseAll?.();
             navigate("/mediacontent");
@@ -258,7 +299,11 @@ export default function CreateInteractivePlaylist({
           onError: (err: unknown) => {
             const msg = err instanceof Error ? err.message : "Unknown error";
             console.error("❌ Update failed:", msg);
-            alert("Failed to update playlist: " + msg);
+            alert({
+              title: "Update failed",
+              message: "Failed to update playlist: " + msg,
+              buttonText: "OK",
+            });
           },
         }
       );
@@ -266,7 +311,12 @@ export default function CreateInteractivePlaylist({
       createPlaylist(formData, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ["interactiveplaylist"] });
-          alert("✅ Playlist uploaded successfully!");
+
+          alert({
+            title: "Playlist created",
+            message: "✅ Playlist uploaded successfully!",
+            buttonText: "Nice",
+          });
           resetAll(); // 👈 clear UI + Redux
           onCloseAll?.();
           navigate("/mediacontent");
@@ -274,7 +324,11 @@ export default function CreateInteractivePlaylist({
         onError: (err: unknown) => {
           const msg = err instanceof Error ? err.message : "Unknown error";
           console.error("❌ Upload failed:", msg);
-          alert("Failed to upload playlist: " + msg);
+          alert({
+            title: "Upload failed",
+            message: "Failed to upload playlist: " + msg,
+            buttonText: "OK",
+          });
         },
       });
     }

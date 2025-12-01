@@ -44,6 +44,7 @@ import {
   SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK,
 } from "@/Redux/ScheduleItem/useScheduleItemBlocksByView";
 import type { ScheduleBlock } from "@/Redux/ScheduleItem/GetScheduleItemBlocks";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 declare global {
   interface Window {
@@ -147,6 +148,7 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   } = useScheduleItemBlocksByView();
 
   const loadingBlocks = blocksLoading || blocksFetching;
+  const confirm = useConfirmDialog();
 
   // 2) Sync result into ScheduleItemSlice so باقي الشاشة تستخدمها
   useEffect(() => {
@@ -158,8 +160,6 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
   // 3) Read blocks + filters + keys from Redux
   const ScheduleItemblocks = useSelector(selectScheduleItemBlocks);
 
-
- 
   const selectedScreenStr = useSelector(selectSelectedScreenId);
   const selectedGroupStr = useSelector(selectSelectedGroupId);
   const scheduleItemId = useSelector(selectScheduleItemId);
@@ -273,47 +273,54 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     return Number.isFinite(n) ? n : null;
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
-    const idNum = toServerId(eventId);
-    if (!idNum) return;
-    if (!window.confirm("Delete this block?")) return;
+const handleDeleteEvent = async (eventId: string) => {
+  const idNum = toServerId(eventId);
+  if (!idNum) return;
 
-    try {
-      // 1) delete from backend
-      await deleteBlock(idNum);
+  const ok = await confirm({
+    title: "Delete block",
+    message: "Are you sure you want to delete this block?",
+    confirmText: "Delete",
+    cancelText: "Cancel",
+  });
 
-      // 2) Redux slice (ScheduleItemBlocks)
-      dispatch(removeScheduleItemBlock(idNum));
+  if (!ok) return;
 
-      // 3) React Query cache for current [scheduleItemId, viewKey]
-      if (scheduleItemId && viewKey) {
-        queryClient.setQueryData<ScheduleBlock[]>(
-          [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
-          (old) => {
-            
+  try {
+    // 1) delete from backend
+    await deleteBlock(idNum);
 
-            if (!old) return old;
-            const next = old.filter((b) => b.id !== idNum);
+    // 2) Redux slice (ScheduleItemBlocks)
+    dispatch(removeScheduleItemBlock(idNum));
 
-        
-
-            return next;
-          }
-        );
-      }
-      // 4) Local events state
-      setEvts((prev) =>
-        prev.filter((x) => x.id !== String(idNum) && x.id !== `block-${idNum}`)
+    // 3) React Query cache for current [scheduleItemId, viewKey]
+    if (scheduleItemId && viewKey) {
+      queryClient.setQueryData<ScheduleBlock[]>(
+        [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
+        (old) => {
+          if (!old) return old;
+          const next = old.filter((b) => b.id !== idNum);
+          return next;
+        }
       );
-
-      // 5) Broadcast (لو في كومبوننتات ثانية تسمع لهذا)
-      window.dispatchEvent(
-        new CustomEvent("schedule/removed", { detail: { id: String(idNum) } })
-      );
-    } catch (err) {
-      console.error("[CalenderForScheduleItem delete] error:", err);
     }
-  };
+
+    // 4) Local events state
+    setEvts((prev) =>
+      prev.filter(
+        (x) => x.id !== String(idNum) && x.id !== `block-${idNum}`
+      )
+    );
+
+    // 5) Broadcast (لو في كومبوننتات ثانية تسمع لهذا)
+    window.dispatchEvent(
+      new CustomEvent("schedule/removed", { detail: { id: String(idNum) } })
+    );
+  } catch (err) {
+    console.error("[CalenderForScheduleItem delete] error:", err);
+  }
+};
+
 
   // Listen for external removals to keep evts in sync
   useEffect(() => {

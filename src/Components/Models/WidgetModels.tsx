@@ -6,6 +6,7 @@ import { updateSlotMedia } from "../../Redux/Playlist/ToolBarFunc/SlideNormalPla
 import { updateSlotWidgetInSlide } from "../../Redux/Playlist/ToolBarFunc/NormalPlaylistSlice";
 import type { SlotWidget } from "../../Config/GridConfig/DefaultGridConfig";
 import SaudiCityDropdown from "../Dropdown/CitiesDropdown";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 type WidgetModelsProps = { onClose: () => void; selectedCity?: string };
 
@@ -23,6 +24,7 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
       ? state.playlist.slides[selectedSlideIndex]
       : null
   );
+  const alert = useAlertDialog();
 
   // city from global store
   const cityFromStore = useSelector((s: RootState) => s.playlist.selectedCity);
@@ -45,7 +47,11 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
 
   const setSlotWidget = (slotIndex: number, widget: SlotWidget) => {
     if (selectedSlideIndex === null || !slide) {
-      alert("Please select/create a slide first.");
+      alert({
+        title: "No slide selected",
+        message: "Please select or create a slide first.",
+        buttonText: "OK",
+      });
       return;
     }
     ensureSlotMedia(slotIndex);
@@ -61,7 +67,11 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
 
   const handleAddClockWidget = () => {
     if (!effectiveCity) {
-      window.alert("Please choose a city first.");
+      alert({
+        title: "City required",
+        message: "Please choose a city first.",
+        buttonText: "OK",
+      });
       return;
     }
     const slotIndex = 0;
@@ -77,7 +87,11 @@ const WidgetModels: React.FC<WidgetModelsProps> = ({
 
   const handleAddWeatherWidget = () => {
     if (!effectiveCity) {
-      window.alert("Please choose a city first.");
+      alert({
+        title: "City required",
+        message: "Please choose a city first.",
+        buttonText: "OK",
+      });
       return;
     }
     const slotIndex = 0;

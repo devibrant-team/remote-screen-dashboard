@@ -24,6 +24,8 @@ import {
   Monitor,
   Smartphone,
 } from "lucide-react";
+import { useConfirmDialog } from "../ConfirmDialogContext";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 type SupportModalProps = {
   open: boolean;
@@ -67,36 +69,45 @@ const screenDeviceTypeLabel = (t: ScreenDeviceType) => {
 
 const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
   const dispatch = useDispatch();
-  const {
-    category,
-    topicType,
-    screenName,
-    description,
-    screenDeviceType,
-  } = useSelector((s: RootState) => selectSupport(s));
-
+  const { category, topicType, screenName, description, screenDeviceType } =
+    useSelector((s: RootState) => selectSupport(s));
+  const alert = useAlertDialog();
   // Get profile (name & email) – user doesn't have to type those
   const { data: profile, isLoading: loadingProfile } = useGetProfile();
-
+  const confirm = useConfirmDialog();
   // Local state for up to 2 images (optional)
   const [image1, setImage1] = useState<File | null>(null);
   const [image2, setImage2] = useState<File | null>(null);
 
   if (!open) return null;
 
-  const handleSubmit = (e: FormEvent) => {
+  // make this async 👇
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!description.trim()) {
-      alert("Please describe your question or problem.");
+      await alert({
+        title: "Description required",
+        message: "Please describe your question or problem before sending.",
+        buttonText: "OK",
+      });
       return;
     }
 
     // If it's a screen software problem, device type is very helpful
-    if (category === "screen" && topicType === "software" && !screenDeviceType) {
-      const confirmContinue = window.confirm(
-        "You did not select the screen device type. This can help us debug faster.\n\nDo you want to continue anyway?"
-      );
+    if (
+      category === "screen" &&
+      topicType === "software" &&
+      !screenDeviceType
+    ) {
+      const confirmContinue = await confirm({
+        title: "Continue without device type?",
+        message:
+          "You did not select the screen device type. This can help us debug faster.\n\nDo you want to continue anyway?",
+        confirmText: "Continue",
+        cancelText: "Go back",
+      });
+
       if (!confirmContinue) return;
     }
 
@@ -123,7 +134,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
     ];
 
     if (category === "screen" && screenDeviceType) {
-      bodyLines.push(`Screen device type: ${screenDeviceTypeLabel(screenDeviceType)}`);
+      bodyLines.push(
+        `Screen device type: ${screenDeviceTypeLabel(screenDeviceType)}`
+      );
     }
 
     bodyLines.push("", "Description:", description, "", "");
@@ -174,7 +187,6 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
               <HelpCircle className="h-4 w-4 text-red-500" />
               Contact support
             </h3>
-            
           </div>
           <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
             {categoryLabel(category)}
@@ -305,9 +317,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
             </label>
             <input
               value={screenName}
-              onChange={(e) =>
-                dispatch(setSupportScreenName(e.target.value))
-              }
+              onChange={(e) => dispatch(setSupportScreenName(e.target.value))}
               placeholder="e.g. Front Window TV"
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-red-400 focus:ring-1 focus:ring-red-300"
             />
@@ -325,9 +335,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
             </label>
             <textarea
               value={description}
-              onChange={(e) =>
-                dispatch(setSupportDescription(e.target.value))
-              }
+              onChange={(e) => dispatch(setSupportDescription(e.target.value))}
               rows={4}
               placeholder={
                 topicType === "software"
@@ -366,9 +374,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) =>
-                      setImage1(e.target.files?.[0] ?? null)
-                    }
+                    onChange={(e) => setImage1(e.target.files?.[0] ?? null)}
                     className="mt-1 hidden"
                   />
                   {image1 && (
@@ -388,9 +394,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ open, onClose }) => {
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={(e) =>
-                      setImage2(e.target.files?.[0] ?? null)
-                    }
+                    onChange={(e) => setImage2(e.target.files?.[0] ?? null)}
                     className="mt-1 hidden"
                   />
                   {image2 && (

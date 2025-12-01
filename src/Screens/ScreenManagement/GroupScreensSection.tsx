@@ -30,8 +30,9 @@ import {
   setSelectedBranchId,
   setSelectedRatio,
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
-import ErrorToast from "@/Components/ErrorToast";     // 👈 NEW
+import ErrorToast from "@/Components/ErrorToast"; // 👈 NEW
 import SuccessToast from "@/Components/SuccessToast"; // 👈 NEW
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
@@ -95,6 +96,7 @@ const GroupScreensSection: React.FC = () => {
 
   const { data: groups, isLoading, isError, refetch } = useGetGroups();
   const { mutate: deleteGroup } = useDeleteGroup();
+  const confirm = useConfirmDialog();
 
   const {
     data: groupScreens,
@@ -103,15 +105,20 @@ const GroupScreensSection: React.FC = () => {
     refetch: refetchScreens,
   } = useGetGroupScreens(selectedGroupId);
 
-  const handleDeleteGroup = (
+  const handleDeleteGroup = async (
     g: Group,
     e: React.MouseEvent<HTMLButtonElement>
   ) => {
     e.stopPropagation();
 
-    if (!window.confirm(`Are you sure you want to delete group "${g.name}"?`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Delete group",
+      message: `Are you sure you want to delete group "${g.name}"?`,
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+
+    if (!ok) return;
 
     setDeletingId(g.id);
 

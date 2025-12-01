@@ -60,6 +60,7 @@ import {
   type PostScheduleItemResponse,
 } from "../../Redux/ScheduleItem/PostScheduleItem";
 import { useNavigate } from "react-router-dom";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -92,7 +93,7 @@ function getScreenKey(s: any): string | number | null {
   if (raw == null) return null;
   // Attempt numeric where possible
   const n = Number(raw);
-  return Number.isFinite(n) ? n : (typeof raw === "string" ? raw : String(raw));
+  return Number.isFinite(n) ? n : typeof raw === "string" ? raw : String(raw);
 }
 
 // Keep your ReservedBlock type as-is. Then:
@@ -292,7 +293,7 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
   };
 
   const isLoading = loadingGroups || loadingScreens;
-
+  const alert = useAlertDialog();
   /* --------------------------- modal wiring ------------------------------- */
   const panelRef = useRef<HTMLDivElement | null>(null);
 
@@ -603,7 +604,11 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                     // 0) validate name
                     const name = scheduleItemName.trim();
                     if (!name) {
-                      alert("Please enter a schedule item name.");
+                      await alert({
+                        title: "Name required",
+                        message: "Please enter a schedule item name.",
+                        buttonText: "OK",
+                      });
                       setSubmitting(false);
                       return;
                     }
@@ -702,7 +707,11 @@ const SelectDevicesModel: React.FC<SelectDevicesModelProps> = ({
                       "[SelectDevicesModel] create + fetch flow failed:",
                       err
                     );
-                    alert("Failed to finish the step. Please try again.");
+                    await alert({
+                      title: "Something went wrong",
+                      message: "Failed to finish the step. Please try again.",
+                      buttonText: "OK",
+                    });
                   } finally {
                     setSubmitting(false);
                   }

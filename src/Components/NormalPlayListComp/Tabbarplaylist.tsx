@@ -15,6 +15,7 @@ import BaseModal from "../Models/BaseModal";
 import WidgetModels from "../Models/WidgetModels";
 import RatioDropdown from "../Dropdown/RatioDropdown";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
@@ -29,18 +30,29 @@ const Tabbarplaylist = () => {
   const [, setSaveMessage] = useState("");
   const [, setError] = useState("");
   const isEdit = useSelector((s: RootState) => s.playlist.isEdit);
+  const alert = useAlertDialog();
   const handleSavePlaylist = async () => {
     if (!playlist.name || playlist.name.trim() === "") {
-      window.alert("❌ Please enter a playlist name.");
+      await alert({
+        title: "Missing name",
+        message: "❌ Please enter a playlist name.",
+        buttonText: "OK",
+      });
       return;
     }
+
     setSaving(true);
     setSaveMessage("");
     setError("");
     try {
       await savePlaylistToDatabase(playlist, isEdit);
       setSaveMessage("✅ Playlist saved successfully!");
-      window.alert("✅ Playlist saved successfully!");
+
+      await alert({
+        title: "Playlist saved",
+        message: "✅ Playlist saved successfully!",
+        buttonText: "Done",
+      });
       dispatch(setPlaylistName(""));
       dispatch(clearPlaylist());
       queryClient.invalidateQueries({ queryKey: ["normalplaylist"] });
@@ -48,7 +60,11 @@ const Tabbarplaylist = () => {
     } catch (err: any) {
       console.error("❌ Save failed", err);
       setError("❌ Failed to save playlist.");
-      window.alert("❌ Failed to save playlist.");
+      await alert({
+        title: "Save failed",
+        message: "❌ Failed to save playlist.",
+        buttonText: "OK",
+      });
     } finally {
       setSaving(false);
     }

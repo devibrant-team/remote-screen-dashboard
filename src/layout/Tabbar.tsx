@@ -18,6 +18,7 @@ import {
   logoutUser,
   logout as forceLocalLogout,
 } from "../Redux/Authentications/AuthSlice";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 type NavItem =
   | {
@@ -58,10 +59,16 @@ const ToolBar = () => {
     navigate(path);
     setIsOpen(false);
   };
-
+  const confirm = useConfirmDialog();
   // Simple alert/confirm before logging out
   const startLogoutFlow = async () => {
-    const ok = window.confirm("Are you sure you want to log out?");
+    const ok = await confirm({
+      title: "Log out",
+      message: "Are you sure you want to log out?",
+      confirmText: "Log out",
+      cancelText: "Cancel",
+    });
+
     if (!ok) return;
 
     try {
@@ -75,6 +82,7 @@ const ToolBar = () => {
       navigate("/login", { replace: true });
     }
   };
+
 
   return (
     <>

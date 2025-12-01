@@ -11,6 +11,7 @@ import {
 } from "../../Redux/Media/MediaSlice";
 import type { RootState } from "../../../store";
 import { selectInteractiveLayoutId } from "../../Redux/Playlist/interactivePlaylist/interactiveSlice";
+import { useAlertDialog } from "@/AlertDialogContext";
 
 type Props = {
   className?: string;
@@ -42,14 +43,13 @@ export default function UserMediaGrid({
 }: Props) {
   const dispatch = useDispatch();
   const selectedIds = useSelector(selectSelectedMediaIds);
-
+  const alert = useAlertDialog();
   // -------- Layout source (create vs. edit) ----------
   // Read both sources in a single selector to avoid conditional hooks
   const { isEditing, editLayoutIdRaw, createLayoutIdRaw } = useSelector(
     (s: RootState) => ({
       // If you already have a selector like selectIsEditing, use it here
-      isEditing:
-        (s as any).playlistInteractive?.isEditing === true,
+      isEditing: (s as any).playlistInteractive?.isEditing === true,
       // layout id coming from edit flow (playlistData)
       editLayoutIdRaw: (s as any).playlistInteractive?.playlistData?.layoutId,
       // layout id coming from create flow (controlled field)
@@ -120,7 +120,11 @@ export default function UserMediaGrid({
 
   const onToggle = (id: number, url: string, type?: AllowedType) => {
     if (type && type !== "image") {
-      alert("Only images can be added (videos are not supported).");
+      alert({
+        title: "Images only",
+        message: "Only images can be added. Videos are not supported here.",
+        buttonText: "OK",
+      });
       return;
     }
 
@@ -129,14 +133,22 @@ export default function UserMediaGrid({
     // Block adding if no layout chosen; allow deselect anytime
     if (!isSelected) {
       if (layoutMissing) {
-        alert("Please select a layout before adding media.");
+        alert({
+          title: "Layout required",
+          message: "Please select a layout before adding media.",
+          buttonText: "OK",
+        });
         return;
       }
 
       // 👇 Unified cap: consider current total slides already in slider
       const totalNow = currentSlidesCount ?? 0; // uploads + library in slides state
       if (Number.isFinite(cap) && totalNow >= cap) {
-        alert(`You can select up to ${cap} items for this layout.`);
+        alert({
+          title: "Selection limit reached",
+          message: `You can select up to ${cap} items for this layout.`,
+          buttonText: "Got it",
+        });
         return;
       }
     }

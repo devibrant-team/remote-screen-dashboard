@@ -39,6 +39,7 @@ import type { ScheduleBlock } from "../../../../Redux/ScheduleItem/GetScheduleIt
 
 import { useDeleteReservedBlock } from "../../../../Redux/Block/DeleteBlock";
 import type { RootState } from "store";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 declare global {
   interface Window {
@@ -185,7 +186,7 @@ const NewCalender: React.FC<CalenderProps> = ({
   const ScheduleItemName = useSelector((s: RootState) => s.ScheduleItem.name);
   /* 🔁 delete hook for persisted blocks */
   const { mutateAsync: deleteBlock } = useDeleteReservedBlock();
-
+  const confirm = useConfirmDialog();
   /* 🔁 Only using selected devices + focused lists */
   const selectedScreens = useSelector(selectReservedSelectedScreens);
   const selectedGroups = useSelector(selectReservedSelectedGroups);
@@ -290,7 +291,16 @@ const NewCalender: React.FC<CalenderProps> = ({
   const handleDeleteEvent = async (eventId: string) => {
     const idNum = toServerId(eventId);
     if (!idNum) return;
-    if (!window.confirm("Delete this block?")) return;
+
+    const ok = await confirm({
+      title: "Delete block",
+      message: "Are you sure you want to delete this block?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+
+    if (!ok) return;
+
     try {
       await deleteBlock(idNum);
       dispatch(removeScheduleItemBlock(idNum));
@@ -401,7 +411,7 @@ const NewCalender: React.FC<CalenderProps> = ({
             isFocused ? "text-zinc-800" : "text-neutral-900",
           ].join(" ")}
         >
-           {content.event.title} / {ScheduleItemName}
+          {content.event.title} / {ScheduleItemName}
         </div>
       </div>
     );
@@ -641,7 +651,7 @@ const NewCalender: React.FC<CalenderProps> = ({
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500" />
               <h2 className="text-lg font-semibold text-neutral-800">
-               {ScheduleItemName} Calendar
+                {ScheduleItemName} Calendar
               </h2>
             </div>
 
@@ -853,7 +863,15 @@ const NewCalender: React.FC<CalenderProps> = ({
                           ? Number(raw.replace("block-", ""))
                           : Number(raw);
                         if (!Number.isFinite(idNum)) return;
-                        if (!window.confirm("Delete this block?")) return;
+                        const ok = await confirm({
+                          title: "Delete block",
+                          message:
+                            "Are you sure you want to delete this block?",
+                          confirmText: "Delete",
+                          cancelText: "Cancel",
+                        });
+
+                        if (!ok) return;
                         try {
                           await deleteBlock(idNum);
                           dispatch(removeScheduleItemBlock(idNum));

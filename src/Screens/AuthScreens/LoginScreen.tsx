@@ -61,11 +61,7 @@ const LoginScreen = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-            <div style={{ position: "fixed", top: 8, right: 8, zIndex: 9999 }}>
-  <span className="text-xs bg-black text-white px-2 py-1 rounded">
-    loading: {String(loading)}
-  </span>
-</div>
+  
 
             <label htmlFor="email" className="block text-sm font-medium mb-2">
               Email

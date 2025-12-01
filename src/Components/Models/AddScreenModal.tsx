@@ -31,6 +31,7 @@ import type { UpdateScreenPayload } from "../../ReactQuery/Screen/UpdateScreen";
 import { GROUP_OK } from "@/ReactQuery/Group/GetGroup";
 import { SCREEN_OK } from "@/ReactQuery/Screen/GetScreen";
 import { GROUP_SCREENS_QK } from "@/ReactQuery/Group/GetGroupScreen";
+import { useAlertDialog } from "@/AlertDialogContext";
 const schema = z.object({
   name: z.string().trim().min(1, "Screen name is required").max(80, "Too long"),
   code: z
@@ -61,7 +62,7 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
   const queryClient = useQueryClient();
   const [errorForToast, setErrorForToast] = useState<unknown | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-
+  const alert = useAlertDialog();
   const isEditing = Boolean(isEdit && editingScreen && editingScreen.id);
 
   const selectedRatioid = useSelector(
@@ -161,7 +162,11 @@ useEffect(() => {
     const isEditing = Boolean(isEdit && editingScreen && editingScreen.id);
 
     if (!isEditing && !values.code) {
-      alert("Code is required and must be 6 digits.");
+     alert({
+      title: "Code required",
+      message: "Code is required and must be exactly 6 digits.",
+      buttonText: "OK",
+    });
       return;
     }
 
