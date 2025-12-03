@@ -22,6 +22,8 @@ export function useUpdateTag() {
     mutationFn: (payload: UpdateTagForm) => UpdateGroup(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TAG_OK });
+      queryClient.invalidateQueries({ queryKey: ["userMedia"] });
+
     },
   });
 }

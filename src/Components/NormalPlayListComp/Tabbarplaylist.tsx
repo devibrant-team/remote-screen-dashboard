@@ -16,7 +16,7 @@ import WidgetModels from "../Models/WidgetModels";
 import RatioDropdown from "../Dropdown/RatioDropdown";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAlertDialog } from "@/AlertDialogContext";
-
+import ErrorToast from "../ErrorToast";
 const Tabbarplaylist = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -27,8 +27,7 @@ const Tabbarplaylist = () => {
   const playlist = useSelector((state: RootState) => state.playlist);
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
-  const [, setSaveMessage] = useState("");
-  const [, setError] = useState("");
+  const [uiError, setUiError] = useState<unknown | null>(null);
   const isEdit = useSelector((s: RootState) => s.playlist.isEdit);
   const alert = useAlertDialog();
   const handleSavePlaylist = async () => {
@@ -42,12 +41,9 @@ const Tabbarplaylist = () => {
     }
 
     setSaving(true);
-    setSaveMessage("");
-    setError("");
+    setUiError(null);
     try {
       await savePlaylistToDatabase(playlist, isEdit);
-      setSaveMessage("✅ Playlist saved successfully!");
-
       await alert({
         title: "Playlist saved",
         message: "✅ Playlist saved successfully!",
@@ -59,12 +55,7 @@ const Tabbarplaylist = () => {
       navigate("/mediacontent");
     } catch (err: any) {
       console.error("❌ Save failed", err);
-      setError("❌ Failed to save playlist.");
-      await alert({
-        title: "Save failed",
-        message: "❌ Failed to save playlist.",
-        buttonText: "OK",
-      });
+      setUiError(err);
     } finally {
       setSaving(false);
     }
@@ -318,6 +309,14 @@ const Tabbarplaylist = () => {
           )}
         </div>
       </aside>
+{uiError && (
+      <ErrorToast
+        error={uiError}
+        onClose={() => setUiError(null)}
+        anchor="top-right"   // or another corner if you like
+        debugToggle={false}  // set true if you want "Details" button
+      />
+    )}
 
       {/* Modal */}
       <BaseModal

@@ -1,6 +1,6 @@
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { useGetNormalPlaylist } from "../../ReactQuery/GetPlaylists/GetNormalPlaylist";
-import type { AppDispatch, RootState } from "../../../store";
+import type { AppDispatch } from "../../../store";
 import { useNavigate } from "react-router-dom";
 import { loadPlaylistForEdit } from "../../Redux/Playlist/EditPlaylist/EditNormalPlaylistSlice";
 import {

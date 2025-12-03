@@ -25,6 +25,7 @@ import {
   selectReservedSelectedGroups,
   selectReservedSelectedScreens,
   selectReservedBlockforScreen,
+  removeReservedBlock,
   selectReservedBlockforGroup,
   type ReservedBlock,
 } from "../../../../Redux/ReservedBlocks/ReservedBlocks";
@@ -226,7 +227,11 @@ const NewCalender: React.FC<CalenderProps> = ({
       const startSafe = start ?? new Date();
       const endSafe =
         end ?? new Date(startSafe.getTime() + Math.max(1, slotStepMin) * 60000);
-      const title = b.title || b.scheduleItemName || `Block #${b.id}`;
+     const title =
+  b.scheduleItemName && b.title
+    ? `${b.scheduleItemName} / ${b.title}`
+    : b.scheduleItemName || b.title || `Block #${b.id}`;
+
       return {
         id: `block-${b.id}`,
         title,
@@ -304,6 +309,7 @@ const NewCalender: React.FC<CalenderProps> = ({
     try {
       await deleteBlock(idNum);
       dispatch(removeScheduleItemBlock(idNum));
+      dispatch(removeReservedBlock(idNum));
       setEvts((prev) =>
         prev.filter((x) => x.id !== String(idNum) && x.id !== `block-${idNum}`)
       );
@@ -411,7 +417,7 @@ const NewCalender: React.FC<CalenderProps> = ({
             isFocused ? "text-zinc-800" : "text-neutral-900",
           ].join(" ")}
         >
-          {content.event.title} / {ScheduleItemName}
+          {content.event.title}
         </div>
       </div>
     );

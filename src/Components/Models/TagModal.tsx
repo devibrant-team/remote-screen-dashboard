@@ -4,8 +4,13 @@ import { useDispatch, useSelector } from "react-redux";
 import { useGetTags } from "@/ReactQuery/Tag/GetTag";
 import { setExistingTag, setNewTagText } from "../../ReactQuery/Tag/TagSlice";
 import type { RootState } from "store";
-import { AssignTag, type AssignTagForm } from "../../ReactQuery/Tag/AssignTag";
-import { useUpdateTag, type UpdateTagForm } from "../../ReactQuery/Tag/UpdateTag";
+import { type AssignTagForm } from "../../ReactQuery/Tag/AssignTag";
+import { useAssignTag } from "../../ReactQuery/Tag/AssignTag";
+
+import {
+  useUpdateTag,
+  type UpdateTagForm,
+} from "../../ReactQuery/Tag/UpdateTag";
 import { useDeleteTag } from "@/ReactQuery/Tag/DeleteTag"; // 👈 عدّل المسار لو مختلف
 
 type TagOption = {
@@ -17,7 +22,8 @@ type TagModalProps = {
   open: boolean;
   onClose: () => void;
   isSubmitting?: boolean;
-  isEdit?: boolean; // 👈 وضع تعديل الاسم
+  isEdit?: boolean;
+  onSuccess?: () => void;
 };
 
 // ----- color helpers -----
@@ -88,11 +94,12 @@ const TagModal: React.FC<TagModalProps> = ({
   onClose,
   isSubmitting = false,
   isEdit = false,
+  onSuccess,
 }) => {
   const dispatch = useDispatch();
   const updateTag = useUpdateTag(); // rename mutation
   const { deleteTag, deletingId } = useDeleteTag(); // 👈 delete mutation
-
+  const assignTag = useAssignTag();
   // 🔴 all hooks before any early return
   const tagState = useSelector((state: RootState) => state.tag);
 
@@ -104,8 +111,9 @@ const TagModal: React.FC<TagModalProps> = ({
   const [newTagName, setNewTagName] = useState("");
 
   // ----- edit mode state -----
-  const [editingTagId, setEditingTagId] =
-    useState<TagOption["id"] | null>(null);
+  const [editingTagId, setEditingTagId] = useState<TagOption["id"] | null>(
+    null
+  );
   const [editingName, setEditingName] = useState("");
 
   const [localSubmitting, setLocalSubmitting] = useState(false);
@@ -150,15 +158,13 @@ const TagModal: React.FC<TagModalProps> = ({
       }
 
       const payload: AssignTagForm = {
-        tagId:
-          selectedTagId != null
-            ? Number(selectedTagId)
-            : null,
+        tagId: selectedTagId != null ? Number(selectedTagId) : null,
         tagText: isAdding && trimmed.length > 0 ? trimmed : null,
         media: tagState.mediaIds.map((id) => ({ id })), // [{ id:10 }, { id:11 }]
       };
 
-      await AssignTag(payload);
+      await assignTag.mutateAsync(payload);
+      onSuccess?.();
       onClose();
     } catch (err) {
       console.error("❌ TagModal save error:", err);
@@ -172,8 +178,7 @@ const TagModal: React.FC<TagModalProps> = ({
     ? editingTagId != null &&
       editingName.trim().length > 0 &&
       !updateTag.isPending
-    : (selectedTagId != null ||
-        (newTagName.trim().length > 0 && isAdding)) &&
+    : (selectedTagId != null || (newTagName.trim().length > 0 && isAdding)) &&
       tagState.mediaIds.length > 0;
 
   const isSaving =
@@ -289,7 +294,7 @@ const TagModal: React.FC<TagModalProps> = ({
                                 e.stopPropagation();
                                 if (isDeleting || updateTag.isPending) return;
                                 deleteTag(tag.id);
-                         
+
                                 if (editingTagId === tag.id) {
                                   setEditingTagId(null);
                                   setEditingName("");
@@ -441,11 +446,7 @@ const TagModal: React.FC<TagModalProps> = ({
             className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--mainred,_#ef4444)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-            {isSaving
-              ? "Saving..."
-              : isEdit
-              ? "Save changes"
-              : "Save"}
+            {isSaving ? "Saving..." : isEdit ? "Save changes" : "Save"}
           </button>
         </div>
       </div>

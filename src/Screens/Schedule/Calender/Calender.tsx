@@ -273,54 +273,51 @@ const CalenderForScheduleItem: React.FC<CalenderProps> = ({
     return Number.isFinite(n) ? n : null;
   };
 
-const handleDeleteEvent = async (eventId: string) => {
-  const idNum = toServerId(eventId);
-  if (!idNum) return;
+  const handleDeleteEvent = async (eventId: string) => {
+    const idNum = toServerId(eventId);
+    if (!idNum) return;
 
-  const ok = await confirm({
-    title: "Delete block",
-    message: "Are you sure you want to delete this block?",
-    confirmText: "Delete",
-    cancelText: "Cancel",
-  });
+    const ok = await confirm({
+      title: "Delete block",
+      message: "Are you sure you want to delete this block?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
 
-  if (!ok) return;
+    if (!ok) return;
 
-  try {
-    // 1) delete from backend
-    await deleteBlock(idNum);
+    try {
+      // 1) delete from backend
+      await deleteBlock(idNum);
 
-    // 2) Redux slice (ScheduleItemBlocks)
-    dispatch(removeScheduleItemBlock(idNum));
+      // 2) Redux slice (ScheduleItemBlocks)
+      dispatch(removeScheduleItemBlock(idNum));
 
-    // 3) React Query cache for current [scheduleItemId, viewKey]
-    if (scheduleItemId && viewKey) {
-      queryClient.setQueryData<ScheduleBlock[]>(
-        [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
-        (old) => {
-          if (!old) return old;
-          const next = old.filter((b) => b.id !== idNum);
-          return next;
-        }
+      // 3) React Query cache for current [scheduleItemId, viewKey]
+      if (scheduleItemId && viewKey) {
+        queryClient.setQueryData<ScheduleBlock[]>(
+          [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK, scheduleItemId, viewKey],
+          (old) => {
+            if (!old) return old;
+            const next = old.filter((b) => b.id !== idNum);
+            return next;
+          }
+        );
+      }
+
+      // 4) Local events state
+      setEvts((prev) =>
+        prev.filter((x) => x.id !== String(idNum) && x.id !== `block-${idNum}`)
       );
+
+      // 5) Broadcast (لو في كومبوننتات ثانية تسمع لهذا)
+      window.dispatchEvent(
+        new CustomEvent("schedule/removed", { detail: { id: String(idNum) } })
+      );
+    } catch (err) {
+      console.error("[CalenderForScheduleItem delete] error:", err);
     }
-
-    // 4) Local events state
-    setEvts((prev) =>
-      prev.filter(
-        (x) => x.id !== String(idNum) && x.id !== `block-${idNum}`
-      )
-    );
-
-    // 5) Broadcast (لو في كومبوننتات ثانية تسمع لهذا)
-    window.dispatchEvent(
-      new CustomEvent("schedule/removed", { detail: { id: String(idNum) } })
-    );
-  } catch (err) {
-    console.error("[CalenderForScheduleItem delete] error:", err);
-  }
-};
-
+  };
 
   // Listen for external removals to keep evts in sync
   useEffect(() => {
@@ -793,6 +790,14 @@ const handleDeleteEvent = async (eventId: string) => {
               eventTextColor="inherit"
               eventClassNames={() => ["overflow-visible", "px-0", "py-0"]}
             />
+            {loadingBlocks && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                <div className="flex flex-col items-center gap-2 text-sm text-neutral-700">
+                  <div className="h-5 w-5 animate-spin rounded-full border border-neutral-300 border-t-transparent" />
+                  <span>Hang tight!</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

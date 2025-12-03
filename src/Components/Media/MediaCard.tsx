@@ -9,7 +9,7 @@ export const MediaCard: React.FC<{
   url: string;
   type?: string;
   storage: number | string; // 👈 allow string from API ("0.00")
-  tag?: string; // 👈 NEW: tag label
+  tag?: string|null; // 👈 NEW: tag label
   onClick?: () => void;
   selectable?: boolean;
   selected?: boolean;

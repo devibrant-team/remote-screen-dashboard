@@ -203,17 +203,24 @@ const MediaPage: React.FC = () => {
     dispatch(setLoading(isPending || isFetching));
   }, [isPending, isFetching, dispatch]);
 
-  // push items
-  useEffect(() => {
-    if (!data) return;
-    dispatch(setItems(data.media ?? []));
-    dispatch(
-      setMeta({
-        last_page: Number(data.meta?.last_page || 1),
-        total: Number(data.meta?.total || (data.media?.length ?? 0)),
-      })
-    );
-  }, [data, dispatch]);
+// push items + pagination meta (current_page + total pages)
+useEffect(() => {
+  if (!data) return;
+
+  dispatch(setItems(data.media ?? []));
+
+  dispatch(
+    setMeta({
+      current_page: Number(data.meta?.current_page ?? page ?? 1),
+      last_page: Number(data.meta?.last_page ?? 1),       // ← total pages
+      per_page: Number(data.meta?.per_page ?? perPage),
+      total: Number(
+        data.meta?.total ??
+          (data.media?.length ?? 0) // fallback if backend doesn’t send total
+      ),
+    })
+  );
+}, [data, dispatch, page, perPage]);
 
   // keep redux TagSlice.mediaIds in sync with selectedIds
   useEffect(() => {
@@ -633,6 +640,13 @@ const MediaPage: React.FC = () => {
           setIsTagEditMode(false);
         }}
         isEdit={isTagEditMode}
+        onSuccess={() => {
+          if (!isTagEditMode) {
+            setIsSelectable(false); 
+            setSelectedIds([]);
+            dispatch(clearMedia());
+          }
+        }}
       />
 
       {/* Bottom bar */}

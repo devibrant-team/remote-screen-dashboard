@@ -1,4 +1,4 @@
-// src/hooks/media/useGetMedia.ts
+// src/ReactQuery/Media/useGetMedia.ts
 import axios from "axios";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getMediaUserApi } from "../../API/API";
@@ -9,19 +9,26 @@ export interface MediaItem {
   id: number;
   type: AllowedType | string;
   media: string;
-  storage: number;
-  tag:string;
+  storage: number | string;     // backend sends string, we accept both
+  tagId?: number | null;        // OPTIONAL, matches API
+  tag: string | null;           // 👈 IMPORTANT: allow null (matches backend)
 }
 
 export interface GetMediaResponse {
   success: boolean;
   media: MediaItem[];
+
+  // some APIs send a `meta` block, some send flat pagination fields
   meta?: {
     current_page: number;
     per_page: number;
     last_page: number;
     total: number;
   };
+
+  current_page?: number;
+  total_pages?: number;
+  total?: number;
 }
 
 type FetchArgs = {
@@ -29,7 +36,7 @@ type FetchArgs = {
   token?: string | null;
   page?: number;
   perPage?: number;
-  tagId?: number | string | null; // 🔴 NEW
+  tagId?: number | string | null;
 };
 
 export interface PaginatedMedia {
@@ -37,7 +44,7 @@ export interface PaginatedMedia {
   meta: {
     current_page: number;
     per_page: number;
-    last_page: number;
+    last_page: number; // treat as total_pages
     total: number;
   };
 }
@@ -47,14 +54,13 @@ export async function fetchUserMedia({
   token,
   page = 1,
   perPage = 6,
-  tagId = null, // 🔴 NEW
+  tagId = null,
 }: FetchArgs = {}): Promise<PaginatedMedia> {
   const params: Record<string, any> = {
     page,
     per_page: perPage,
   };
 
-  // 🔴 only send tagId if not null (All → null → not sent)
   if (tagId !== null && tagId !== undefined) {
     params.tagId = tagId;
   }
@@ -69,19 +75,31 @@ export async function fetchUserMedia({
     throw new Error("Invalid media response");
   }
 
-  if (!data.meta) {
-    return {
-      media: data.media,
-      meta: {
-        current_page: page,
-        per_page: perPage,
-        last_page: data.media.length < perPage ? page : page + 1,
-        total: page * perPage,
-      },
-    };
-  }
+  // 🔹 Normalize pagination regardless of whether it comes in `meta` or flat
+  const current_page =
+    data.meta?.current_page ?? data.current_page ?? page ?? 1;
 
-  return { media: data.media, meta: data.meta };
+  const last_page =
+    data.meta?.last_page ??
+    data.total_pages ?? // backend field
+    (data.media.length < perPage ? current_page : current_page + 1);
+
+  const per_page = data.meta?.per_page ?? perPage;
+
+  const total =
+    data.meta?.total ??
+    data.total ?? // if backend gives it
+    data.media.length;
+
+  return {
+    media: data.media,
+    meta: {
+      current_page,
+      last_page,
+      per_page,
+      total,
+    },
+  };
 }
 
 const FIVE_MIN = 5 * 60 * 1000;
@@ -91,21 +109,15 @@ export function useGetMedia(
     page?: number;
     perPage?: number;
     requireAuth?: boolean;
-    tagId?: number | string | null; // 🔴 NEW
+    tagId?: number | string | null;
   } = {}
 ) {
-  const {
-    page = 1,
-    perPage = 6,
-    requireAuth = true,
-    tagId = null,
-  } = opts;
+  const { page = 1, perPage = 6, requireAuth = true, tagId = null } = opts;
 
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   return useQuery<PaginatedMedia>({
-    // 🔴 include tagId in cache key
     queryKey: ["userMedia", Boolean(token), page, perPage, tagId ?? "all"],
     queryFn: ({ signal }) =>
       fetchUserMedia({ signal, token, page, perPage, tagId }),
