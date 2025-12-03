@@ -1,6 +1,10 @@
 // src/components/Playlist/Interactive/InteractivePlaylist.tsx
 import { useState } from "react";
-import { useDispatch, type TypedUseSelectorHook, useSelector } from "react-redux";
+import {
+  useDispatch,
+  type TypedUseSelectorHook,
+  useSelector,
+} from "react-redux";
 import { type AppDispatch, type RootState } from "../../../store";
 import {
   setSelectedId,
@@ -14,6 +18,7 @@ import CreateInteractivePlaylist from "../../Components/InteractivePlaylist/Inte
 import { useDeleteNormalPlaylist } from "../../ReactQuery/GetPlaylists/DeletePlaylist";
 
 import MediaPreview from "../../Components/Media/MediaPreview";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 const FALLBACK_IMG =
   "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
@@ -53,7 +58,7 @@ export default function InteractivePlaylist() {
 
   const [editorOpen, setEditorOpen] = useState(false);
   const selectedId = useAppSelector((s) => s.interactive.selectedId);
-
+  const confirm = useConfirmDialog();
   // ✅ use the same delete hook (works for normal + interactive)
   const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
 
@@ -151,11 +156,18 @@ export default function InteractivePlaylist() {
               {/* ✅ Delete Button */}
               <button
                 type="button"
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  if (confirm(`Delete "${title}"?`)) {
-                    deletePlaylist(p.id);
-                  }
+
+                  const ok = await confirm({
+                    title: "Delete playlist",
+                    message: `Are you sure you want to delete "${title}"? This cannot be undone.`,
+                    confirmText: "Delete",
+                    cancelText: "Cancel",
+                  });
+
+                  if (!ok) return;
+                  deletePlaylist(p.id);
                 }}
                 className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90
                            text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 z-10 shadow-sm"

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Play, X, Check, Tag as TagIcon } from "lucide-react";
 import { useVideoThumbnail } from "../../Hook/Playlist/useVideoThumbnail";
 import { useDeleteMedia } from "../../ReactQuery/Media/DeleteMedia";
+import { useConfirmDialog } from "../ConfirmDialogContext";
 
 export const MediaCard: React.FC<{
   id: number | string;
@@ -29,13 +30,22 @@ export const MediaCard: React.FC<{
   const isVideo = (type || "").toLowerCase() === "video";
   const { thumb } = useVideoThumbnail(isVideo ? url : undefined, 1.0);
   const { deleteMedia, deletingId } = useDeleteMedia();
-
+  const confirm = useConfirmDialog();
   const [imgError, setImgError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
-  const handleDelete = (e: React.MouseEvent) => {
+  const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm("Delete this media?")) deleteMedia(id);
+    const ok = await confirm({
+      title: "Delete media",
+      message:
+        "Are you sure you want to delete this media item? This cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+    });
+
+    if (!ok) return;
+    deleteMedia(id);
   };
 
   const handleRetry = (e: React.MouseEvent) => {

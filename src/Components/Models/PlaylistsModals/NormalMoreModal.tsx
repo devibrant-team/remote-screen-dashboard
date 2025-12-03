@@ -11,6 +11,7 @@ import {
 import type { AppDispatch } from "../../../../store";
 import { useDeleteNormalPlaylist } from "../../../ReactQuery/GetPlaylists/DeletePlaylist";
 import { X } from "lucide-react";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 const FALLBACK_IMG =
   "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
 
@@ -40,7 +41,7 @@ export default function NormalMoreModal({ open, onClose }: Props) {
   const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-
+  const confirm = useConfirmDialog();
   // When modal opens, ensure first page is present (useful if it was closed before first load)
   useEffect(() => {
     if (open && !data.length && !isLoading) refetch();
@@ -101,14 +102,20 @@ export default function NormalMoreModal({ open, onClose }: Props) {
                   {/* Delete button (shown on each card) */}
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation(); // prevent opening editor
-                      // optional confirm; remove if you don't want confirmation
-                      if (
-                        confirm(`Delete "${p.name || `Playlist #${p.id}`}"?`)
-                      ) {
-                        deletePlaylist(p.id);
-                      }
+
+                      const ok = await confirm({
+                        title: "Delete playlist",
+                        message: `Are you sure you want to delete "${
+                          p.name || `Playlist #${p.id}`
+                        }"? This cannot be undone.`,
+                        confirmText: "Delete",
+                        cancelText: "Cancel",
+                      });
+
+                      if (!ok) return;
+                      deletePlaylist(p.id);
                     }}
                     className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90
                text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 shadow-sm"

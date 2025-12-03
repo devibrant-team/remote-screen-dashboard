@@ -20,6 +20,7 @@ import AddBranchModal from "../ScreenManagement/AddBranchModal";
 import { useQueryClient } from "@tanstack/react-query";
 import ErrorToast from "@/Components/ErrorToast";
 import SuccessToast from "@/Components/SuccessToast";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 const PAGE_SIZE = 4;
 
@@ -241,9 +242,7 @@ const BranchScreensPanel = React.memo(function BranchScreensPanel({
       </div>
 
       {isLoadingScreens && (
-        <p className="text-xs text-neutral-500 sm:text-sm">
-          Loading screens…
-        </p>
+        <p className="text-xs text-neutral-500 sm:text-sm">Loading screens…</p>
       )}
 
       {isErrorScreens && !isLoadingScreens && (
@@ -437,6 +436,7 @@ const BranchScreensPanel = React.memo(function BranchScreensPanel({
 const BranchCard: React.FC = () => {
   const { data: branches = [], isLoading, isError } = useGetBranches();
   const [page, setPage] = useState(0);
+  const confirm = useConfirmDialog();
 
   // local selected branch id (NOT Redux)
   const [selectedId, setSelectedId] = useState<IdLike | null>(null);
@@ -661,13 +661,15 @@ const BranchCard: React.FC = () => {
                   onCancelEdit={cancelEdit}
                   onSaveEdit={() => saveEdit(b.id)}
                   isRenaming={isRenaming}
-                  onDelete={() => {
-                    if (
-                      !confirm(
-                        `Delete branch "${b.name}"?\n\nNote: All devices/screens under this branch and their schedules will also be deleted.`
-                      )
-                    )
-                      return;
+                  onDelete={async () => {
+                    const ok = await confirm({
+                      title: "Delete branch",
+                      message: `Are you sure you want to delete branch "${b.name}"?\n\nAll devices/screens under this branch and their schedules will also be deleted.`,
+                      confirmText: "Delete",
+                      cancelText: "Cancel",
+                    });
+
+                    if (!ok) return;
 
                     setDeletingId(b.id);
                     deleteBranch(

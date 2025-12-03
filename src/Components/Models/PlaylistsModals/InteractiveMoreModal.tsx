@@ -11,6 +11,7 @@ import { useGetInteractiveplaylist } from "../../../ReactQuery/GetPlaylists/GetI
 import { useDeleteNormalPlaylist } from "../../../ReactQuery/GetPlaylists/DeletePlaylist";
 import CreateInteractivePlaylist from "../../InteractivePlaylist/InteractivePlaylist/InteractivePlaylist";
 import { X } from "lucide-react";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 const FALLBACK_IMG =
   "https://dummyimage.com/640x360/eeeeee/9aa0a6&text=No+Preview";
@@ -43,7 +44,7 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
   } = useGetInteractiveplaylist();
 
   const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
-
+  const confirm = useConfirmDialog();
   // Make sure we have data when the modal opens
   useEffect(() => {
     if (open && !items.length && !isLoading) refetch();
@@ -109,7 +110,10 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
               {isLoading ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {Array.from({ length: 9 }).map((_, i) => (
-                    <div key={i} className="rounded-lg border border-gray-200 overflow-hidden shadow">
+                    <div
+                      key={i}
+                      className="rounded-lg border border-gray-200 overflow-hidden shadow"
+                    >
                       <div className="w-full h-24 bg-gray-200 animate-pulse" />
                       <div className="p-2 space-y-1">
                         <div className="h-4 bg-gray-200 rounded animate-pulse" />
@@ -120,7 +124,8 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
                 </div>
               ) : isError ? (
                 <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
-                  Failed to load playlists{error && `: ${(error as any)?.message ?? ""}`}
+                  Failed to load playlists
+                  {error && `: ${(error as any)?.message ?? ""}`}
                 </div>
               ) : !items.length ? (
                 <div className="p-6 text-center rounded-xl border border-gray-200 bg-white">
@@ -133,7 +138,8 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {items.map((p: any) => {
                         const title = p.name || `Playlist #${p.id}`;
-                        const slidesCount = p.slideNumber ?? p.slide_number ?? "—";
+                        const slidesCount =
+                          p.slideNumber ?? p.slide_number ?? "—";
                         const src = p.media || FALLBACK_IMG;
 
                         return (
@@ -157,11 +163,18 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
                             {/* Delete button */}
                             <button
                               type="button"
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                if (confirm(`Delete "${title}"?`)) {
-                                  deletePlaylist(p.id);
-                                }
+
+                                const ok = await confirm({
+                                  title: "Delete playlist",
+                                  message: `Are you sure you want to delete "${title}"? This cannot be undone.`,
+                                  confirmText: "Delete",
+                                  cancelText: "Cancel",
+                                });
+
+                                if (!ok) return;
+                                deletePlaylist(p.id);
                               }}
                               className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90
                                          text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 z-10 shadow-sm"
@@ -180,7 +193,8 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
                                 src={src}
                                 alt={title}
                                 onError={(e) => {
-                                  (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
+                                  (e.currentTarget as HTMLImageElement).src =
+                                    FALLBACK_IMG;
                                 }}
                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                                 loading="lazy"
@@ -248,7 +262,9 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
                           {isFetchingNextPage ? "Loading..." : "Load more"}
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-500">You’ve reached the end</span>
+                        <span className="text-xs text-gray-500">
+                          You’ve reached the end
+                        </span>
                       )}
                     </div>
                   </div>

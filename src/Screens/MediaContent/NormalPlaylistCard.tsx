@@ -10,6 +10,7 @@ import {
 import { useDeleteNormalPlaylist } from "../../ReactQuery/GetPlaylists/DeletePlaylist";
 import { X } from "lucide-react";
 import MediaPreview from "../../Components/Media/MediaPreview";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 function formatSeconds(total?: number) {
   const s = Number(total || 0);
@@ -34,6 +35,7 @@ export default function NormalPlaylistCard() {
   const dispatch = useDispatch<AppDispatch>();
   const items = playlists.slice(0, 4);
   const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
+  const confirm = useConfirmDialog();
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -106,11 +108,20 @@ export default function NormalPlaylistCard() {
         >
           <button
             type="button"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation(); // ⬅ prevent card click
-              if (confirm(`Delete "${p.name || `Playlist #${p.id}`}"?`)) {
-                deletePlaylist(p.id);
-              }
+
+              const ok = await confirm({
+                title: "Delete playlist",
+                message: `Are you sure you want to delete "${
+                  p.name || `Playlist #${p.id}`
+                }"? This cannot be undone.`,
+                confirmText: "Delete",
+                cancelText: "Cancel",
+              });
+
+              if (!ok) return;
+              deletePlaylist(p.id);
             }}
             className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/90
            text-gray-600 hover:bg-white hover:text-red-600 border border-gray-200 z-3 shadow-sm"

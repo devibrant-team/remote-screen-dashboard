@@ -24,6 +24,7 @@ import type { RootState } from "../../../store";
 import { useDeleteScreen } from "@/Redux/ScreenManagement/DeleteScreen";
 import ErrorToast from "@/Components/ErrorToast"; // 👈 NEW
 import SuccessToast from "@/Components/SuccessToast"; // 👈 NEW
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
@@ -33,7 +34,7 @@ const SingleScreensSection: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingScreen, setEditingScreen] = useState<any | null>(null);
   const [visible, setVisible] = useState(CHUNK);
-
+  const confirm = useConfirmDialog();
   // 👇 للحذف
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
   const [errorForToast, setErrorForToast] = useState<unknown | null>(null);
@@ -283,8 +284,16 @@ const SingleScreensSection: React.FC = () => {
                             <button
                               type="button"
                               disabled={isDeletingThis}
-                              onClick={() => {
-                                if (!confirm("Delete this screen?")) return;
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: "Delete screen",
+                                  message:
+                                    "Are you sure you want to delete this screen? This cannot be undone.",
+                                  confirmText: "Delete",
+                                  cancelText: "Cancel",
+                                });
+
+                                if (!ok) return;
 
                                 setDeletingId(sc.id);
                                 deleteScreen(
