@@ -9,8 +9,8 @@ const InteractivePlaylistSchema = z.object({
   name: z.string(),
   duration: z.coerce.number(),
   slide_number: z.coerce.number(),
-  media: z.string(), // keep plain; URLs may include spaces
-    layoutId: z.coerce.number().optional(),
+  media: z.string(),
+  layoutId: z.coerce.number().optional(),
 });
 
 const PaginationSchema = z.object({
@@ -28,11 +28,12 @@ const ApiResponseSchema = z.object({
   success: z.boolean(),
   playLists: z.array(InteractivePlaylistSchema),
   pagination: PaginationSchema,
-  now: z.string().optional(), // not used, but present
+  now: z.string().optional(),
 });
 
 /* 2) Types */
 type InteractivePlaylistRaw = z.infer<typeof InteractivePlaylistSchema>;
+
 export type InteractivePlaylist = {
   id: number;
   name: string;
@@ -47,10 +48,20 @@ type PageResult = {
   pagination: z.infer<typeof PaginationSchema>;
 };
 
+type InteractiveQueryData = {
+  items: InteractivePlaylist[];
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  perPage: number;
+};
+
 /* 3) Fetch a single page (by page number) */
-async function fetchInteractiveplaylistPage(page: number, signal?: AbortSignal): Promise<PageResult> {
+async function fetchInteractiveplaylistPage(
+  page: number,
+  signal?: AbortSignal
+): Promise<PageResult> {
   const token = localStorage.getItem("token");
-  // If your base already has query params, this still works:
   const join = getInteractiveplaylistApi.includes("?") ? "&" : "?";
   const url = `${getInteractiveplaylistApi}${join}page=${page}`;
 
@@ -63,20 +74,26 @@ async function fetchInteractiveplaylistPage(page: number, signal?: AbortSignal):
   const parsed = ApiResponseSchema.parse(res.data);
   const items = parsed.playLists.map((r) => ({
     ...r,
-    // Encode once so <img> doesn't choke on spaces
     media: encodeURI(r.media),
   }));
 
   return { items, pagination: parsed.pagination };
 }
 
-/* 4) Infinite hook */
+/* 4) Infinite hook with backend pagination info */
 export function useGetInteractiveplaylist() {
-  return useInfiniteQuery<PageResult, Error, InteractivePlaylist[], ["interactiveplaylist"], number>({
+  return useInfiniteQuery<
+    PageResult,
+    Error,
+    InteractiveQueryData,
+    ["interactiveplaylist"],
+    number
+  >({
     queryKey: ["interactiveplaylist"],
     initialPageParam: 1,
-    queryFn: ({ pageParam, signal }) => fetchInteractiveplaylistPage(pageParam, signal),
-    // Compute next page from numbers (robust even if next_page_url is null)
+    queryFn: ({ pageParam, signal }) =>
+      fetchInteractiveplaylistPage(pageParam, signal),
+
     getNextPageParam: (lastPage) => {
       const { current_page, last_page } = lastPage.pagination;
       return current_page < last_page ? current_page + 1 : undefined;
@@ -85,20 +102,31 @@ export function useGetInteractiveplaylist() {
       const { current_page } = firstPage.pagination;
       return current_page > 1 ? current_page - 1 : undefined;
     },
+
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 0, // easier debugging
-    // Flatten + map to your camelCase type
-    select: (data) =>
-      data.pages.flatMap((p) =>
-        p.items.map<InteractivePlaylist>((r) => ({
-          id: r.id,
-          name: r.name,
-          duration: r.duration,
-          slideNumber: r.slide_number,
-          media: r.media,
-          layoutId: r.layoutId, 
-        }))
-      ),
+    retry: 0,
+
+    // 👉 only expose "current page" items + pagination meta
+    select: (data) => {
+      const lastPage = data.pages[data.pages.length - 1];
+
+      const items = lastPage.items.map<InteractivePlaylist>((r) => ({
+        id: r.id,
+        name: r.name,
+        duration: r.duration,
+        slideNumber: r.slide_number,
+        media: r.media,
+        layoutId: r.layoutId,
+      }));
+
+      return {
+        items,
+        currentPage: lastPage.pagination.current_page,
+        totalPages: lastPage.pagination.last_page,
+        totalItems: lastPage.pagination.total,
+        perPage: lastPage.pagination.per_page,
+      };
+    },
   });
 }

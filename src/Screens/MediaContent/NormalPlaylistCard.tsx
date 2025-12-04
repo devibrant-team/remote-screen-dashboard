@@ -29,7 +29,7 @@ function guessTypeFromUrl(url: string): "video" | "image" {
 
 export default function NormalPlaylistCard() {
   const { data, isLoading, isError, error } = useGetNormalPlaylist();
-  const playlists = data ?? [];
+  const playlists = data?.items ?? [];
 
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();

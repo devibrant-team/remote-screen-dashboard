@@ -1,8 +1,6 @@
 // ScheduleToolBar.tsx
 import React, { useMemo, useRef, useState } from "react";
 import { ListVideo, Sparkles, ArrowLeft } from "lucide-react";
-import { useGetNormalPlaylist } from "../../ReactQuery/GetPlaylists/GetNormalPlaylist";
-import { useGetInteractiveplaylist } from "../../ReactQuery/GetPlaylists/GetInteractivePlaylist";
 import ScheduleScreen from "./ScheduleScreen";
 import { useExternalDraggable } from "../../Components/useExternalDraggable";
 import NormalContent from "./Content/NormalContent";
@@ -16,16 +14,7 @@ const ScheduleToolBar: React.FC = () => {
   const listRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate(); // ⬅️ hook
 
-  const { data: normalData, isLoading: loadingNormal } = useGetNormalPlaylist();
-  const { data: interactiveData, isLoading: loadingInteractive } =
-    useGetInteractiveplaylist();
-
-  const normalCount = useMemo(() => normalData?.length ?? 0, [normalData]);
-  const interactiveCount = useMemo(
-    () => interactiveData?.length ?? 0,
-    [interactiveData]
-  );
-
+  
   useExternalDraggable(listRef, ".fc-draggable");
 
   return (

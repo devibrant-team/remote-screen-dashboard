@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-// ❌ REMOVE this: import { Draggable } from "@fullcalendar/interaction";
+import { useEffect } from "react";
 import MediaPreview from "../../../Components/Media/MediaPreview";
 import { useGetNormalPlaylist } from "../../../ReactQuery/GetPlaylists/GetNormalPlaylist";
 
@@ -26,39 +25,34 @@ function guessTypeFromUrl(url: string): "video" | "image" {
 }
 
 export default function NormalContent() {
-  const { data, isLoading, isError, error } = useGetNormalPlaylist();
-  const playlists = data ?? [];
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    hasPreviousPage,
+    fetchNextPage,
+    fetchPreviousPage,
+    isFetchingNextPage,
+    isFetchingPreviousPage,
+  } = useGetNormalPlaylist();
 
-  // Pagination (5 per page)
-  const pageSize = 5;
-  const [page, setPage] = useState(0);
-  const totalPages = Math.max(
-    1,
-    Math.ceil((playlists.length || 0) / pageSize)
-  );
+  const playlists = data?.items ?? [];
+  const currentPage = data?.currentPage ?? 1;
+  const totalPages = data?.totalPages ?? 1;
+  const totalItems = data?.totalItems ?? playlists.length;
 
-  // Clamp page when data size changes
+  // (optional) side-effect if you want to do something when page changes
   useEffect(() => {
-    const newTotal = Math.max(
-      1,
-      Math.ceil((playlists.length || 0) / pageSize)
-    );
-    if (page > newTotal - 1) setPage(newTotal - 1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playlists.length]);
+    // console.log("Server page:", currentPage, "/", totalPages);
+  }, [currentPage, totalPages]);
 
-  const start = page * pageSize;
-  const end = Math.min(start + pageSize, playlists.length);
-  const pageItems = playlists.slice(start, end);
-
-  // ❌ REMOVE the Draggable useEffect entirely.
-  // The shared hook in ScheduleToolBar handles Draggable for .fc-draggable items.
-  // It also sets/clears window.__draggingPlaylist for you.
-
-  if (isLoading) {
+  if (isLoading && !data) {
+    // initial skeleton (you can keep your old skeleton if you like)
     return (
       <ul className="flex flex-col gap-2">
-        {Array.from({ length: pageSize }).map((_, i) => (
+        {Array.from({ length: 4 }).map((_, i) => (
           <li
             key={i}
             className="flex items-center gap-3 rounded-lg bg-white p-2"
@@ -98,7 +92,7 @@ export default function NormalContent() {
   return (
     <>
       <ul id="normal-playlist-list" className="flex flex-col gap-2">
-        {pageItems.map((p) => (
+        {playlists.map((p) => (
           <li
             key={p.id}
             data-playlist-id={p.id}
@@ -106,7 +100,6 @@ export default function NormalContent() {
             data-duration={Number(p.duration || 0)}
             className="fc-draggable group relative flex items-center gap-3 rounded-lg border border-neutral-200 bg-white p-2 hover:border-red-500 hover:shadow-sm transition cursor-grab"
             title={p.name || `Playlist #${p.id}`}
-
           >
             <MediaPreview
               src={p.media}
@@ -132,27 +125,28 @@ export default function NormalContent() {
         ))}
       </ul>
 
-      {/* Pager */}
+      {/* Pager using API current_page / last_page */}
       <div className="mt-3 flex items-center justify-between text-[11px] text-gray-700">
         <span className="font-medium">
-          {start + 1}-{end} of {playlists.length}
+          Page {currentPage}/{totalPages} • Total {totalItems} playlists
         </span>
+
         <div className="inline-flex items-center gap-2">
           <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
+            onClick={() => fetchPreviousPage()}
+            disabled={!hasPreviousPage || isFetchingPreviousPage}
             className="rounded-md border border-neutral-300 bg-white px-2 py-1 disabled:opacity-50 hover:bg-neutral-50"
           >
             Prev
           </button>
+
           <span className="tabular-nums">
-            {page + 1}/{totalPages}
+            {currentPage}/{totalPages}
           </span>
+
           <button
-            onClick={() =>
-              setPage((p) => (end >= playlists.length ? p : p + 1))
-            }
-            disabled={end >= playlists.length}
+            onClick={() => fetchNextPage()}
+            disabled={!hasNextPage || isFetchingNextPage}
             className="rounded-md border border-neutral-300 bg-white px-2 py-1 disabled:opacity-50 hover:bg-neutral-50"
           >
             Next

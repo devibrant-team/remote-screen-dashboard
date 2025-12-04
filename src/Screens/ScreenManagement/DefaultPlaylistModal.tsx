@@ -29,15 +29,19 @@ const DefaultPlaylistDropdown: React.FC = () => {
   const { data: normalData, isLoading: loadingNormal } = useGetNormalPlaylist();
 
   // Normalize normal playlists
-  const normalPlaylists: PlaylistWithKind[] = useMemo(() => {
-    if (Array.isArray(normalData)) {
-      return (normalData as Playlist[]).map((p) => ({
-        ...p,
-        kind: "normal",
-      }));
-    }
-    return [];
-  }, [normalData]);
+const normalPlaylists: PlaylistWithKind[] = useMemo(() => {
+  const items = normalData?.items ?? [];
+  return items.map((p) => ({
+    id: p.id,
+    name: p.name,
+    duration: p.duration,
+    slideNumber: p.slideNumber,
+    media: p.media,
+    kind: "normal" as const,
+  }));
+}, [normalData]);
+
+
 
   // Normal first, then interactive
   const playlists: PlaylistWithKind[] = useMemo(

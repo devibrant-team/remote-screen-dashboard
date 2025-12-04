@@ -54,7 +54,9 @@ function guessTypeFromUrl(url?: string): "video" | "image" {
 export default function InteractivePlaylist() {
   const dispatch = useAppDispatch();
   const { data, isLoading, isError, error } = useGetInteractiveplaylist();
-  const playlists: PlaylistItem[] = (data as PlaylistItem[]) ?? [];
+
+  // ⬅️ data is the pagination object; grab the array from .items
+  const playlists: PlaylistItem[] = data?.items ?? [];
 
   const [editorOpen, setEditorOpen] = useState(false);
   const selectedId = useAppSelector((s) => s.interactive.selectedId);

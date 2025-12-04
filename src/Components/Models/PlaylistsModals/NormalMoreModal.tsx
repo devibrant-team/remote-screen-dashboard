@@ -31,16 +31,19 @@ function guessTypeFromUrl(url: string): "video" | "image" {
 type Props = { open: boolean; onClose: () => void };
 
 export default function NormalMoreModal({ open, onClose }: Props) {
-  const {
-    data = [],
-    isLoading,
-    isError,
-    error,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    refetch,
-  } = useGetNormalPlaylist();
+const {
+  data,
+  isLoading,
+  isError,
+  error,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  refetch,
+} = useGetNormalPlaylist();
+
+const playlists = data?.items ?? [];
+
   const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -48,8 +51,8 @@ export default function NormalMoreModal({ open, onClose }: Props) {
   formatSeconds;
   // When modal opens, ensure first page is present (useful if it was closed before first load)
   useEffect(() => {
-    if (open && !data.length && !isLoading) refetch();
-  }, [open, data.length, isLoading, refetch]);
+    if (open && !playlists.length && !isLoading) refetch();
+  }, [open, playlists.length, isLoading, refetch]);
 
   if (!open) return null;
 
@@ -101,14 +104,14 @@ export default function NormalMoreModal({ open, onClose }: Props) {
               Failed to load playlists
               {error && `: ${(error as any)?.message ?? ""}`}
             </div>
-          ) : !data.length ? (
+          ) : !playlists.length ? (
             <div className="p-6 text-center rounded-xl border border-gray-200 bg-white">
               <p className="text-gray-700">No playlists found.</p>
             </div>
           ) : (
             <div className="relative max-h-[70vh] overflow-auto pr-1">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {data.map((p) => (
+                {playlists.map((p) => (
                   <div
                     key={p.id}
                     onClick={() => {

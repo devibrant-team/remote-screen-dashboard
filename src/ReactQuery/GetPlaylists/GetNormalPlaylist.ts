@@ -12,7 +12,7 @@ const NormalPlaylistSchema = z.object({
   duration: z.coerce.number(),
   slide_number: z.coerce.number(),
   grid: z.string(),
-  media: z.string(), // keep plain; encode before rendering
+  media: z.string(),
 });
 
 const PaginationSchema = z.object({
@@ -33,6 +33,12 @@ const ApiResponseSchema = z.object({
 });
 
 type NormalPlaylistRaw = z.infer<typeof NormalPlaylistSchema>;
+type Pagination = z.infer<typeof PaginationSchema>;
+
+type PageResult = {
+  items: NormalPlaylistRaw[];
+  pagination: Pagination;
+};
 
 /* 2) Public type (camelCase) */
 export type NormalPlaylist = {
@@ -44,12 +50,10 @@ export type NormalPlaylist = {
 };
 
 /* 3) One-page fetcher */
-type PageResult = {
-  items: NormalPlaylistRaw[];
-  pagination: z.infer<typeof PaginationSchema>;
-};
-
-async function fetchNormalPlaylistsPage(page: number, signal?: AbortSignal): Promise<PageResult> {
+async function fetchNormalPlaylistsPage(
+  page: number,
+  signal?: AbortSignal
+): Promise<PageResult> {
   const token = localStorage.getItem("token");
   const join = getNormalplaylistApi.includes("?") ? "&" : "?";
   const url = `${getNormalplaylistApi}${join}page=${page}`;
@@ -64,18 +68,34 @@ async function fetchNormalPlaylistsPage(page: number, signal?: AbortSignal): Pro
 
   const items = parsed.playLists.map((r) => ({
     ...r,
-    media: encodeURI(r.media), // handle spaces safely for <img src>
+    media: encodeURI(r.media),
   }));
 
   return { items, pagination: parsed.pagination };
 }
 
-/* 4) Infinite hook */
+/* 4) What the component will receive */
+type NormalPlaylistResult = {
+  items: NormalPlaylist[];
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+};
+
+/* 5) Infinite hook */
 export function useGetNormalPlaylist() {
-  return useInfiniteQuery<PageResult, Error, NormalPlaylist[], ["normalplaylist"], number>({
+  return useInfiniteQuery<
+    PageResult,
+    Error,
+    NormalPlaylistResult,
+    ["normalplaylist"],
+    number
+  >({
     queryKey: ["normalplaylist"],
     initialPageParam: 1,
-    queryFn: ({ pageParam, signal }) => fetchNormalPlaylistsPage(pageParam, signal),
+    queryFn: ({ pageParam, signal }) =>
+      fetchNormalPlaylistsPage(pageParam, signal),
+
     getNextPageParam: (lastPage) => {
       const { current_page, last_page } = lastPage.pagination;
       return current_page < last_page ? current_page + 1 : undefined;
@@ -84,19 +104,31 @@ export function useGetNormalPlaylist() {
       const { current_page } = firstPage.pagination;
       return current_page > 1 ? current_page - 1 : undefined;
     },
+
     staleTime: 2 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: 0,
-    // Flatten + map to your camelCase type
-    select: (data) =>
-      data.pages.flatMap((p) =>
-        p.items.map<NormalPlaylist>((r) => ({
+
+    // ✅ Flatten + attach real pagination from API
+    select: (data): NormalPlaylistResult => {
+      const allItems: NormalPlaylist[] = data.pages.flatMap((p) =>
+        p.items.map((r) => ({
           id: r.id,
           name: r.name,
           duration: r.duration,
           slideNumber: r.slide_number,
           media: r.media,
         }))
-      ),
+      );
+
+      const lastPage = data.pages[data.pages.length - 1].pagination;
+
+      return {
+        items: allItems,
+        currentPage: lastPage.current_page,
+        totalPages: lastPage.last_page,
+        totalItems: lastPage.total,
+      };
+    },
   });
 }

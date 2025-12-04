@@ -79,9 +79,27 @@ export default function AssignSchedulebar({
   const dispatch = useDispatch();
 
   /* ----------------------- Playlists (single select) ---------------------- */
-  const { data: normalData, isLoading: loadingNormal } = useGetNormalPlaylist();
-  const { data: interactiveData, isLoading: loadingInteractive } =
-    useGetInteractiveplaylist();
+  const {
+    data: normalData,
+    isLoading: loadingNormal,
+    hasNextPage: normalHasNext,
+    hasPreviousPage: normalHasPrev,
+    fetchNextPage: fetchNextNormal,
+    fetchPreviousPage: fetchPrevNormal,
+    isFetchingNextPage: fetchingNextNormal,
+    isFetchingPreviousPage: fetchingPrevNormal,
+  } = useGetNormalPlaylist();
+
+  const {
+    data: interactiveData,
+    isLoading: loadingInteractive,
+    hasNextPage: interactiveHasNext,
+    hasPreviousPage: interactiveHasPrev,
+    fetchNextPage: fetchNextInteractive,
+    fetchPreviousPage: fetchPrevInteractive,
+    isFetchingNextPage: fetchingNextInteractive,
+    isFetchingPreviousPage: fetchingPrevInteractive,
+  } = useGetInteractiveplaylist();
 
   const [tab, setTab] = useState<PickType>("normal");
   const [uiError, setUiError] = useState<unknown | null>(null);
@@ -91,14 +109,26 @@ export default function AssignSchedulebar({
   } | null>(null);
 
   const normals: Item[] = useMemo(
-    () => (Array.isArray(normalData) ? normalData : []),
+    () =>
+      (normalData?.items ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        duration: p.duration,
+        media: p.media,
+      })),
     [normalData]
   );
+
   const interactives: Item[] = useMemo(
-    () => (Array.isArray(interactiveData) ? interactiveData : []),
+    () =>
+      (interactiveData?.items ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        duration: p.duration,
+        media: p.media,
+      })),
     [interactiveData]
   );
-
   const list = tab === "normal" ? normals : interactives;
   const isLoadingPlaylists = loadingNormal || loadingInteractive;
 
@@ -201,35 +231,34 @@ export default function AssignSchedulebar({
   };
 
   // Devices
-const toggleScreen = (id: number) => {
-  // استخدم القيمة الحالية من الـ state (مش callback)
-  const prev = selectedScreenIds;
-  const next = prev.includes(id)
-    ? prev.filter((x) => x !== id)
-    : [...prev, id];
+  const toggleScreen = (id: number) => {
+    // استخدم القيمة الحالية من الـ state (مش callback)
+    const prev = selectedScreenIds;
+    const next = prev.includes(id)
+      ? prev.filter((x) => x !== id)
+      : [...prev, id];
 
-  // 1) حدّث الـ local state
-  setSelectedScreenIds(next);
+    // 1) حدّث الـ local state
+    setSelectedScreenIds(next);
 
-  // 2) حدّث الـ block عن طريق الـ dispatch
-  patchBlock({
-    screens: next.map((screenId) => ({ screenId })),
-  });
-};
+    // 2) حدّث الـ block عن طريق الـ dispatch
+    patchBlock({
+      screens: next.map((screenId) => ({ screenId })),
+    });
+  };
 
-const toggleGroup = (id: number) => {
-  const prev = selectedGroupIds;
-  const next = prev.includes(id)
-    ? prev.filter((x) => x !== id)
-    : [...prev, id];
+  const toggleGroup = (id: number) => {
+    const prev = selectedGroupIds;
+    const next = prev.includes(id)
+      ? prev.filter((x) => x !== id)
+      : [...prev, id];
 
-  setSelectedGroupIds(next);
+    setSelectedGroupIds(next);
 
-  patchBlock({
-    groups: next.map((groupId) => ({ groupId })),
-  });
-};
-
+    patchBlock({
+      groups: next.map((groupId) => ({ groupId })),
+    });
+  };
 
   /* --------------------------- Create vs Update --------------------------- */
   // local draft if id is a string and doesn’t start with "block-"
@@ -470,6 +499,60 @@ const toggleGroup = (id: number) => {
               );
             })}
           </div>
+          {tab === "normal" && (
+            <div className="mt-3 flex items-center justify-between text-xs text-gray-700">
+              <span>
+                Page {normalData?.currentPage ?? 1} /{" "}
+                {normalData?.totalPages ?? 1}
+              </span>
+
+              <div className="inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fetchPrevNormal()}
+                  disabled={!normalHasPrev || fetchingPrevNormal}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 disabled:opacity-50 hover:bg-gray-50"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fetchNextNormal()}
+                  disabled={!normalHasNext || fetchingNextNormal}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 disabled:opacity-50 hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+          {tab === "interactive" && (
+            <div className="mt-3 flex items-center justify-between text-xs text-gray-700">
+              <span>
+                Page {interactiveData?.currentPage ?? 1} /{" "}
+                {interactiveData?.totalPages ?? 1}
+              </span>
+
+              <div className="inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fetchPrevInteractive()}
+                  disabled={!interactiveHasPrev || fetchingPrevInteractive}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 disabled:opacity-50 hover:bg-gray-50"
+                >
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fetchNextInteractive()}
+                  disabled={!interactiveHasNext || fetchingNextInteractive}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1 disabled:opacity-50 hover:bg-gray-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ====================== Timing ====================== */}

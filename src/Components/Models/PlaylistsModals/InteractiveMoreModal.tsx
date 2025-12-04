@@ -1,4 +1,4 @@
-// src/components/Playlist/Interactive/InteractiveMoreModal.tsx
+// src/Components/Playlist/Interactive/InteractiveMoreModal.tsx
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../../store";
@@ -33,7 +33,7 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
   const [editorOpen, setEditorOpen] = useState(false);
 
   const {
-    data: items = [],
+    data,
     isLoading,
     isError,
     error,
@@ -43,8 +43,15 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
     refetch,
   } = useGetInteractiveplaylist();
 
+  // 👉 derive items + optional meta from data
+  const items = data?.items ?? [];
+  const currentPage = data?.currentPage ?? 1;
+  const totalPages = data?.totalPages ?? 1;
+  const totalItems = data?.totalItems ?? items.length;
+
   const { deletePlaylist, deletingId } = useDeleteNormalPlaylist();
   const confirm = useConfirmDialog();
+
   // Make sure we have data when the modal opens
   useEffect(() => {
     if (open && !items.length && !isLoading) refetch();
@@ -125,7 +132,14 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
               ) : isError ? (
                 <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
                   Failed to load playlists
-                  {error && `: ${(error as any)?.message ?? ""}`}
+                  {error && (
+                    <>
+                      :{" "}
+                      <span className="font-medium">
+                        {(error as any)?.message ?? ""}
+                      </span>
+                    </>
+                  )}
                 </div>
               ) : !items.length ? (
                 <div className="p-6 text-center rounded-xl border border-gray-200 bg-white">
@@ -250,22 +264,27 @@ export default function InteractiveMoreModal({ open, onClose }: Props) {
                     </div>
                   </div>
 
-                  {/* Sticky footer */}
+                  {/* Sticky footer with backend pagination */}
                   <div className="sticky bottom-0 left-0 right-0 mt-3 bg-[var(--white)]/95 backdrop-blur px-3 py-2 border-t border-gray-200">
-                    <div className="grid place-items-center">
-                      {hasNextPage ? (
-                        <button
-                          onClick={() => fetchNextPage()}
-                          disabled={isFetchingNextPage}
-                          className="bg-[var(--mainred)] text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-red-600 transition disabled:opacity-60"
-                        >
-                          {isFetchingNextPage ? "Loading..." : "Load more"}
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-500">
-                          You’ve reached the end
-                        </span>
-                      )}
+                    <div className="flex items-center justify-between text-xs text-gray-600">
+                      <span>
+                        Page {currentPage} of {totalPages} • {totalItems} total
+                      </span>
+                      <div className="grid place-items-center">
+                        {hasNextPage ? (
+                          <button
+                            onClick={() => fetchNextPage()}
+                            disabled={isFetchingNextPage}
+                            className="bg-[var(--mainred)] text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-red-600 transition disabled:opacity-60"
+                          >
+                            {isFetchingNextPage ? "Loading..." : "Load more"}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-500">
+                            You’ve reached the end
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
