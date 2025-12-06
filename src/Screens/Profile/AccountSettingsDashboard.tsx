@@ -1,7 +1,15 @@
 // src/Pages/AccountSettingsDashboard.tsx
 
+import { useState } from "react";
 import { useGetProfile } from "../../ReactQuery/Profile/GetProfile";
-
+import SupportModal from "@/Components/Models/SupportModal";
+import {
+  resetSupportForm,
+  setSupportCategory,
+  setSupportDescription,
+  setSupportTopicType,
+} from "@/Redux/Support/SupportSlice";
+import { useDispatch } from "react-redux";
 type SkeletonLineProps = {
   className?: string;
 };
@@ -167,7 +175,8 @@ function SkeletonAccountSettingsDashboard() {
 
 function AccountSettingsDashboard() {
   const { data: profile, isLoading, isError } = useGetProfile();
-
+  const [supportOpen, setSupportOpen] = useState(false);
+  const dispatch = useDispatch();
   if (isLoading) {
     return <SkeletonAccountSettingsDashboard />;
   }
@@ -263,12 +272,6 @@ function AccountSettingsDashboard() {
                       className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                     />
                   </div>
-
-
-
-                  <button className="mt-2 inline-flex items-center justify-center rounded-md bg-red-500 px-4 py-2 text-xs font-medium text-white hover:bg-red-600 transition">
-                    Update Profile
-                  </button>
                 </div>
               </section>
 
@@ -289,8 +292,26 @@ function AccountSettingsDashboard() {
                   />
                 </div>
 
-                <button className="mt-3 inline-flex items-center justify-center rounded-md bg-red-500 px-4 py-2 text-xs font-medium text-white hover:bg-red-600 transition">
-                  Change Password
+                <button
+                  type="button"
+                  onClick={() => {
+                    // fresh form
+                    dispatch(resetSupportForm());
+
+                    // this is an account/password issue → billing/account category
+                    dispatch(setSupportCategory("billing"));
+                    dispatch(setSupportTopicType("question"));
+                    dispatch(
+                      setSupportDescription(
+                        "I forgot my password and cannot log in. Please help me reset my password or regain access to my account."
+                      )
+                    );
+
+                    setSupportOpen(true);
+                  }}
+                  className="mt-3 inline-flex items-center justify-center rounded-md bg-red-500 px-4 py-2 text-xs font-medium text-white hover:bg-red-600 transition"
+                >
+                  Forget Password ?
                 </button>
               </section>
             </div>
@@ -440,6 +461,7 @@ function AccountSettingsDashboard() {
           </div>
         </div>
       </div>
+      <SupportModal open={supportOpen} onClose={() => setSupportOpen(false)} />
     </div>
   );
 }

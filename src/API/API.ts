@@ -45,3 +45,5 @@ export const GetTagApi = `${http}getmediatags`
 export const AssignMediaToTagApi = `${http}updatemediatags`
 export const UpdateTagApi = `${http}updatetag`
 export const DeleteTagApi = `${http}deletetag`
+export const VersionApi = `${http}dashboardversion`
+

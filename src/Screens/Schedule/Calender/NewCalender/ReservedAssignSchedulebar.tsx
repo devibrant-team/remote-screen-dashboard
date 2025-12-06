@@ -40,6 +40,7 @@ import {
 } from "../../../../Redux/ReservedBlocks/ReservedBlocks";
 import ReservedAssignNewModel from "./ReservedAssignNewModel";
 import { useAlertDialog } from "@/AlertDialogContext";
+import MediaPreview from "@/Components/Media/MediaPreview";
 
 /* -------------------------------- Types ---------------------------------- */
 type Item = { id: number; name: string; duration?: number; media?: string };
@@ -307,7 +308,13 @@ export default function ReservedAssignSchedulebar({
   onCancel,
 }: AssignSchedulebarProps) {
   const dispatch = useDispatch();
-
+  function guessTypeFromUrl(url: string): "video" | "image" {
+    const ext =
+      url.split("?")[0].split("#")[0].split(".").pop()?.toLowerCase() || "";
+    return ["mp4", "mov", "avi", "mkv", "webm"].includes(ext)
+      ? "video"
+      : "image";
+  }
   /* ----------------------- Playlists (single select) ---------------------- */
   const {
     data: normalData,
@@ -832,23 +839,25 @@ export default function ReservedAssignSchedulebar({
                 >
                   <div className="aspect-[4/3] bg-gray-100 relative">
                     {it.media ? (
-                      <img
+                      <MediaPreview
                         src={it.media}
+                        type={guessTypeFromUrl(it.media)}
                         alt={it.name}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
+                        className="w-full h-full"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
                         <ImageIcon className="size-6" />
                       </div>
                     )}
+
                     {isSel && (
                       <div className="absolute top-1.5 right-1.5 bg-red-500 text-white rounded-full p-0.5">
                         <Check className="size-3" />
                       </div>
                     )}
                   </div>
+
                   <div className="p-2">
                     <div className="font-medium text-sm truncate">
                       {it.name}

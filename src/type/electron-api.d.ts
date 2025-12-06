@@ -10,6 +10,7 @@ declare global {
       onDownloadProgress?: (cb: (p: any) => void) => () => void;
       onDownloadComplete?: (cb: (p: any) => void) => () => void;
       onDownloadError?: (cb: (p: any) => void) => () => void;
+         startUpdate?: () => void;
     };
   }
 }

@@ -22,6 +22,11 @@ import Dashboard from "./Screens/Dashboard/Dashboard";
 import Support from "./Screens/Support/Support";
 import BranchScreen from "./Screens/Branches/BranchScreen";
 import ConnectionStatusBanner from "./Components/ConnectionStatusBanner";
+import { useGetVersion } from "./ReactQuery/Version/GetVersion";
+import { APP_VERSION } from "./Hook/version";
+import { useEffect, useState } from "react";
+import { useAlertDialog } from "./AlertDialogContext";
+import { useConfirmDialog } from "./Components/ConfirmDialogContext";
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
   const token =
@@ -60,6 +65,83 @@ function PlainLayout() {
 
 /* ---------- Routes ---------- */
 export default function App() {
+  const { data: backendVersion, isLoading } = useGetVersion();
+  console.log(backendVersion)
+  const alert = useAlertDialog();
+  const confirm = useConfirmDialog();
+
+  const [updateHandled, setUpdateHandled] = useState(false);
+
+useEffect(() => {
+  if (isLoading || !backendVersion || updateHandled) return;
+
+  const serverVersion = backendVersion.version;
+  const type = backendVersion.versionType; // 1 = forced, 0 = optional
+  const downloadUrl = backendVersion.link;
+
+  // If versions are the same → no dialog
+  if (!serverVersion || serverVersion === APP_VERSION) return;
+
+  setUpdateHandled(true); // avoid showing multiple times
+
+  const startDownload = async () => {
+    console.log("[Update] backendVersion:", backendVersion);
+    console.log("[Update] downloadUrl:", downloadUrl);
+
+    if (!downloadUrl) {
+      await alert({
+        title: "Download unavailable",
+        message:
+          "A new version is available, but no download link was provided. Please contact support.",
+        buttonText: "OK",
+      });
+      return;
+    }
+
+    // Log what we have on window
+    console.log("[Update] window.electronAPI:", window.electronAPI);
+
+    // If electron bridge is missing, fallback to browser
+    if (!window.electronAPI || !window.electronAPI.downloadFile) {
+      console.warn(
+        "[Update] electronAPI.downloadFile not available, opening in browser instead."
+      );
+      window.open(downloadUrl, "_blank"); // 👈 this SHOULD visibly open/download
+      return;
+    }
+
+    console.log("[Update] Sending download-file IPC with URL:", downloadUrl);
+    window.electronAPI.downloadFile({ url: downloadUrl });
+  };
+
+  // FORCED UPDATE (versionType === 1)
+  if (type === 1) {
+    (async () => {
+      await alert({
+        title: "Update required",
+        message: `A new version (${serverVersion}) of Iguana Dashboard is available.\n\nYour current version is ${APP_VERSION}.\n\nYou must update to continue using the app.`,
+        buttonText: "Update now",
+      });
+
+      await startDownload();
+    })();
+  } else {
+    // OPTIONAL UPDATE (versionType !== 1)
+    (async () => {
+      const ok = await confirm({
+        title: "Update available",
+        message: `A new version (${serverVersion}) of Iguana Dashboard is available.\n\nYour current version is ${APP_VERSION}.\n\nDo you want to download it now?`,
+        confirmText: "Download",
+        cancelText: "Later",
+      });
+
+      if (ok) {
+        await startDownload();
+      }
+    })();
+  }
+}, [backendVersion, isLoading, updateHandled, alert, confirm]);
+
   return (
     <>
       <LicenseKey />

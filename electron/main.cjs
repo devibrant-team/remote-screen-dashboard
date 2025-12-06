@@ -12,6 +12,16 @@ function getPreloadPath() {
   return path.join(__dirname, 'preload.cjs');
 }
 
+const { autoUpdater } = require("electron-updater");
+
+// somewhere in your setup (you probably already have autoUpdater config)
+ipcMain.on("app/start-update", () => {
+  // for example:
+  autoUpdater.checkForUpdatesAndNotify();
+  // or if update already downloaded:
+  // autoUpdater.quitAndInstall();
+});
+
 let win;
 const activeDownloads = new Map();
 
@@ -111,14 +121,13 @@ ipcMain.handle('get-machine-id', async () => {
 
 
 // IPC: trigger a download from renderer
-ipcMain.on('download-file', (_event, payload) => {
+ipcMain.on("download-file", (_event, payload) => {
   try {
     const { url } =
-      typeof payload === 'string' ? { url: payload } : payload || {};
+      typeof payload === "string" ? { url: payload } : payload || {};
     if (!win || !url) return;
     win.webContents.downloadURL(url);
-
   } catch (err) {
-    console.error('[Main] download-file error:', err);
+    console.error("[Main] download-file error:", err);
   }
 });
