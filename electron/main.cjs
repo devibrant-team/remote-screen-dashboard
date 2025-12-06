@@ -12,15 +12,15 @@ function getPreloadPath() {
   return path.join(__dirname, 'preload.cjs');
 }
 
-const { autoUpdater } = require("electron-updater");
+// const { autoUpdater } = require("electron-updater");
 
 // somewhere in your setup (you probably already have autoUpdater config)
-ipcMain.on("app/start-update", () => {
-  // for example:
-  autoUpdater.checkForUpdatesAndNotify();
-  // or if update already downloaded:
-  // autoUpdater.quitAndInstall();
-});
+// ipcMain.on("app/start-update", () => {
+//   // for example:
+//   autoUpdater.checkForUpdatesAndNotify();
+//   // or if update already downloaded:
+//   // autoUpdater.quitAndInstall();
+// });
 
 let win;
 const activeDownloads = new Map();
