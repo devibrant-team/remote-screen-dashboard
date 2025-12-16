@@ -1,5 +1,11 @@
 // src/Screens/Schedule/SelectDevices/AssignNewModel.tsx
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { UsersRound, Monitor, Layers, Check, X, Search } from "lucide-react";
 
@@ -75,11 +81,13 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
   ) as any[];
 
   const selectedDevicesRaw = useSelector(selectSelectedDevices) as any[];
-  const selectedGroups = useSelector(selectSelectedGroups) as Array<string | number>;
+  const selectedGroups = useSelector(selectSelectedGroups) as Array<
+    string | number
+  >;
 
   // ScheduleItem (for preselect only)
   const schedScreens = useSelector(selectScheduleItemScreens); // Array<{id,name}>
-  const schedGroups = useSelector(selectScheduleItemGroups);   // Array<{id,name}>
+  const schedGroups = useSelector(selectScheduleItemGroups); // Array<{id,name}>
 
   // Normalize selected device IDs from ScreenSlice
   const selectedDeviceIds = useMemo(() => {
@@ -120,7 +128,9 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
     // Screens
     for (const s of schedScreens ?? []) {
       const sid = String(s.id);
-      const isAlready = (selectedDeviceIds ?? []).some((id) => String(id) === sid);
+      const isAlready = (selectedDeviceIds ?? []).some(
+        (id) => String(id) === sid
+      );
       if (!isAlready) {
         dispatch(toggleSelectedDevice(s.id as number));
       }
@@ -172,7 +182,7 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
         name: s?.name || `Screen #${sid ?? "?"}`,
         branch: s?.branch,
         screenId: s?.screenId,
-        active: s?.active ?? false,
+        active: s?.isOnline,
       };
     });
 
@@ -192,7 +202,9 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
         const bag =
           r.kind === "group"
             ? `${r.name} ${r.branchName ?? ""} ${r.screenNumber ?? ""}`
-            : `${r.name} ${r.branch ?? ""} ${r.screenId ?? ""} ${r.active ? "active" : "inactive"}`;
+            : `${r.name} ${r.branch ?? ""} ${r.screenId ?? ""} ${
+                r.active ? "active" : "inactive"
+              }`;
         return bag.toLowerCase().includes(q);
       });
     }
@@ -211,26 +223,41 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
   };
 
   const selectedChips = useMemo(() => {
-    const chips: Array<{ label: string; kind: Row["kind"]; id: string | number }> = [];
+    const chips: Array<{
+      label: string;
+      kind: Row["kind"];
+      id: string | number;
+    }> = [];
     for (const gid of selectedGroups ?? []) {
       const g = groups.find((x) => String(x.id) === String(gid));
       if (g) chips.push({ label: g.name, kind: "group", id: gid });
     }
     for (const sid of selectedDeviceIds ?? []) {
-      const s = (screens ?? []).find((x: any) => String(getScreenKey(x)) === String(sid));
-      chips.push({ label: s?.name || `Screen #${sid}`, kind: "screen", id: sid });
+      const s = (screens ?? []).find(
+        (x: any) => String(getScreenKey(x)) === String(sid)
+      );
+      chips.push({
+        label: s?.name || `Screen #${sid}`,
+        kind: "screen",
+        id: sid,
+      });
     }
     return chips;
   }, [selectedGroups, selectedDeviceIds, groups, screens]);
 
-  const handleRemoveChip = (chip: { kind: Row["kind"]; id: string | number }) => {
+  const handleRemoveChip = (chip: {
+    kind: Row["kind"];
+    id: string | number;
+  }) => {
     if (chip.kind === "group") dispatch(toggleSelectedGroup(chip.id));
     else dispatch(toggleSelectedDevice(chip.id));
   };
 
   const clearAllSelected = () => {
     (selectedGroups ?? []).forEach((gid) => dispatch(toggleSelectedGroup(gid)));
-    (selectedDeviceIds ?? []).forEach((sid) => dispatch(toggleSelectedDevice(sid)));
+    (selectedDeviceIds ?? []).forEach((sid) =>
+      dispatch(toggleSelectedDevice(sid))
+    );
   };
 
   const isLoading = loadingGroups || loadingScreens;
@@ -238,12 +265,16 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
   // Modal wiring
   const panelRef = useRef<HTMLDivElement | null>(null);
   const onBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
+    if (panelRef.current && !panelRef.current.contains(e.target as Node))
+      onClose();
   };
 
-  const onKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === "Escape") onClose();
-  }, [onClose]);
+  const onKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    },
+    [onClose]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -278,13 +309,17 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
       // Build [{id,name}] for groups
       const pickedGroups: RBNamed[] = (selectedGroups ?? [])
         .map((gid) => {
-          const g = (groups ?? []).find((x: Group) => String(x.id) === String(gid));
+          const g = (groups ?? []).find(
+            (x: Group) => String(x.id) === String(gid)
+          );
           return { id: Number(gid), name: g?.name ?? `Group #${gid}` };
         })
         .filter((x) => Number.isFinite(x.id));
 
       // ✅ Save into ReservedBlocks slice (selection chips)
-      dispatch(setReservedSelection({ screens: pickedScreens, groups: pickedGroups }));
+      dispatch(
+        setReservedSelection({ screens: pickedScreens, groups: pickedGroups })
+      );
 
       // (optional) keep callback for parent if needed
       onApply?.({
@@ -324,7 +359,9 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
 
         {/* Title */}
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-gray-200 bg-white/90 px-6 py-4 backdrop-blur">
-          <h2 className="text-base font-semibold text-gray-900">Select Targets</h2>
+          <h2 className="text-base font-semibold text-gray-900">
+            Select Targets
+          </h2>
         </div>
 
         {/* Controls */}
@@ -339,7 +376,9 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
                     onClick={() => setMode(m)}
                     className={[
                       "inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm transition",
-                      mode === m ? "bg-red-500 text-white shadow-sm" : "text-gray-700 hover:bg-gray-50",
+                      mode === m
+                        ? "bg-red-500 text-white shadow-sm"
+                        : "text-gray-700 hover:bg-gray-50",
                     ].join(" ")}
                     aria-pressed={mode === m}
                   >
@@ -386,10 +425,16 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
                   key={`${chip.kind}-${chip.id}`}
                   className={[
                     "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ring-1",
-                    chip.kind === "group" ? "bg-red-50 text-red-700 ring-red-200" : "bg-gray-50 text-gray-700 ring-gray-200",
+                    chip.kind === "group"
+                      ? "bg-red-50 text-red-700 ring-red-200"
+                      : "bg-gray-50 text-gray-700 ring-gray-200",
                   ].join(" ")}
                 >
-                  {chip.kind === "group" ? <UsersRound className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
+                  {chip.kind === "group" ? (
+                    <UsersRound className="h-3.5 w-3.5" />
+                  ) : (
+                    <Monitor className="h-3.5 w-3.5" />
+                  )}
                   <span className="max-w-[160px] truncate">{chip.label}</span>
                   <button
                     type="button"
@@ -414,7 +459,10 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
           {isLoading ? (
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 9 }).map((_, i) => (
-                <li key={i} className="rounded-xl border border-gray-200 bg-white p-3">
+                <li
+                  key={i}
+                  className="rounded-xl border border-gray-200 bg-white p-3"
+                >
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-lg bg-gray-200 animate-pulse" />
                     <div className="flex-1 space-y-2">
@@ -427,7 +475,9 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
             </ul>
           ) : filtered.length === 0 ? (
             <div className="grid place-items-center rounded-xl border border-dashed border-gray-300 bg-gray-50 py-16 text-center">
-              <p className="text-sm text-gray-600">Nothing here. Try filters or search.</p>
+              <p className="text-sm text-gray-600">
+                Nothing here. Try filters or search.
+              </p>
             </div>
           ) : (
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -451,13 +501,17 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
                       onClick={() => handleToggleRow(r)}
                       className={[
                         "group relative w-full overflow-hidden rounded-xl border bg-white p-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400",
-                        isSelected ? "border-red-500 ring-1 ring-red-200" : "border-gray-200 hover:border-gray-300 hover:shadow-sm",
+                        isSelected
+                          ? "border-red-500 ring-1 ring-red-200"
+                          : "border-gray-200 hover:border-gray-300 hover:shadow-sm",
                       ].join(" ")}
                     >
                       <span
                         className={[
                           "absolute right-3 top-3 inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs transition",
-                          isSelected ? "bg-red-500 border-red-600 text-white" : "bg-white border-gray-200 text-gray-400 group-hover:text-gray-600",
+                          isSelected
+                            ? "bg-red-500 border-red-600 text-white"
+                            : "bg-white border-gray-200 text-gray-400 group-hover:text-gray-600",
                         ].join(" ")}
                         aria-hidden
                       >
@@ -475,26 +529,40 @@ const ReservedAssignNewModel: React.FC<AssignNewModelProps> = ({
                               : "bg-gray-100 text-gray-600",
                           ].join(" ")}
                         >
-                          {r.kind === "group" ? <UsersRound className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
+                          {r.kind === "group" ? (
+                            <UsersRound className="h-5 w-5" />
+                          ) : (
+                            <Monitor className="h-5 w-5" />
+                          )}
                         </div>
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             {statusDot}
-                            <div className="truncate text-sm font-medium text-gray-900">{r.name}</div>
+                            <div className="truncate text-sm font-medium text-gray-900">
+                              {r.name}
+                            </div>
                           </div>
                           <div className="mt-0.5 text-[11px] text-gray-500">
                             {r.kind === "group" ? (
                               <>
                                 ID: {r.id}
-                                {typeof (r as any).screenNumber !== "undefined" ? ` · Screens: ${(r as any).screenNumber}` : ""}
-                                {typeof (r as any).branchName !== "undefined" ? ` · Branch: ${(r as any).branchName}` : ""}
+                                {typeof (r as any).screenNumber !== "undefined"
+                                  ? ` · Screens: ${(r as any).screenNumber}`
+                                  : ""}
+                                {typeof (r as any).branchName !== "undefined"
+                                  ? ` · Branch: ${(r as any).branchName}`
+                                  : ""}
                               </>
                             ) : (
                               <>
                                 ID: {r.id}
-                                {typeof (r as any).screenId !== "undefined" ? ` · HW: ${(r as any).screenId}` : ""}
-                                {typeof (r as any).branch !== "undefined" ? ` · Branch: ${(r as any).branch}` : ""}
+                                {typeof (r as any).screenId !== "undefined"
+                                  ? ` · HW: ${(r as any).screenId}`
+                                  : ""}
+                                {typeof (r as any).branch !== "undefined"
+                                  ? ` · Branch: ${(r as any).branch}`
+                                  : ""}
                               </>
                             )}
                           </div>

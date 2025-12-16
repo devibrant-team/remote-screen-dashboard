@@ -90,6 +90,7 @@ const AssignNewModel: React.FC<AssignNewModelProps> = ({
   const { data: apiGroups, isLoading: loadingGroups } = useGetGroups();
   const { data: apiScreens, isLoading: loadingScreens } = useGetScreen();
 
+
   useEffect(() => {
     if (!groups.length && Array.isArray(apiGroups) && apiGroups.length) {
       dispatch(setGroups(apiGroups as Group[]));
@@ -167,7 +168,7 @@ const AssignNewModel: React.FC<AssignNewModelProps> = ({
         name: s?.name || `Screen #${sid ?? "?"}`,
         branch: s?.branch,
         screenId: s?.screenId,
-        active: s?.active ?? false,
+        active: s?.isOnline ,
       };
     });
 

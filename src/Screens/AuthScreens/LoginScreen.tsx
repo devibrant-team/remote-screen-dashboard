@@ -1,3 +1,5 @@
+// src/Screens/AuthScreens/LoginScreen.tsx
+import React, { useEffect, useState, type FormEvent } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -5,7 +7,6 @@ import { loginUser } from "../../Redux/Authentications/AuthSlice";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "../../../store";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email"),
@@ -26,6 +27,9 @@ const LoginScreen = () => {
   const machineId: string | null = useSelector(
     (state: RootState) => state.machine.machineId
   );
+
+  const [helpOpen, setHelpOpen] = useState(false);
+
   const {
     register,
     handleSubmit,
@@ -33,23 +37,24 @@ const LoginScreen = () => {
   } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
   });
+
   useEffect(() => {
     if (token) navigate("/mediacontent", { replace: true });
   }, [token, navigate]);
+
   const onSubmit = async (data: LoginFormInputs) => {
     const payload: LoginPayload = { ...data, machineId };
     try {
-      // unwrap throws on reject (RTK)
       await dispatch(loginUser(payload)).unwrap();
-      // if your thunk returns token and your slice doesn't persist it:
     } catch (e) {
-      // error state already set by slice; optional toast here
-    } 
+      // error state already handled in slice
+    }
   };
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-red-300 to-red-800 flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background IGUANA text with inverted gradient */}
-      <div className="absolute z-0 text-[160px] md:text-[200px] lg:text-[240px] font-extrabold  bg-clip-text text-white  opacity-30 select-none pointer-events-none">
+      <div className="absolute z-0 text-[160px] md:text-[200px] lg:text-[240px] font-extrabold bg-clip-text text-white opacity-30 select-none pointer-events-none">
         IGUANA
       </div>
 
@@ -61,8 +66,6 @@ const LoginScreen = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div>
-  
-
             <label htmlFor="email" className="block text-sm font-medium mb-2">
               Email
             </label>
@@ -119,6 +122,107 @@ const LoginScreen = () => {
           >
             {loading ? "Signing In..." : "Sign In"}
           </button>
+        </form>
+
+        <button
+          type="button"
+          onClick={() => setHelpOpen(true)}
+          className="font-bold text-red-500 mt-5 hover:text-red-400"
+        >
+          Need help?
+        </button>
+      </div>
+
+      <LoginHelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+    </div>
+  );
+};
+
+type LoginHelpModalProps = {
+  open: boolean;
+  onClose: () => void;
+};
+
+const LoginHelpModal: React.FC<LoginHelpModalProps> = ({ open, onClose }) => {
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+
+  if (!open) return null;
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !message.trim()) return;
+
+    const subject = "[Iguana Signage] Login help";
+    const bodyLines = [
+      `User email: ${email}`,
+      "",
+      "Problem / question:",
+      message,
+    ];
+    const body = bodyLines.join("\n");
+
+    const mailto = `mailto:support@signage-app.com?subject=${encodeURIComponent(
+      subject
+    )}&body=${encodeURIComponent(body)}`;
+
+    window.location.href = mailto;
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-semibold mb-3 text-gray-900">
+          Need help with login?
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Write your email and describe the problem you&apos;re facing. Your
+          email app will open with everything filled in.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Your email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)]"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              What is the problem?
+            </label>
+            <textarea
+              rows={4}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Describe what happens when you try to log in..."
+              className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[var(--mainred)]"
+              required
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 rounded-lg bg-[var(--mainred)] text-[var(--white)] text-sm font-semibold hover:opacity-90"
+            >
+              Open email app
+            </button>
+          </div>
         </form>
       </div>
     </div>

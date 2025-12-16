@@ -8,6 +8,7 @@ import {
   Edit3,
   X,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { useGetScheduleItem } from "../../../Redux/ScheduleItem/GetScheduleItem";
 import { useRenameScheduleItem } from "../../../Redux/ScheduleItem/RenameScheduleItem";
@@ -18,10 +19,10 @@ import {
   clearScheduleItemBlocks,
 } from "../../../Redux/ScheduleItem/ScheduleItemSlice";
 
-
-
 import SelectDevicesModel from "../SelectDevicesModel";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK } from "@/Redux/ScheduleItem/useScheduleItemBlocksByView";
 type Row = { id: string; name: string; modifiedAtISO: string };
 
 const fmtDateTime = (iso: string) => {
@@ -49,6 +50,8 @@ const ScheduleItem: React.FC = () => {
   const dispatch = useDispatch();
   const [displayRows, setDisplayRows] = useState<Row[]>([]);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   useEffect(() => {
     if (!Array.isArray(data)) return;
 
@@ -136,8 +139,13 @@ const ScheduleItem: React.FC = () => {
 
     // (optional) clear previous blocks immediately to avoid stale UI
     dispatch(clearScheduleItemBlocks());
+    await queryClient.invalidateQueries({
+      queryKey: ["scheduleItemBlocks", r.id],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [SCHEDULE_ITEM_BLOCKS_BY_VIEW_QK],
+    });
 
-  
     navigate("/calender");
   };
 
@@ -167,7 +175,16 @@ const ScheduleItem: React.FC = () => {
     if (e.key === "Enter") confirmRename();
     if (e.key === "Escape") cancelInlineRename();
   };
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+ queryClient.invalidateQueries({ queryKey: ["scheduleItems"] }),
 
+      await Promise.all([]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   return (
     <>
       <section className="w-full mt-5 px-5">
@@ -192,6 +209,16 @@ const ScheduleItem: React.FC = () => {
               >
                 <Plus className="h-4 w-4" />
                 Create New
+              </button>
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                />
               </button>
             </div>
           </div>
