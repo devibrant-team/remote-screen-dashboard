@@ -43,7 +43,8 @@ import {
   getDocument,
   type PDFDocumentProxy,
 } from "pdfjs-dist";
-import workerSrc from "pdfjs-dist/build/pdf.worker?worker&url";
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.js?url";
+
 
 GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -113,13 +114,14 @@ async function pdfToImages(
     const renderTask = page.render({
       canvasContext: ctx,
       viewport,
-      canvas,
+
     });
     await renderTask.promise;
 
-    const blob: Blob = await new Promise((resolve) =>
-      canvas.toBlob((b) => resolve(b as Blob), format, quality)
-    );
+const blob: Blob = await new Promise((resolve, reject) => {
+  canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob() failed"))), format, quality);
+});
+
 
     const ext = format === "image/jpeg" ? "jpg" : "webp";
     const nameBase = pdfFile.name.replace(/\.pdf$/i, "");
@@ -149,6 +151,7 @@ const MediaPage: React.FC = () => {
   const [isSelectable, setIsSelectable] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Array<number | string>>([]);
   const [tagPage, setTagPage] = useState(0); // current page of tags
+
 
   // 🔴 NEW: central error for ErrorToast
   const [toastError, setToastError] = useState<unknown | null>(null);
