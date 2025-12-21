@@ -4,29 +4,16 @@ const {
   BrowserWindow,
   ipcMain,
   session,
-  globalShortcut,
 } = require("electron");
 const path = require("path");
 const { machineIdSync } = require("node-machine-id");
+const { shell } = require("electron");
 
 const isDev = !app.isPackaged;
 
 function getPreloadPath() {
-  // In dev: __dirname = <repo>/electron
-  // In prod: __dirname = <App>.app/.../app.asar/electron
-  // So preload is always next to main.cjs.
   return path.join(__dirname, "preload.cjs");
 }
-
-// const { autoUpdater } = require("electron-updater");
-
-// somewhere in your setup (you probably already have autoUpdater config)
-// ipcMain.on("app/start-update", () => {
-//   // for example:
-//   autoUpdater.checkForUpdatesAndNotify();
-//   // or if update already downloaded:
-//   // autoUpdater.quitAndInstall();
-// });
 
 let win;
 const activeDownloads = new Map();
@@ -37,38 +24,51 @@ function createWindow() {
   win = new BrowserWindow({
     width: 1000,
     height: 700,
+    autoHideMenuBar: true, // ✅ hide top menu bar
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
+      devTools: false, // ✅ completely disable DevTools
     },
   });
 
   if (isDev) {
-    // Match your dev script (wait-on http://localhost:5174)
     win.loadURL("http://localhost:5174");
-    win.webContents.openDevTools({ mode: "detach" });
   } else {
     const indexPath = path.join(app.getAppPath(), "dist", "index.html");
     win.loadFile(indexPath);
   }
-  // ✅ HARD RELOAD shortcut (Ctrl+Shift+R / Cmd+Shift+R)
+
+  // ❌ Block DevTools shortcuts (Ctrl+Shift+I, F12)
   win.webContents.on("before-input-event", (event, input) => {
-    const isHardReload =
+    const key = input.key?.toLowerCase();
+
+    const openDevTools =
+      (input.control || input.meta) && input.shift && key === "i";
+
+    const f12 = input.key === "F12";
+
+    if (openDevTools || f12) {
+      event.preventDefault();
+      return;
+    }
+
+    // ✅ HARD RELOAD (Ctrl+Shift+R)
+    const hardReload =
       (input.control || input.meta) &&
       input.shift &&
-      input.key?.toLowerCase() === "r";
+      key === "r";
 
-    if (isHardReload) {
+    if (hardReload) {
       event.preventDefault();
-
-      // Clear cache and reload like a hard refresh
       const ses = win.webContents.session;
       ses.clearCache().finally(() => {
         win.webContents.reloadIgnoringCache();
       });
     }
   });
+
   win.on("closed", () => {
     win = null;
   });
@@ -77,8 +77,8 @@ function createWindow() {
 app.whenReady().then(() => {
   createWindow();
 
-  // Native download pipeline
-  session.defaultSession.on("will-download", (event, item) => {
+  // Native download handling
+  session.defaultSession.on("will-download", (_event, item) => {
     const suggestedName = item.getFilename();
     const savePath = path.join(app.getPath("downloads"), suggestedName);
     item.setSavePath(savePath);
@@ -89,9 +89,11 @@ app.whenReady().then(() => {
 
     item.on("updated", () => {
       if (!win) return;
+
       const received = item.getReceivedBytes();
       const total = item.getTotalBytes();
       const percent = total > 0 ? Math.round((received / total) * 100) : 0;
+
       win.webContents.send("download-progress", {
         id: downloadId,
         state: item.getState?.(),
@@ -106,6 +108,7 @@ app.whenReady().then(() => {
     item.once("done", (_e, state) => {
       activeDownloads.delete(downloadId);
       if (!win) return;
+
       if (state === "completed") {
         win.webContents.send("download-complete", {
           id: downloadId,
@@ -143,7 +146,7 @@ ipcMain.handle("get-machine-id", async () => {
   }
 });
 
-// IPC: trigger a download from renderer
+// IPC: trigger download
 ipcMain.on("download-file", (_event, payload) => {
   try {
     const { url } =
@@ -152,5 +155,17 @@ ipcMain.on("download-file", (_event, payload) => {
     win.webContents.downloadURL(url);
   } catch (err) {
     console.error("[Main] download-file error:", err);
+  }
+});
+
+
+ipcMain.on("open-external", async (_event, payload) => {
+  try {
+    const { url } =
+      typeof payload === "string" ? { url: payload } : payload || {};
+    if (!url) return;
+    await shell.openExternal(url); // ✅ opens default browser (Chrome/Edge)
+  } catch (err) {
+    console.error("[Main] open-external error:", err);
   }
 });

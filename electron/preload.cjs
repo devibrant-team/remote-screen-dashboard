@@ -5,7 +5,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getMachineId: () => ipcRenderer.invoke("get-machine-id"),
   sendLog: (...args) => ipcRenderer.send("renderer-log", ...args),
   startUpdate: () => ipcRenderer.send("app/start-update"),
+
   downloadFile: (args) => ipcRenderer.send("download-file", args),
+
+  openExternal: (url) => ipcRenderer.send("open-external", { url }),
 
   onDownloadProgress: (cb) => {
     const listener = (_e, payload) => cb(payload);

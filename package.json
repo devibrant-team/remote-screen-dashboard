@@ -1,12 +1,12 @@
 {
   "name": "iguanadashboard",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "private": true,
   "description": "Iguana Dashboard - application",
   "author": "Devibrant",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "concurrently \"vite --port 5173\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron electron/main.cjs\"",
+    "dev": "concurrently \"vite --port 5174\" \"wait-on http://localhost:5174 && cross-env NODE_ENV=development electron electron/main.cjs\"",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",

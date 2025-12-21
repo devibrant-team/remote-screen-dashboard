@@ -66,7 +66,7 @@ function PlainLayout() {
 /* ---------- Routes ---------- */
 export default function App() {
   const { data: backendVersion, isLoading } = useGetVersion();
-  console.log(backendVersion)
+  // console.log(backendVersion)
   const alert = useAlertDialog();
   const confirm = useConfirmDialog();
 
@@ -84,35 +84,32 @@ useEffect(() => {
 
   setUpdateHandled(true); // avoid showing multiple times
 
-  const startDownload = async () => {
-    console.log("[Update] backendVersion:", backendVersion);
-    console.log("[Update] downloadUrl:", downloadUrl);
+const startDownload = async () => {
+  console.log("[Update] backendVersion:", backendVersion);
+  console.log("[Update] downloadUrl:", downloadUrl);
 
-    if (!downloadUrl) {
-      await alert({
-        title: "Download unavailable",
-        message:
-          "A new version is available, but no download link was provided. Please contact support.",
-        buttonText: "OK",
-      });
-      return;
-    }
+  if (!downloadUrl) {
+    await alert({
+      title: "Download unavailable",
+      message:
+        "A new version is available, but no download link was provided. Please contact support.",
+      buttonText: "OK",
+    });
+    return;
+  }
 
-    // Log what we have on window
-    console.log("[Update] window.electronAPI:", window.electronAPI);
+  // ✅ If inside Electron, open Chrome/default browser
+  if (window.electronAPI?.openExternal) {
+    console.log("[Update] Opening in default browser:", downloadUrl);
+    window.electronAPI.openExternal(downloadUrl);
+    return;
+  }
 
-    // If electron bridge is missing, fallback to browser
-    if (!window.electronAPI || !window.electronAPI.downloadFile) {
-      console.warn(
-        "[Update] electronAPI.downloadFile not available, opening in browser instead."
-      );
-      window.open(downloadUrl, "_blank"); // 👈 this SHOULD visibly open/download
-      return;
-    }
+  // ✅ If not Electron, normal browser behavior
+  window.open(downloadUrl, "_blank");
+};
 
-    console.log("[Update] Sending download-file IPC with URL:", downloadUrl);
-    window.electronAPI.downloadFile({ url: downloadUrl });
-  };
+
 
   // FORCED UPDATE (versionType === 1)
   if (type === 1) {
