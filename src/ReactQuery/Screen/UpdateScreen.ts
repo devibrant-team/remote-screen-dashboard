@@ -1,6 +1,8 @@
 // src/ReactQuery/Screen/UpdateScreen.ts
 import axios from "axios";
 import { UpdateScreen as UpdateScreenApi } from "../../API/API";
+import { number, string } from "zod";
+export type IdLike = string | number;
 
 export type UpdateScreenPayload = {
   screenId: string | number; // 👈 use screenId for URL
@@ -10,6 +12,7 @@ export type UpdateScreenPayload = {
   branch_id: string | number | null;
   group_id: string | number | null;
   playlist_id?: string | number | null;
+  type?:IdLike|null;
 };
 
 export async function UpdateScreen(payload: UpdateScreenPayload) {

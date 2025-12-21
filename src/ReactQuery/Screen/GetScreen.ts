@@ -16,6 +16,7 @@ export type Screen = {
   PlaylistName: string | null;
   branchId: number | null;
   isOnline: boolean;
+  type:string;
 };
 
 export const SCREEN_OK = ["screens"] as const;
@@ -43,7 +44,9 @@ async function fetchScreens(): Promise<Screen[]> {
     PlaylistId: r.PlaylistId ?? null,
     PlaylistName: r.PlaylistName ?? null,
     branchId: r.branchId ?? null,
-    isOnline: r.isOnline ?? false
+    isOnline: r.isOnline ?? false,
+    type: r.type ?? 'landscape'
+
   }));
 }
 

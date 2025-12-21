@@ -18,6 +18,7 @@ import {
   setSelectedBranchId,
   setSelectedRatio,
   setDefaultPlaylist,
+  setScreenType,
 } from "../../Redux/ScreenManagement/ScreenManagementSlice";
 import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
 import type { RootState } from "../../../store";
@@ -42,6 +43,7 @@ const SingleScreensSection: React.FC = () => {
 
   const dispatch = useDispatch();
   const { data: screens, isLoading, isError, error, refetch } = useGetScreen();
+  console.log(screens);
   const { mutate: deleteScreen } = useDeleteScreen();
 
   const FilteredBranchId = useSelector(
@@ -273,6 +275,12 @@ const SingleScreensSection: React.FC = () => {
                                 if (sc.PlaylistId != null) {
                                   dispatch(
                                     setDefaultPlaylist(String(sc.PlaylistId))
+                                  );
+                                }
+
+                                 if (sc.type != null) {
+                                  dispatch(
+                                    setScreenType(String(sc.type))
                                   );
                                 }
 

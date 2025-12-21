@@ -10,7 +10,8 @@ export type Screen = {
   branch?: string | null;
   active?: boolean | null;
   lastSeen?: string | null;
-  screenId: number;        // hardware id (never identity)
+  screenId: number;
+  type?:string;        // hardware id (never identity)
 };
 
 export type SelectedDevice = { id: number; name: string };

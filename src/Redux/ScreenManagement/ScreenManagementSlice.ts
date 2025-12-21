@@ -11,6 +11,7 @@ export type ScreenManagementState = {
   selectedBranchId: IdLike | null;
   playlist_id: IdLike | null;
   FilterScreenAcctoBranchId: IdLike | null;
+  Selectedtype: IdLike|null;
 };
 
 const initialState: ScreenManagementState = {
@@ -19,6 +20,7 @@ const initialState: ScreenManagementState = {
   selectedBranchId: null,
   playlist_id: null,
   FilterScreenAcctoBranchId: null,
+  Selectedtype: 'landscape'
 };
 
 const screenManagementSlice = createSlice({
@@ -38,6 +40,9 @@ const screenManagementSlice = createSlice({
     setFilterScreenAcctoBranchId: (s, a: PayloadAction<IdLike | null>) => {
       s.FilterScreenAcctoBranchId = a.payload;
     },
+    setScreenType: (s, a: PayloadAction<IdLike | null>) => {
+      s.Selectedtype = a.payload;
+    },
     setDefaultPlaylist: (s, a: PayloadAction<IdLike | null>) => {
       s.playlist_id = a.payload;
     },
@@ -51,6 +56,7 @@ export const {
   setDefaultPlaylist,
   resetScreenManagement,
   setFilterScreenAcctoBranchId,
+  setScreenType
 } = screenManagementSlice.actions;
 
 export default screenManagementSlice.reducer;

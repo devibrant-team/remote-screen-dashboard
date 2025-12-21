@@ -32,6 +32,7 @@ import { GROUP_OK } from "@/ReactQuery/Group/GetGroup";
 import { SCREEN_OK } from "@/ReactQuery/Screen/GetScreen";
 import { GROUP_SCREENS_QK } from "@/ReactQuery/Group/GetGroupScreen";
 import { useAlertDialog } from "@/AlertDialogContext";
+import OrientationDropdown from "../Dropdown/OrientationDropdown";
 const schema = z.object({
   name: z.string().trim().min(1, "Screen name is required").max(80, "Too long"),
   code: z
@@ -68,6 +69,9 @@ const AddScreenModal: React.FC<AddScreenModalProps> = ({
   const selectedRatioid = useSelector(
     (s: RootState) => s.screenManagement.selectedRatioId
   );
+
+ const selectedtype = useSelector((s: RootState) => s.screenManagement.Selectedtype);
+  
   const selectedPlaylistId = useSelector(selectedDefaultPlaylistId);
   const selectedBranchId = useSelector(
     (s: RootState) => s.screenManagement.selectedBranchId
@@ -177,6 +181,7 @@ useEffect(() => {
       branch_id: selectedBranchId ?? null,
       group_id: groupId ?? null,
       playlist_id: selectedPlaylistId ? Number(selectedPlaylistId) : null,
+      type:selectedtype??null
     };
 
     if (isEditing && editingScreen) {
@@ -188,6 +193,7 @@ useEffect(() => {
         branch_id: selectedBranchId ?? null,
         group_id: groupId ?? null,
         playlist_id: selectedPlaylistId ? Number(selectedPlaylistId) : null,
+        type:selectedtype ?? null
       };
 
       updateScreen(payload, {
@@ -312,6 +318,19 @@ useEffect(() => {
               <GroupDropdown />
             </div>
           </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-neutral-700 mb-1 block">
+                Orientation
+              </label>
+              <OrientationDropdown />
+            </div>
+            
+          </div>
+
+
+          
 
           {groupId == null && (
             <div>
