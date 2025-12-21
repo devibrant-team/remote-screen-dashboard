@@ -9,6 +9,7 @@ import {
   toggleSelectedGroup,
   type Group,
   selectSelectedGroups,
+  clearSelectedGroups,
 } from "../../../Redux/ScreenManagement/GroupSlice";
 import { useGetGroups } from "../../../ReactQuery/Group/GetGroup";
 import { useGetScreen } from "../../../ReactQuery/Screen/GetScreen";
@@ -25,6 +26,7 @@ import {
   mergeScheduleItemGroups,
   mergeScheduleItemScreens,
 } from "../../../Redux/ScheduleItem/ScheduleItemSlice";
+import { clearSelectedDevices } from "../../../Redux/ScreenManagement/ScreenSlice";
 
 /* -------------------------------- Types -------------------------------- */
 type FilterMode = "all" | "groups" | "screens";
@@ -288,6 +290,9 @@ const AssignNewModel: React.FC<AssignNewModelProps> = ({
         selectedGroups,
         selectedDevices: selectedDeviceIds,
       });
+// after successful merge/onApply
+dispatch(clearSelectedGroups());
+dispatch(clearSelectedDevices());
 
       onClose();
     } finally {

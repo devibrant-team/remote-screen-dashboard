@@ -153,6 +153,7 @@ export default function AssignSchedulebar({
 
   /* ------------------------ Devices (multi select) ------------------------ */
   const screens = useSelector((s: RootState) => s.ScheduleItem.screens);
+  console.log(screens);
   const groups = useSelector((s: RootState) => s.ScheduleItem.groups);
   const [deviceTab, setDeviceTab] = useState<DeviceTab>("screens");
   const [selectedScreenIds, setSelectedScreenIds] = useState<number[]>([]);
