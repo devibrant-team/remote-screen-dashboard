@@ -23,9 +23,10 @@ import {
 import { resetScreenForm } from "../../Redux/AddScreen/AddScreenSlice";
 import type { RootState } from "../../../store";
 import { useDeleteScreen } from "@/Redux/ScreenManagement/DeleteScreen";
-import ErrorToast from "@/Components/ErrorToast"; // 👈 NEW
-import SuccessToast from "@/Components/SuccessToast"; // 👈 NEW
+import ErrorToast from "@/Components/ErrorToast";
+import SuccessToast from "@/Components/SuccessToast";
 import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
+import { refreshScreen } from "../../Redux/Refresh/RefreshScreen";
 
 const CHUNK = 10;
 const MIN_VISIBLE = CHUNK;
@@ -35,6 +36,8 @@ const SingleScreensSection: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingScreen, setEditingScreen] = useState<any | null>(null);
   const [visible, setVisible] = useState(CHUNK);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+
   const confirm = useConfirmDialog();
   // 👇 للحذف
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
@@ -88,6 +91,22 @@ const SingleScreensSection: React.FC = () => {
 
   const onShowMore = () => setVisible((v) => Math.min(total, v + CHUNK));
   const onShowLess = () => setVisible((v) => Math.max(MIN_VISIBLE, v - CHUNK));
+  const onRefreshScreen = async (sc: any) => {
+    const key = String(sc.screenId); // ✅ stable key
+
+    try {
+      setRefreshingId(key);
+
+      console.log("refresh clicked for:", { screenId: key });
+
+      await refreshScreen({ screenId: key });
+    } catch (err) {
+      console.error("Refresh screen failed", err);
+      setErrorForToast(err);
+    } finally {
+      setRefreshingId(null);
+    }
+  };
 
   return (
     <>
@@ -190,6 +209,7 @@ const SingleScreensSection: React.FC = () => {
                   <div className="flex flex-col gap-3">
                     {visibleScreens.map((sc) => {
                       const isDeletingThis = deletingId === sc.id;
+                      const refreshKey = String(sc.screenId);
 
                       return (
                         <article
@@ -197,17 +217,41 @@ const SingleScreensSection: React.FC = () => {
                           className="flex flex-col items-start justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-xs sm:flex-row sm:items-center"
                         >
                           <div className="flex w-full items-start gap-3">
-                            <div className="mt-0.5 shrink-0">
-                              <Monitor
-                                size={18}
-                                className={
-                                  sc.active
-                                    ? "text-green-600"
-                                    : "text-neutral-400"
-                                }
-                                aria-label={sc.active ? "Online" : "Offline"}
-                              />
+                            <div className="mt-0.5 shrink-0 group">
+                              <button
+                                type="button"
+                                onClick={() => onRefreshScreen(sc)}
+                                disabled={refreshingId === refreshKey}
+                                title="Refresh screen"
+                                aria-label={`Refresh ${sc.name || "screen"}`}
+                                className="relative rounded-lg p-1.5 transition hover:bg-neutral-100 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-red-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {/* small refresh hint badge shows on hover (no text) */}
+                                <span className="pointer-events-none absolute -right-1 -top-1 hidden rounded-full bg-neutral-900/80 p-0.5 group-hover:block">
+                                  <RefreshCw size={10} className="text-white" />
+                                </span>
+
+                                {refreshingId === refreshKey ? (
+                                  <Loader2
+                                    size={18}
+                                    className="animate-spin text-neutral-600"
+                                  />
+                                ) : (
+                                  <Monitor
+                                    size={18}
+                                    className={`${
+                                      sc.active
+                                        ? "text-green-600"
+                                        : "text-neutral-400"
+                                    } transition-transform group-hover:scale-105`}
+                                    aria-label={
+                                      sc.active ? "Online" : "Offline"
+                                    }
+                                  />
+                                )}
+                              </button>
                             </div>
+
                             <div className="min-w-0">
                               <div className="flex flex-row">
                                 <h3 className="truncate text-sm font-semibold text-neutral-900">
@@ -236,6 +280,8 @@ const SingleScreensSection: React.FC = () => {
                               </div>
                               <p className="mt-1 line-clamp-2 text-xs text-neutral-500">
                                 ID:{sc.screenId}
+                                <span className="mx-2">•</span>
+                               {sc.platform}
                                 <span className="mx-2">•</span>
                                 {sc.ratio ?? "—"}
                                 <span className="mx-2">•</span>
@@ -278,10 +324,8 @@ const SingleScreensSection: React.FC = () => {
                                   );
                                 }
 
-                                 if (sc.type != null) {
-                                  dispatch(
-                                    setScreenType(String(sc.type))
-                                  );
+                                if (sc.type != null) {
+                                  dispatch(setScreenType(String(sc.type)));
                                 }
 
                                 setOpen(true);
