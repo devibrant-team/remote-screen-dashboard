@@ -36,7 +36,7 @@ import {
 import SuccessToast from "@/Components/SuccessToast";
 // 🔴 NEW: import ErrorToast
 import ErrorToast from "@/Components/ErrorToast";
-
+import { validateFilesForUpload } from "@/Hook/validateUploadFiles";
 // pdf.js
 import {
   GlobalWorkerOptions,
@@ -44,7 +44,6 @@ import {
   type PDFDocumentProxy,
 } from "pdfjs-dist";
 import workerSrc from "pdfjs-dist/build/pdf.worker.min.js?url";
-
 
 GlobalWorkerOptions.workerSrc = workerSrc;
 
@@ -114,14 +113,16 @@ async function pdfToImages(
     const renderTask = page.render({
       canvasContext: ctx,
       viewport,
-
     });
     await renderTask.promise;
 
-const blob: Blob = await new Promise((resolve, reject) => {
-  canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob() failed"))), format, quality);
-});
-
+    const blob: Blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error("toBlob() failed"))),
+        format,
+        quality
+      );
+    });
 
     const ext = format === "image/jpeg" ? "jpg" : "webp";
     const nameBase = pdfFile.name.replace(/\.pdf$/i, "");
@@ -151,7 +152,6 @@ const MediaPage: React.FC = () => {
   const [isSelectable, setIsSelectable] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Array<number | string>>([]);
   const [tagPage, setTagPage] = useState(0); // current page of tags
-
 
   // 🔴 NEW: central error for ErrorToast
   const [toastError, setToastError] = useState<unknown | null>(null);
@@ -206,24 +206,23 @@ const MediaPage: React.FC = () => {
     dispatch(setLoading(isPending || isFetching));
   }, [isPending, isFetching, dispatch]);
 
-// push items + pagination meta (current_page + total pages)
-useEffect(() => {
-  if (!data) return;
+  // push items + pagination meta (current_page + total pages)
+  useEffect(() => {
+    if (!data) return;
 
-  dispatch(setItems(data.media ?? []));
+    dispatch(setItems(data.media ?? []));
 
-  dispatch(
-    setMeta({
-      current_page: Number(data.meta?.current_page ?? page ?? 1),
-      last_page: Number(data.meta?.last_page ?? 1),       // ← total pages
-      per_page: Number(data.meta?.per_page ?? perPage),
-      total: Number(
-        data.meta?.total ??
-          (data.media?.length ?? 0) // fallback if backend doesn’t send total
-      ),
-    })
-  );
-}, [data, dispatch, page, perPage]);
+    dispatch(
+      setMeta({
+        current_page: Number(data.meta?.current_page ?? page ?? 1),
+        last_page: Number(data.meta?.last_page ?? 1), // ← total pages
+        per_page: Number(data.meta?.per_page ?? perPage),
+        total: Number(
+          data.meta?.total ?? data.media?.length ?? 0 // fallback if backend doesn’t send total
+        ),
+      })
+    );
+  }, [data, dispatch, page, perPage]);
 
   // keep redux TagSlice.mediaIds in sync with selectedIds
   useEffect(() => {
@@ -243,30 +242,49 @@ useEffect(() => {
     const all = Array.from(e.target.files || []);
     if (!all.length) return;
 
-    const { good, bad } = filterDisallowed(all);
+const { good, bad } = filterDisallowed(all);
 
-    if (bad.length) {
-      const firstFew = bad
-        .slice(0, 3)
-        .map((f) => f.name)
-        .join(", ");
-      setErrorMsg(
-        `Only images/videos/PDFs are allowed. Blocked: ${firstFew}${
-          bad.length > 3 ? `, +${bad.length - 3} more` : ""
-        }`
-      );
-    } else {
-      setErrorMsg(null);
-    }
+const { allowed: goodAfter4k, blocked } = await validateFilesForUpload(good, {
+  maxVideoWidth: 1920,
+  maxVideoHeight: 1080,
+  blockOnVideoMetaFail: true,
+});
 
-    if (!good.length) {
-      e.currentTarget.value = "";
-      return;
-    }
+// 1) show 4k blocked message
+if (blocked.length) {
+  const firstFew = blocked.slice(0, 3).map((b) => b.file.name).join(", ");
+  const msg = `Some videos are not allowed (max 1080p). Blocked: ${firstFew}${
+    blocked.length > 3 ? `, +${blocked.length - 3} more` : ""
+  }`;
+
+  setErrorMsg(msg);
+  setToastError(new Error(msg));
+}
+
+// 2) add bad extensions message WITHOUT deleting the 4K message
+if (bad.length) {
+  const firstFew = bad.slice(0, 3).map((f) => f.name).join(", ");
+  const badMsg = `Only images/videos/PDFs are allowed. Blocked: ${firstFew}${
+    bad.length > 3 ? `, +${bad.length - 3} more` : ""
+  }`;
+
+  setErrorMsg((prev) => (prev ? `${prev}\n${badMsg}` : badMsg));
+} else if (!blocked.length) {
+  // only clear if there is NO 4K message
+  setErrorMsg(null);
+}
+
+// 3) IMPORTANT: stop if nothing left after filtering 4K
+if (!goodAfter4k.length) {
+  e.currentTarget.value = "";
+  return;
+}
+
 
     try {
       const expanded: File[] = [];
-      for (const f of good) {
+     for (const f of goodAfter4k) {
+
         if (f.type === "application/pdf") {
           setRenderStatus(`Rendering ${f.name} (preparing pages)…`);
           const imgs = await pdfToImages(f, {
@@ -645,7 +663,7 @@ useEffect(() => {
         isEdit={isTagEditMode}
         onSuccess={() => {
           if (!isTagEditMode) {
-            setIsSelectable(false); 
+            setIsSelectable(false);
             setSelectedIds([]);
             dispatch(clearMedia());
           }
