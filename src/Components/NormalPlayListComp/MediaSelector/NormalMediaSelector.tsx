@@ -18,11 +18,11 @@ import {
   ACCEPT_ATTR,
   filterDisallowed,
 } from "../../../Hook/Playlist/AllowedUploadExt";
-
+import { validateFilesForUpload } from "@/Hook/validateUploadFiles";
 import { useGetTags } from "../../../ReactQuery/Tag/GetTag";
 import { setSelectedTagId } from "../../../ReactQuery/Tag/TagSlice";
 import type { RootState } from "../../../../store";
-
+import type { MediaItem } from "../../../ReactQuery/Media/useGetMedia";
 type Props = {
   open: boolean;
   onClose: () => void;
@@ -30,7 +30,7 @@ type Props = {
   slotIndex: number;
 };
 
-type MediaItem = { id: number; type: string; media: string , tag:string };
+
 
 const SkeletonCard = () => (
   <div className="animate-pulse rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -229,24 +229,49 @@ const NormalMediaSelector: React.FC<Props> = ({
                 type="file"
                 accept={ACCEPT_ATTR}
                 className="hidden"
-                onChange={(e) => {
-                  const all = Array.from(e.target.files || []);
-                  if (!all.length) return;
-                  const [file] = all;
-                  const { good, bad } = filterDisallowed([file]);
+              onChange={async (e) => {
+  const all = Array.from(e.target.files || []);
+  if (!all.length) return;
 
-                  if (bad.length) {
-                    setErrorMsg(
-                      "Only images/videos are allowed (jpeg,png,jpg,gif,webp,mp4,mov,avi)."
-                    );
-                    e.currentTarget.value = "";
-                    return;
-                  }
+  const [file] = all;
 
-                  setErrorMsg(null);
-                  handleUpload(good[0]);
-                  e.currentTarget.value = "";
-                }}
+  // 1) type filter
+  const { good, bad } = filterDisallowed([file]);
+
+  if (bad.length) {
+    setErrorMsg(
+      "Only images/videos are allowed (jpeg,png,jpg,gif,webp,mp4,mov,avi)."
+    );
+    e.currentTarget.value = "";
+    return;
+  }
+
+  // 2) 4K / resolution filter (max 1080p)
+  const { allowed, blocked } = await validateFilesForUpload(good, {
+    maxVideoWidth: 1920,
+    maxVideoHeight: 1080,
+    blockOnVideoMetaFail: true,
+  });
+
+  if (blocked.length) {
+    // only one file here, but keep same formatting
+    const reason = blocked[0]?.reason ?? "Video resolution too high.";
+    setErrorMsg(reason);
+    e.currentTarget.value = "";
+    return;
+  }
+
+  if (!allowed.length) {
+    e.currentTarget.value = "";
+    return;
+  }
+
+  // ok
+  setErrorMsg(null);
+  handleUpload(allowed[0]);
+  e.currentTarget.value = "";
+}}
+
                 disabled={uploading}
               />
             </label>
