@@ -61,27 +61,30 @@ const ToolBar = () => {
   };
   const confirm = useConfirmDialog();
   // Simple alert/confirm before logging out
-  const startLogoutFlow = async () => {
-    const ok = await confirm({
-      title: "Log out",
-      message: "Are you sure you want to log out?",
-      confirmText: "Log out",
-      cancelText: "Cancel",
-    });
+const startLogoutFlow = async () => {
+  const ok = await confirm({
+    title: "Log out",
+    message: "Are you sure you want to log out?",
+    confirmText: "Log out",
+    cancelText: "Cancel",
+  });
 
-    if (!ok) return;
+  if (!ok) return;
 
-    try {
-      // @ts-ignore unwrap available if you use RTK types; ignore if not
-      await dispatch(logoutUser()).unwrap();
-    } catch {
-      // Force local cleanup even if server logout fails
-      dispatch(forceLocalLogout());
-    } finally {
-      setIsOpen(false);
-      navigate("/login", { replace: true });
-    }
-  };
+  try {
+    // try server logout
+    // @ts-ignore
+    await dispatch(logoutUser()).unwrap();
+  } catch {
+    // ignore server error
+  } finally {
+  dispatch(forceLocalLogout());
+  setIsOpen(false);
+
+  window.location.replace("/login"); // ✅ loads /login fresh, no back button
+}
+
+};
 
 
   return (
