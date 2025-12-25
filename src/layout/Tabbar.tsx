@@ -11,6 +11,7 @@ import {
   UploadCloudIcon,
   Building2Icon,
   LogOut,
+  Loader2, // ✅ add
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -50,50 +51,56 @@ const menuItems: NavItem[] = [
 
 const ToolBar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // ✅ add
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
   const dispatch = useDispatch();
+  const confirm = useConfirmDialog();
 
   const handleNavClick = (path: string) => {
+    if (isLoggingOut) return; // ✅ block navigation while logging out
     navigate(path);
     setIsOpen(false);
   };
-  const confirm = useConfirmDialog();
-  // Simple alert/confirm before logging out
-const startLogoutFlow = async () => {
-  const ok = await confirm({
-    title: "Log out",
-    message: "Are you sure you want to log out?",
-    confirmText: "Log out",
-    cancelText: "Cancel",
-  });
 
-  if (!ok) return;
+  const startLogoutFlow = async () => {
+    if (isLoggingOut) return; // ✅ prevent double click
 
-  try {
-    // try server logout
-    // @ts-ignore
-    await dispatch(logoutUser()).unwrap();
-  } catch {
-    // ignore server error
-  } finally {
-  dispatch(forceLocalLogout());
-  setIsOpen(false);
+    const ok = await confirm({
+      title: "Log out",
+      message: "Are you sure you want to log out?",
+      confirmText: "Log out",
+      cancelText: "Cancel",
+    });
 
-  window.location.replace("/login"); // ✅ loads /login fresh, no back button
-}
+    if (!ok) return;
 
-};
+    setIsLoggingOut(true);
 
+    try {
+      // @ts-ignore
+      await dispatch(logoutUser()).unwrap();
+    } catch {
+      // ignore server error
+    } finally {
+      dispatch(forceLocalLogout());
+      setIsOpen(false);
+
+      // ✅ Hard redirect (fresh state)
+      window.location.replace("/login");
+      // no need to setIsLoggingOut(false) because page will reload
+    }
+  };
 
   return (
     <>
       {/* Mobile Toggle Button */}
       <button
         className="md:hidden fixed top-4 left-4 z-50 bg-white p-2 rounded shadow"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => !isLoggingOut && setIsOpen(!isOpen)} // ✅ block while logging out
         aria-label="Toggle sidebar"
+        disabled={isLoggingOut}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
@@ -111,7 +118,13 @@ const startLogoutFlow = async () => {
 
           <nav className="flex flex-col gap-5 overflow-y-auto flex-1">
             {menuItems.map((item) => {
-              const Icon = item.icon;
+              const isLogout = "action" in item && item.action === "logout";
+              const Icon = isLogout
+                ? isLoggingOut
+                  ? Loader2
+                  : item.icon
+                : item.icon;
+
               const isActive =
                 "path" in item ? currentPath.startsWith(item.path) : false;
 
@@ -119,13 +132,14 @@ const startLogoutFlow = async () => {
                 isActive
                   ? "bg-[var(--mainred)] text-white"
                   : "text-black hover:bg-[var(--mainred)] hover:text-white"
-              }`;
+              } ${isLoggingOut ? "opacity-60 cursor-not-allowed" : ""}`;
 
               return (
                 <button
                   key={"path" in item ? item.path : item.label}
+                  disabled={isLoggingOut} // ✅ disables all buttons while logout
                   onClick={
-                    "action" in item && item.action === "logout"
+                    isLogout
                       ? startLogoutFlow
                       : () =>
                           handleNavClick(
@@ -134,8 +148,10 @@ const startLogoutFlow = async () => {
                   }
                   className={className}
                 >
-                  <Icon size={20} />
-                  <span className="whitespace-nowrap">{item.label}</span>
+                  <Icon size={20} className={isLogout && isLoggingOut ? "animate-spin" : ""} />
+                  <span className="whitespace-nowrap">
+                    {isLogout && isLoggingOut ? "Logging out..." : item.label}
+                  </span>
                 </button>
               );
             })}
