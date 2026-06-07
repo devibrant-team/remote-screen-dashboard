@@ -95,6 +95,7 @@ const authSlice = createSlice({
       attachToken(null);
       try { localStorage.removeItem("token"); } catch {}
     },
+
     clearAuthError(state) {
       state.error = null;
     },
@@ -147,7 +148,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setToken, clearAuthError } = authSlice.actions;
+export const { logout, setToken, clearAuthError  } = authSlice.actions;
 export default authSlice.reducer;
 
 // Selectors

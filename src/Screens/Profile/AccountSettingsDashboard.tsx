@@ -9,7 +9,10 @@ import {
   setSupportDescription,
   setSupportTopicType,
 } from "@/Redux/Support/SupportSlice";
+import { logout } from "@/Redux/Authentications/AuthSlice";
+
 import { useDispatch } from "react-redux";
+import { useConfirmDialog } from "@/Components/ConfirmDialogContext";
 type SkeletonLineProps = {
   className?: string;
 };
@@ -177,6 +180,7 @@ function AccountSettingsDashboard() {
   const { data: profile, isLoading, isError } = useGetProfile();
   const [supportOpen, setSupportOpen] = useState(false);
   const dispatch = useDispatch();
+  const confirm = useConfirmDialog();
   if (isLoading) {
     return <SkeletonAccountSettingsDashboard />;
   }
@@ -282,8 +286,22 @@ function AccountSettingsDashboard() {
                 </h3>
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: "Change Server IP?",
+                      message:
+                        "To change the server IP, you need to logout first. Are you sure you want to continue?",
+                      confirmText: "Logout & Change IP",
+                      cancelText: "Cancel",
+                    });
+
+                    if (!ok) return;
+
+                    dispatch(logout());
+
+                    localStorage.removeItem("token");
                     localStorage.removeItem("server_ip");
+
                     window.dispatchEvent(new Event("server-ip-changed"));
                   }}
                   className="mt-3 ml-2 inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-black hover:bg-gray-50 transition"

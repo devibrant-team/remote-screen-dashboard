@@ -19,28 +19,30 @@ const IpModal = () => {
   const [isChecking, setIsChecking] = useState(true);
   const [error, setError] = useState("");
 
+  const checkIp = () => {
+    const storedIp = localStorage.getItem(STORAGE_KEY);
+
+    if (storedIp && isValidIp(storedIp)) {
+      setSavedIp(storedIp);
+      setIp(storedIp);
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+      setSavedIp(null);
+      setIp("");
+    }
+
+    setIsChecking(false);
+  };
+
   useEffect(() => {
-    const checkIp = () => {
-      const storedIp = localStorage.getItem(STORAGE_KEY);
-
-      if (storedIp && isValidIp(storedIp)) {
-        setSavedIp(storedIp);
-        setIp(storedIp);
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-        setSavedIp(null);
-        setIp("");
-      }
-
-      setIsChecking(false);
-    };
-
     checkIp();
 
     window.addEventListener("server-ip-changed", checkIp);
+    window.addEventListener("storage", checkIp);
 
     return () => {
       window.removeEventListener("server-ip-changed", checkIp);
+      window.removeEventListener("storage", checkIp);
     };
   }, []);
 
@@ -50,13 +52,19 @@ const IpModal = () => {
       return;
     }
 
-    localStorage.setItem(STORAGE_KEY, ip.trim());
-    setSavedIp(ip.trim());
+    const newIp = ip.trim();
+
+    localStorage.setItem(STORAGE_KEY, newIp);
+    setSavedIp(newIp);
     setError("");
+
+    window.dispatchEvent(new Event("server-ip-changed"));
+
+    // important: reload so API base URL updates directly
+    window.location.reload();
   };
 
   if (isChecking) return null;
-
   if (savedIp) return null;
 
   return (
