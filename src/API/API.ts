@@ -1,5 +1,12 @@
-export const http = "http://192.168.10.31/remote-screen-backend/public/api/";
+//export const http = "http://192.168.10.16/remote-screen-backend/public/api/";
+
+import { getServerIp } from "@/Hook/getServerIp";
+
 // export const http =  "https://rjmso.com/api/";
+const ip = getServerIp();
+console.log("Using server IP:", ip);
+ export const http =  `http://${ip}:8000/api/`;
+
 export const loginApi = `${http}dashboard/login`
 export const playlisttypeApi = `${http}getplaylistStyle`
 export const PlaylistPostApi = `${http}postNormal`

@@ -280,7 +280,16 @@ function AccountSettingsDashboard() {
                 <h3 className="text-sm font-semibold text-gray-800">
                   Security Settings
                 </h3>
-
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem("server_ip");
+                    window.dispatchEvent(new Event("server-ip-changed"));
+                  }}
+                  className="mt-3 ml-2 inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-medium text-black hover:bg-gray-50 transition"
+                >
+                  Change Server IP
+                </button>
                 <div className="mt-4 space-y-1.5">
                   <label className="text-xs font-medium text-gray-600">
                     Current Password
@@ -303,8 +312,8 @@ function AccountSettingsDashboard() {
                     dispatch(setSupportTopicType("question"));
                     dispatch(
                       setSupportDescription(
-                        "I forgot my password and cannot log in. Please help me reset my password or regain access to my account."
-                      )
+                        "I forgot my password and cannot log in. Please help me reset my password or regain access to my account.",
+                      ),
                     );
 
                     setSupportOpen(true);

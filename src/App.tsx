@@ -27,6 +27,7 @@ import { APP_VERSION } from "./Hook/version";
 import { useEffect, useState } from "react";
 import { useAlertDialog } from "./AlertDialogContext";
 import { useConfirmDialog } from "./Components/ConfirmDialogContext";
+import IpModal from "./Components/Models/IpModal";
 /* ---------- Auth gate ---------- */
 function RequireAuth() {
   const token =
@@ -141,6 +142,7 @@ const startDownload = async () => {
 
   return (
     <>
+    <IpModal />
       <LicenseKey />
       <ConnectionStatusBanner />
       <Router>

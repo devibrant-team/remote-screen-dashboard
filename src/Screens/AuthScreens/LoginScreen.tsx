@@ -25,7 +25,7 @@ const LoginScreen = () => {
   const { loading, error } = useSelector((state: RootState) => state.auth);
   const token = useSelector((state: RootState) => state.auth.token);
   const machineId: string | null = useSelector(
-    (state: RootState) => state.machine.machineId
+    (state: RootState) => state.machine.machineId,
   );
 
   const [helpOpen, setHelpOpen] = useState(false);
@@ -163,7 +163,7 @@ const LoginHelpModal: React.FC<LoginHelpModalProps> = ({ open, onClose }) => {
     const body = bodyLines.join("\n");
 
     const mailto = `mailto:support@signage-app.com?subject=${encodeURIComponent(
-      subject
+      subject,
     )}&body=${encodeURIComponent(body)}`;
 
     window.location.href = mailto;
@@ -211,11 +211,24 @@ const LoginHelpModal: React.FC<LoginHelpModalProps> = ({ open, onClose }) => {
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
+              onClick={() => {
+                localStorage.removeItem("server_ip");
+                window.dispatchEvent(new Event("server-ip-changed"));
+                onClose();
+              }}
+              className="mr-auto px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-black hover:bg-gray-50"
+            >
+              Change IP
+            </button>
+
+            <button
+              type="button"
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
               Cancel
             </button>
+
             <button
               type="submit"
               className="px-4 py-2 rounded-lg bg-[var(--mainred)] text-[var(--white)] text-sm font-semibold hover:opacity-90"
