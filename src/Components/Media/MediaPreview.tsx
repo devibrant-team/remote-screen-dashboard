@@ -12,27 +12,30 @@ type Props = {
   className?: string;
 };
 
-const MediaPreview: React.FC<Props> = ({ src, type, alt, className }) => {
+const MediaPreview: React.FC<Props> = ({
+  src,
+  type,
+  alt,
+  className,
+}) => {
   const isVideo = type === "video" || type?.startsWith("video");
-  const { thumb } = useVideoThumbnail(isVideo ? src : undefined, 1);
+
+  const { thumb } = useVideoThumbnail(
+    isVideo ? src : undefined,
+    1
+  );
 
   if (isVideo) {
-    if (thumb) {
-      return (
-        <img
-          src={thumb}
-          alt={alt}
-          className={`object-cover ${className ?? ""}`}
-          draggable={false}
-        />
-      );
-    }
     return (
-      <div
-        className={`flex items-center justify-center bg-black/70 text-white text-xs ${className ?? ""}`}
-      >
-        Loading…
-      </div>
+      <img
+        src={thumb || FALLBACK_IMG}
+        alt={alt}
+        draggable={false}
+        className={`object-cover ${className ?? ""}`}
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
+        }}
+      />
     );
   }
 
@@ -40,12 +43,12 @@ const MediaPreview: React.FC<Props> = ({ src, type, alt, className }) => {
     <img
       src={src}
       alt={alt}
+      draggable={false}
+      loading="lazy"
+      className={`object-cover ${className ?? ""}`}
       onError={(e) => {
         (e.currentTarget as HTMLImageElement).src = FALLBACK_IMG;
       }}
-      loading="lazy"
-      draggable={false}
-      className={`object-cover ${className ?? ""}`}
     />
   );
 };

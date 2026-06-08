@@ -66,79 +66,79 @@ function PlainLayout() {
 
 /* ---------- Routes ---------- */
 export default function App() {
-  const { data: backendVersion, isLoading } = useGetVersion();
+  // const { data: backendVersion, isLoading } = useGetVersion();
   // console.log(backendVersion)
   const alert = useAlertDialog();
   const confirm = useConfirmDialog();
 
   const [updateHandled, setUpdateHandled] = useState(false);
 
-useEffect(() => {
-  if (isLoading || !backendVersion || updateHandled) return;
+// useEffect(() => {
+//   if (isLoading || !backendVersion || updateHandled) return;
 
-  const serverVersion = backendVersion.version;
-  const type = backendVersion.versionType; // 1 = forced, 0 = optional
-  const downloadUrl = backendVersion.link;
+//   const serverVersion = backendVersion.version;
+//   const type = backendVersion.versionType; // 1 = forced, 0 = optional
+//   const downloadUrl = backendVersion.link;
 
-  // If versions are the same → no dialog
-  if (!serverVersion || serverVersion === APP_VERSION) return;
+//   // If versions are the same → no dialog
+//   if (!serverVersion || serverVersion === APP_VERSION) return;
 
-  setUpdateHandled(true); // avoid showing multiple times
+//   setUpdateHandled(true); // avoid showing multiple times
 
-const startDownload = async () => {
-  console.log("[Update] backendVersion:", backendVersion);
-  console.log("[Update] downloadUrl:", downloadUrl);
+// const startDownload = async () => {
+//   console.log("[Update] backendVersion:", backendVersion);
+//   console.log("[Update] downloadUrl:", downloadUrl);
 
-  if (!downloadUrl) {
-    await alert({
-      title: "Download unavailable",
-      message:
-        "A new version is available, but no download link was provided. Please contact support.",
-      buttonText: "OK",
-    });
-    return;
-  }
+//   if (!downloadUrl) {
+//     await alert({
+//       title: "Download unavailable",
+//       message:
+//         "A new version is available, but no download link was provided. Please contact support.",
+//       buttonText: "OK",
+//     });
+//     return;
+//   }
 
-  // ✅ If inside Electron, open Chrome/default browser
-  if (window.electronAPI?.openExternal) {
-    console.log("[Update] Opening in default browser:", downloadUrl);
-    window.electronAPI.openExternal(downloadUrl);
-    return;
-  }
+//   // ✅ If inside Electron, open Chrome/default browser
+//   if (window.electronAPI?.openExternal) {
+//     console.log("[Update] Opening in default browser:", downloadUrl);
+//     window.electronAPI.openExternal(downloadUrl);
+//     return;
+//   }
 
-  // ✅ If not Electron, normal browser behavior
-  window.open(downloadUrl, "_blank");
-};
+//   // ✅ If not Electron, normal browser behavior
+//   window.open(downloadUrl, "_blank");
+// };
 
 
 
-  // FORCED UPDATE (versionType === 1)
-  if (type === 1) {
-    (async () => {
-      await alert({
-        title: "Update required",
-        message: `A new version (${serverVersion}) of Iguana Dashboard is available.\n\nYour current version is ${APP_VERSION}.\n\nYou must update to continue using the app.`,
-        buttonText: "Update now",
-      });
+//   // FORCED UPDATE (versionType === 1)
+//   if (type === 1) {
+//     (async () => {
+//       await alert({
+//         title: "Update required",
+//         message: `A new version (${serverVersion}) of Iguana Dashboard is available.\n\nYour current version is ${APP_VERSION}.\n\nYou must update to continue using the app.`,
+//         buttonText: "Update now",
+//       });
 
-      await startDownload();
-    })();
-  } else {
-    // OPTIONAL UPDATE (versionType !== 1)
-    (async () => {
-      const ok = await confirm({
-        title: "Update available",
-        message: `A new version (${serverVersion}) of Iguana Dashboard is available.\n\nYour current version is ${APP_VERSION}.\n\nDo you want to download it now?`,
-        confirmText: "Download",
-        cancelText: "Later",
-      });
+//       await startDownload();
+//     })();
+//   } else {
+//     // OPTIONAL UPDATE (versionType !== 1)
+//     (async () => {
+//       const ok = await confirm({
+//         title: "Update available",
+//         message: `A new version (${serverVersion}) of Iguana Dashboard is available.\n\nYour current version is ${APP_VERSION}.\n\nDo you want to download it now?`,
+//         confirmText: "Download",
+//         cancelText: "Later",
+//       });
 
-      if (ok) {
-        await startDownload();
-      }
-    })();
-  }
-}, [backendVersion, isLoading, updateHandled, alert, confirm]);
+//       if (ok) {
+//         await startDownload();
+//       }
+//     })();
+//   }
+// }, [backendVersion, isLoading, updateHandled, alert, confirm]);
 
   return (
     <>
